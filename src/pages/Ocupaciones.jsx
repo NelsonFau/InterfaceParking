@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { http } from "../api/http";
 import toast from "react-hot-toast";
+import Autocomplete from "@mui/material/Autocomplete";
 import {
   Box,
   Button,
@@ -18,15 +19,16 @@ import {
   Typography,
 } from "@mui/material";
 
-// Ajustá IDs si tus enums no arrancan en 1 o si cambian nombres.
-// Igual, para listar usamos el número del enum.
+// Basado en tu C#:
+// EstadoOcupacion { ACTIVA=1, VENCIDA=2, CANCELADA=3 }
 const ESTADOS = [
   { id: "", label: "Todos" },
   { id: 1, label: "ACTIVA" },
-  { id: 2, label: "CANCELADA" },
-  { id: 3, label: "VENCIDA" },
+  { id: 2, label: "VENCIDA" },
+  { id: 3, label: "CANCELADA" },
 ];
 
+// TipoOcupacion { HORA=1, DIA=2, MES=3 }
 const TIPOS = [
   { id: 1, label: "HORA" },
   { id: 2, label: "DIA" },
@@ -49,9 +51,9 @@ function fmtDate(dt) {
 }
 
 function EstadoChip({ estado }) {
-  // estado es texto o número? tu API devuelve enum (probablemente número)
-  // mostramos algo razonable
-  const label = typeof estado === "string" ? estado : String(estado);
+  const estNum = typeof estado === "number" ? estado : Number(estado);
+  const label =
+    ESTADOS.find((x) => x.id !== "" && Number(x.id) === estNum)?.label ?? String(estado);
   return <Chip size="small" label={label} variant="outlined" />;
 }
 
@@ -74,8 +76,8 @@ export default function Ocupaciones() {
   const [openCrear, setOpenCrear] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const [cCocheraId, setCCocheraId] = useState("");
-  const [cClienteId, setCClienteId] = useState("");
+  // form crear
+  const [cCocheraId, setCCocheraId] = useState(""); // seleccionado desde cocheras disponibles (id)
   const [cTipo, setCTipo] = useState(TIPOS[0].id);
   const [cInicio, setCInicio] = useState("");
   const [cFin, setCFin] = useState("");
@@ -83,6 +85,18 @@ export default function Ocupaciones() {
   const [usarExcep, setUsarExcep] = useState(false);
   const [precioExcep, setPrecioExcep] = useState("");
   const [motivoExcep, setMotivoExcep] = useState("");
+
+  // CLIENTE: Autocomplete server-side
+  const [clienteSel, setClienteSel] = useState(null);
+  const [clienteInput, setClienteInput] = useState("");
+  const [clienteOptions, setClienteOptions] = useState([]);
+  const [clienteLoading, setClienteLoading] = useState(false);
+  const clienteTimerRef = useRef(null);
+
+  // COCHERAS DISPONIBLES para el rango inicio/fin
+  const [cocherasDisp, setCocherasDisp] = useState([]);
+  const [cocherasLoading, setCocherasLoading] = useState(false);
+  const cocheraTimerRef = useRef(null);
 
   // dialog cancelar
   const [openCancelar, setOpenCancelar] = useState(false);
@@ -92,9 +106,18 @@ export default function Ocupaciones() {
 
   const resumen = useMemo(() => {
     const total = items.length;
-    const vencen = items.filter((x) => String(x.estadoCalculado).includes("VENC")).length;
+    const vencen = items.filter((x) => {
+      const v = x?.estadoCalculado;
+      if (typeof v === "string") return v.includes("VENC");
+      return Number(v) === 2; // VENCIDA = 2
+    }).length;
     return { total, vencen };
   }, [items]);
+
+  function tipoLabel(tipoVal) {
+    const n = typeof tipoVal === "number" ? tipoVal : Number(tipoVal);
+    return TIPOS.find((t) => t.id === n)?.label ?? String(tipoVal);
+  }
 
   async function cargar() {
     const myReqId = ++reqIdRef.current;
@@ -107,7 +130,6 @@ export default function Ocupaciones() {
       if (cocheraId.trim()) params.set("cocheraId", cocheraId.trim());
       if (clienteId.trim()) params.set("clienteId", clienteId.trim());
 
-      // el backend espera DateTime?; mandamos ISO si hay
       if (desde) params.set("desde", new Date(desde).toISOString());
       if (hasta) params.set("hasta", new Date(hasta).toISOString());
 
@@ -115,7 +137,6 @@ export default function Ocupaciones() {
       params.set("take", String(take || 200));
 
       const res = await http.get(`/Ocupacion?${params.toString()}`);
-
       if (myReqId !== reqIdRef.current) return;
 
       setItems(Array.isArray(res.data) ? res.data : []);
@@ -127,29 +148,133 @@ export default function Ocupaciones() {
     }
   }
 
+  // =========================
+  // Cocheras disponibles para el rango (server-side)
+  // GET /api/Cochera/disponibles?desde=...&hasta=...
+  // =========================
+  async function cargarCocherasDisponibles(inicioLocal, finLocal) {
+    if (!inicioLocal || !finLocal) {
+      setCocherasDisp([]);
+      return;
+    }
+
+    const desdeIso = new Date(inicioLocal).toISOString();
+    const hastaIso = new Date(finLocal).toISOString();
+
+    if (new Date(hastaIso) <= new Date(desdeIso)) {
+      setCocherasDisp([]);
+      return;
+    }
+
+    try {
+      setCocherasLoading(true);
+      const res = await http.get(
+        `/Cochera/disponibles?desde=${encodeURIComponent(desdeIso)}&hasta=${encodeURIComponent(
+          hastaIso
+        )}`
+      );
+      setCocherasDisp(Array.isArray(res.data) ? res.data : []);
+    } catch (e) {
+      console.error(e);
+      toast.error(e?.response?.data?.error || "No pude cargar cocheras disponibles");
+      setCocherasDisp([]);
+    } finally {
+      setCocherasLoading(false);
+    }
+  }
+
+  // =========================
+  // Buscar clientes (server-side) con debounce
+  // =========================
+  async function buscarClientes(term) {
+    const q = (term || "").trim();
+    if (!q) {
+      setClienteOptions([]);
+      return;
+    }
+
+    try {
+      setClienteLoading(true);
+      const res = await http.get(
+        `/Cliente?q=${encodeURIComponent(q)}&activos=true&page=1&pageSize=20`
+      );
+
+      const data = res.data ?? {};
+      const it = Array.isArray(data.items) ? data.items : [];
+      setClienteOptions(it);
+    } catch (e) {
+      console.error(e);
+      toast.error(e?.response?.data?.error || "No pude buscar clientes");
+    } finally {
+      setClienteLoading(false);
+    }
+  }
+
   useEffect(() => {
     cargar();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    if (clienteTimerRef.current) clearTimeout(clienteTimerRef.current);
+
+    clienteTimerRef.current = setTimeout(() => {
+      buscarClientes(clienteInput);
+    }, 300);
+
+    return () => {
+      if (clienteTimerRef.current) clearTimeout(clienteTimerRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clienteInput]);
+
+  // debounce para cocheras disponibles cuando cambia inicio/fin
+  useEffect(() => {
+    if (cocheraTimerRef.current) clearTimeout(cocheraTimerRef.current);
+
+    cocheraTimerRef.current = setTimeout(() => {
+      cargarCocherasDisponibles(cInicio, cFin);
+    }, 300);
+
+    return () => {
+      if (cocheraTimerRef.current) clearTimeout(cocheraTimerRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cInicio, cFin]);
+
+  // si cambian las disponibles, y la seleccion ya no existe, limpiamos
+  useEffect(() => {
+    if (!cCocheraId) return;
+    const existe = cocherasDisp.some((x) => String(x.id) === String(cCocheraId));
+    if (!existe) setCCocheraId("");
+  }, [cocherasDisp, cCocheraId]);
+
   function abrirCrear() {
     setCCocheraId("");
-    setCClienteId("");
     setCTipo(TIPOS[0].id);
     setCInicio("");
     setCFin("");
+
     setUsarExcep(false);
     setPrecioExcep("");
     setMotivoExcep("");
+
+    // cliente autocomplete reset
+    setClienteSel(null);
+    setClienteInput("");
+    setClienteOptions([]);
+
+    // cocheras disponibles reset
+    setCocherasDisp([]);
+
     setOpenCrear(true);
   }
 
   async function crear() {
     const coch = Number(cCocheraId);
-    const cli = Number(cClienteId);
 
-    if (!coch) return toast.error("Falta CocheraId");
-    if (!cli) return toast.error("Falta ClienteId");
+    if (!coch) return toast.error("Elegí una cochera disponible");
+    if (!clienteSel?.id) return toast.error("Elegí un cliente");
     if (!cInicio) return toast.error("Falta Inicio");
     if (!cFin) return toast.error("Falta Fin");
 
@@ -160,7 +285,7 @@ export default function Ocupaciones() {
 
     let payload = {
       cocheraId: coch,
-      clienteId: cli,
+      clienteId: clienteSel.id,
       tipo: cTipo,
       inicio: inicioIso,
       fin: finIso,
@@ -207,9 +332,7 @@ export default function Ocupaciones() {
     if (!motivoCancel.trim()) return toast.error("Falta motivo");
 
     const finReal =
-      finRealCancel && finRealCancel.trim()
-        ? new Date(finRealCancel).toISOString()
-        : null;
+      finRealCancel && finRealCancel.trim() ? new Date(finRealCancel).toISOString() : null;
 
     try {
       setSaving(true);
@@ -260,7 +383,7 @@ export default function Ocupaciones() {
               sx={{ width: 180 }}
             >
               {ESTADOS.map((x) => (
-                <MenuItem key={x.id} value={x.id}>
+                <MenuItem key={String(x.id)} value={x.id}>
                   {x.label}
                 </MenuItem>
               ))}
@@ -331,38 +454,50 @@ export default function Ocupaciones() {
       ) : (
         <Stack spacing={1.2}>
           <Typography variant="body2" color="text.secondary">
-            Resultados: {resumen.total} {resumen.vencen ? `· Vencidas: ${resumen.vencen}` : ""}
+            Resultados: {resumen.total}
+            {resumen.vencen ? ` · Vencidas: ${resumen.vencen}` : ""}
           </Typography>
 
           {items.map((o) => (
             <Card key={o.id} variant="outlined">
               <CardContent>
-                <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ gap: 2, flexWrap: "wrap" }}>
+                <Stack
+                  direction="row"
+                  justifyContent="space-between"
+                  alignItems="center"
+                  sx={{ gap: 2, flexWrap: "wrap" }}
+                >
                   <Stack spacing={0.5}>
                     <Stack direction="row" spacing={1} alignItems="center">
                       <Typography fontWeight={800}>
                         Cochera #{o.cocheraNumero ?? o.cocheraId}
                       </Typography>
+
                       <EstadoChip estado={o.estadoCalculado ?? o.estado} />
-                      <Chip size="small" label={`Tipo: ${o.tipo}`} variant="outlined" />
+                      <Chip size="small" label={`Tipo: ${tipoLabel(o.tipo)}`} variant="outlined" />
                     </Stack>
 
                     <Typography variant="body2" color="text.secondary">
-                      Cliente: {o.clienteNombre ?? o.clienteId} · Inicio: {fmtDate(o.inicio)} · Fin: {fmtDate(o.fin)}
+                      Cliente: {o.clienteNombre ?? o.clienteId} · Inicio: {fmtDate(o.inicio)} · Fin:{" "}
+                      {fmtDate(o.fin)}
                     </Typography>
 
                     <Typography variant="body2">
-                      Total: <b>{money(o.precioTotal)}</b> · Pagado: <b>{money(o.pagado)}</b> · Saldo: <b>{money(o.saldo)}</b>
+                      Total: <b>{money(o.precioTotal)}</b> · Pagado: <b>{money(o.pagado)}</b> ·
+                      Saldo: <b>{money(o.saldo)}</b>
                     </Typography>
                   </Stack>
 
                   <Stack direction="row" spacing={1}>
-                    <Button variant="outlined" onClick={() => toast(`Ocupación #${o.id}`)}>
+                    <Button
+                      variant="outlined"
+                      onClick={() => toast(`Ocupación #${o.id} (detalle pendiente)`)}
+                    >
                       Ver
                     </Button>
 
-                    {/* cancelar solo si está activa en DB */}
-                    {String(o.estado).includes("ACTIVA") || o.estado === 1 ? (
+                    {/* cancelar solo si está ACTIVA en DB: ACTIVA=1 */}
+                    {Number(o.estado) === 1 ? (
                       <Button color="error" variant="contained" onClick={() => abrirCancelar(o.id)}>
                         Cancelar
                       </Button>
@@ -386,29 +521,6 @@ export default function Ocupaciones() {
           <Stack spacing={2}>
             <Stack direction="row" spacing={2}>
               <TextField
-                label="CocheraId"
-                value={cCocheraId}
-                onChange={(e) => setCCocheraId(e.target.value)}
-                fullWidth
-              />
-              <TextField
-                label="ClienteId"
-                value={cClienteId}
-                onChange={(e) => setCClienteId(e.target.value)}
-                fullWidth
-              />
-            </Stack>
-
-            <TextField select label="Tipo" value={cTipo} onChange={(e) => setCTipo(Number(e.target.value))} fullWidth>
-              {TIPOS.map((t) => (
-                <MenuItem key={t.id} value={t.id}>
-                  {t.label}
-                </MenuItem>
-              ))}
-            </TextField>
-
-            <Stack direction="row" spacing={2}>
-              <TextField
                 label="Inicio"
                 type="datetime-local"
                 value={cInicio}
@@ -425,6 +537,65 @@ export default function Ocupaciones() {
                 fullWidth
               />
             </Stack>
+
+            {/* Cochera por select (solo disponibles) */}
+            <TextField
+              select
+              label="Cochera disponible"
+              value={cCocheraId}
+              onChange={(e) => setCCocheraId(e.target.value)}
+              fullWidth
+              disabled={!cInicio || !cFin || cocherasLoading}
+              helperText={
+                !cInicio || !cFin
+                  ? "Elegí Inicio y Fin para ver cocheras disponibles."
+                  : cocherasLoading
+                  ? "Cargando cocheras disponibles..."
+                  : !cocherasDisp.length
+                  ? "No hay cocheras disponibles en ese rango."
+                  : ""
+              }
+            >
+              {cocherasDisp.map((c) => (
+                <MenuItem key={c.id} value={String(c.id)}>
+                  Cochera #{c.numero}
+                </MenuItem>
+              ))}
+            </TextField>
+
+            {/* Cliente por búsqueda */}
+            <Autocomplete
+              options={clienteOptions}
+              value={clienteSel}
+              inputValue={clienteInput}
+              onInputChange={(e, v) => setClienteInput(v)}
+              onChange={(e, v) => setClienteSel(v)}
+              loading={clienteLoading}
+              getOptionLabel={(opt) => (opt ? `${opt.nombreCompleto} · CI: ${opt.documento}` : "")}
+              isOptionEqualToValue={(opt, val) => opt?.id === val?.id}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Cliente (nombre o CI)"
+                  placeholder="Escribí las primeras letras..."
+                  fullWidth
+                />
+              )}
+            />
+
+            <TextField
+              select
+              label="Tipo"
+              value={cTipo}
+              onChange={(e) => setCTipo(Number(e.target.value))}
+              fullWidth
+            >
+              {TIPOS.map((t) => (
+                <MenuItem key={t.id} value={t.id}>
+                  {t.label}
+                </MenuItem>
+              ))}
+            </TextField>
 
             <Divider />
 
@@ -445,6 +616,7 @@ export default function Ocupaciones() {
                   onChange={(e) => setPrecioExcep(e.target.value)}
                   fullWidth
                 />
+
                 <TextField
                   label="Motivo tarifa excepcional"
                   value={motivoExcep}
@@ -453,6 +625,10 @@ export default function Ocupaciones() {
                 />
               </>
             )}
+
+            <Typography variant="body2" color="text.secondary">
+              Tip: primero poné Inicio/Fin y el sistema te muestra solo cocheras disponibles.
+            </Typography>
           </Stack>
         </DialogContent>
         <DialogActions>

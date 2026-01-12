@@ -1,13 +1,7 @@
 import axios from "axios";
 
+const baseURL = import.meta.env.VITE_API_BASE_URL;
 
-export const http = axios.create({
-  baseURL: "https://localhost:7076/api", // o el puerto real de tu API
-});
+console.log("VITE_API_BASE_URL =", baseURL);
 
-// si después usás JWT:
-http.interceptors.request.use((config) => {
-  const token = localStorage.getItem("token");
-  if (token) config.headers.Authorization = `Bearer ${token}`;
-  return config;
-});
+export const http = axios.create({ baseURL });

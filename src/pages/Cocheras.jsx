@@ -17,31 +17,42 @@ import {
   Typography,
 } from "@mui/material";
 
-
+// =========================
+// Estados cocheras (FRONT)
+// 1 Disponible
+// 2 Bloqueada
+// 3 Ocupada
+// 4 Reservada (nuevo)
+// =========================
+const ESTADO_COCHERA = {
+  1: { label: "Disponible", color: "success" },
+  2: { label: "Bloqueada", color: "error" },
+  3: { label: "Ocupada", color: "warning" },
+  4: { label: "Reservada", color: "info" },
+};
 
 function estadoChip(estado) {
-  // normalizamos a número 1/2/3
+  // normalizamos estado a número
   let n = null;
 
-  if (typeof estado === "number") n = estado;
-  else {
-    const s = String(estado).toUpperCase();
+  if (typeof estado === "number") {
+    n = estado;
+  } else {
+    const s = String(estado).trim().toUpperCase();
+
+    // por si el backend algún día devuelve strings
     if (s === "DISPONIBLE") n = 1;
-    else if (s === "OCUPADA") n = 2;
-    else if (s === "BLOQUEADA") n = 3;
-    else if (s === "1" || s === "2" || s === "3") n = Number(s);
+    else if (s === "BLOQUEADA") n = 2;
+    else if (s === "OCUPADA") n = 3;
+    else if (s === "RESERVADA") n = 4;
+    else if (["1", "2", "3", "4"].includes(s)) n = Number(s);
   }
 
-  if (n === 1) return { label: "Disponible", color: "success" };
-  if (n === 2) return { label: "Ocupada", color: "warning" };
-  if (n === 3) return { label: "Bloqueada", color: "error" };
-  return { label: String(estado), color: "default" };
+  return ESTADO_COCHERA[n] ?? { label: String(estado), color: "default" };
 }
-
 
 function formatDateTime(dt) {
   if (!dt) return "";
-  // se ve bien para Uruguay y funciona igual en tu PC:
   return new Date(dt).toLocaleString();
 }
 
@@ -86,7 +97,7 @@ export default function Cocheras() {
     try {
       setLoading(true);
       const res = await http.get("/Cochera");
-      setItems(res.data);
+      setItems(Array.isArray(res.data) ? res.data : []);
     } catch (e) {
       console.error(e);
       toast.error("No pude cargar cocheras");
@@ -99,7 +110,7 @@ export default function Cocheras() {
     try {
       const res = await http.get(`/Cochera/${cocheraId}`);
       setDetalle(res.data);
-      setNota(res.data.nota ?? "");
+      setNota(res.data?.nota ?? "");
       setOpen(true);
     } catch (e) {
       console.error(e);
@@ -158,6 +169,17 @@ export default function Cocheras() {
             const chip = estadoChip(c.estado);
             const ocupa = c.ocupacionActiva;
 
+            const borderColor =
+              chip.color === "success"
+                ? "success.light"
+                : chip.color === "warning"
+                ? "warning.light"
+                : chip.color === "error"
+                ? "error.light"
+                : chip.color === "info"
+                ? "info.light"
+                : "divider";
+
             return (
               <Grid key={c.id} item xs={6} sm={4} md={3} lg={2}>
                 <Card
@@ -166,14 +188,7 @@ export default function Cocheras() {
                     cursor: "pointer",
                     height: "100%",
                     borderWidth: 2,
-                    borderColor:
-                      chip.color === "success"
-                        ? "success.light"
-                        : chip.color === "warning"
-                        ? "warning.light"
-                        : chip.color === "error"
-                        ? "error.light"
-                        : "divider",
+                    borderColor,
                   }}
                   onClick={() => abrirDetalle(c.id)}
                 >
@@ -183,7 +198,6 @@ export default function Cocheras() {
                         #{c.numero}
                       </Typography>
                       <Chip size="small" label={chip.label} color={chip.color} variant="filled" />
-
                     </Stack>
 
                     {ocupa ? (
@@ -191,12 +205,19 @@ export default function Cocheras() {
                         <Typography variant="body2" sx={{ fontWeight: 600 }}>
                           {ocupa.clienteNombre}
                         </Typography>
+
+                        {/* Si estás en OCUPADA: sentido mostrar vencimiento */}
+                        {/* Si estás en RESERVADA: podés querer mostrar "empieza en..." (depende de tu DTO) */}
                         <Typography variant="caption" color="text.secondary">
                           {diffHuman(ocupa.fin)}
                         </Typography>
                       </Box>
                     ) : (
-                      <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: "block" }}>
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        sx={{ mt: 1, display: "block" }}
+                      >
                         —
                       </Typography>
                     )}
@@ -216,14 +237,15 @@ export default function Cocheras() {
             <div>Cargando detalle...</div>
           ) : (
             <Stack spacing={2}>
-              <Stack direction="row" justifyContent="space-between" alignItems="center">
-                <Typography variant="h6">Cochera #{detalle.numero}</Typography>
-                <Chip
-                  size="small"
-                  label={estadoChip(detalle.estado).label}
-                  color={estadoChip(detalle.estado).color}
-                />
-              </Stack>
+              {(() => {
+                const chip = estadoChip(detalle.estado);
+                return (
+                  <Stack direction="row" justifyContent="space-between" alignItems="center">
+                    <Typography variant="h6">Cochera #{detalle.numero}</Typography>
+                    <Chip size="small" label={chip.label} color={chip.color} />
+                  </Stack>
+                );
+              })()}
 
               <TextField
                 label="Nota (ej: en reparación)"
@@ -237,7 +259,7 @@ export default function Cocheras() {
                   variant="contained"
                   color="error"
                   disabled={saving}
-                  onClick={() => setEstado(detalle.id, 3, nota)} // BLOQUEADA
+                  onClick={() => setEstado(detalle.id, 2, nota)} // BLOQUEADA = 2
                 >
                   Bloquear
                 </Button>
@@ -246,7 +268,7 @@ export default function Cocheras() {
                   variant="contained"
                   color="success"
                   disabled={saving}
-                  onClick={() => setEstado(detalle.id, 1, nota)} // DISPONIBLE
+                  onClick={() => setEstado(detalle.id, 1, nota)} // DISPONIBLE = 1
                 >
                   Desbloquear
                 </Button>
@@ -285,55 +307,47 @@ export default function Cocheras() {
                 </Typography>
 
                 {detalle.historial?.length ? (
-                <Stack spacing={1}>
-                  {detalle.historial.map((h) => {
-                    const chipH = estadoChip(h.estado);
+                  <Stack spacing={1}>
+                    {detalle.historial.map((h) => {
+                      const chipH = estadoChip(h.estado);
 
-                    const borderColor =
-                      chipH.color === "success"
-                        ? "success.main"
-                        : chipH.color === "warning"
-                        ? "warning.main"
-                        : chipH.color === "error"
-                        ? "error.main"
-                        : "divider";
+                      const borderColor =
+                        chipH.color === "success"
+                          ? "success.main"
+                          : chipH.color === "warning"
+                          ? "warning.main"
+                          : chipH.color === "error"
+                          ? "error.main"
+                          : chipH.color === "info"
+                          ? "info.main"
+                          : "divider";
 
-                    return (
-                      <Card
-                        key={h.id}
-                        variant="outlined"
-                        sx={{ borderWidth: 2, borderColor }}
-                      >
-                        <CardContent sx={{ py: 1.2 }}>
-                          <Stack direction="row" justifyContent="space-between" alignItems="center">
-                            <Typography fontWeight={700}>
-                              #{h.id} · {h.clienteNombre}
+                      return (
+                        <Card key={h.id} variant="outlined" sx={{ borderWidth: 2, borderColor }}>
+                          <CardContent sx={{ py: 1.2 }}>
+                            <Stack direction="row" justifyContent="space-between" alignItems="center">
+                              <Typography fontWeight={700}>
+                                #{h.id} · {h.clienteNombre}
+                              </Typography>
+
+                              <Chip size="small" label={chipH.label} color={chipH.color} variant="filled" />
+                            </Stack>
+
+                            <Typography variant="caption" color="text.secondary">
+                              {formatDateTime(h.inicio)} → {formatDateTime(h.fin)}
                             </Typography>
 
-                            <Chip
-                              size="small"
-                              label={chipH.label}
-                              color={chipH.color}
-                              variant="filled"
-                            />
-                          </Stack>
-
-                          <Typography variant="caption" color="text.secondary">
-                            {formatDateTime(h.inicio)} → {formatDateTime(h.fin)}
-                          </Typography>
-
-                          <Typography variant="body2">Total: ${h.precioTotal}</Typography>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </Stack>
-              ) : (
-                <Typography variant="body2" color="text.secondary">
-                  Sin historial.
-                </Typography>
-              )}
-
+                            <Typography variant="body2">Total: ${h.precioTotal}</Typography>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </Stack>
+                ) : (
+                  <Typography variant="body2" color="text.secondary">
+                    Sin historial.
+                  </Typography>
+                )}
               </Box>
             </Stack>
           )}
