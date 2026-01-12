@@ -19,8 +19,7 @@ import {
   Typography,
 } from "@mui/material";
 
-// Basado en tu C#:
-// EstadoOcupacion { ACTIVA=1, VENCIDA=2, CANCELADA=3 }
+// enums C# (numéricos)
 const ESTADOS = [
   { id: "", label: "Todos" },
   { id: 1, label: "ACTIVA" },
@@ -28,7 +27,6 @@ const ESTADOS = [
   { id: 3, label: "CANCELADA" },
 ];
 
-// TipoOcupacion { HORA=1, DIA=2, MES=3 }
 const TIPOS = [
   { id: 1, label: "HORA" },
   { id: 2, label: "DIA" },
@@ -36,10 +34,11 @@ const TIPOS = [
 ];
 
 function money(n) {
+  const x = Number(n ?? 0);
   try {
-    return new Intl.NumberFormat("es-UY", { style: "currency", currency: "UYU" }).format(n ?? 0);
+    return new Intl.NumberFormat("es-UY", { style: "currency", currency: "UYU" }).format(x);
   } catch {
-    return `$ ${n}`;
+    return `$ ${x}`;
   }
 }
 
@@ -50,10 +49,18 @@ function fmtDate(dt) {
   return d.toLocaleString();
 }
 
+function estadoLabel(v) {
+  const n = typeof v === "number" ? v : Number(v);
+  return ESTADOS.find((x) => x.id !== "" && Number(x.id) === n)?.label ?? String(v);
+}
+
+function tipoLabel(v) {
+  const n = typeof v === "number" ? v : Number(v);
+  return TIPOS.find((x) => x.id === n)?.label ?? String(v);
+}
+
 function EstadoChip({ estado }) {
-  const estNum = typeof estado === "number" ? estado : Number(estado);
-  const label =
-    ESTADOS.find((x) => x.id !== "" && Number(x.id) === estNum)?.label ?? String(estado);
+  const label = estadoLabel(estado);
   return <Chip size="small" label={label} variant="outlined" />;
 }
 
@@ -76,8 +83,7 @@ export default function Ocupaciones() {
   const [openCrear, setOpenCrear] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  // form crear
-  const [cCocheraId, setCCocheraId] = useState(""); // seleccionado desde cocheras disponibles (id)
+  const [cCocheraId, setCCocheraId] = useState("");
   const [cTipo, setCTipo] = useState(TIPOS[0].id);
   const [cInicio, setCInicio] = useState("");
   const [cFin, setCFin] = useState("");
@@ -86,17 +92,12 @@ export default function Ocupaciones() {
   const [precioExcep, setPrecioExcep] = useState("");
   const [motivoExcep, setMotivoExcep] = useState("");
 
-  // CLIENTE: Autocomplete server-side
+  // cliente autocomplete
   const [clienteSel, setClienteSel] = useState(null);
   const [clienteInput, setClienteInput] = useState("");
   const [clienteOptions, setClienteOptions] = useState([]);
   const [clienteLoading, setClienteLoading] = useState(false);
   const clienteTimerRef = useRef(null);
-
-  // COCHERAS DISPONIBLES para el rango inicio/fin
-  const [cocherasDisp, setCocherasDisp] = useState([]);
-  const [cocherasLoading, setCocherasLoading] = useState(false);
-  const cocheraTimerRef = useRef(null);
 
   // dialog cancelar
   const [openCancelar, setOpenCancelar] = useState(false);
@@ -106,18 +107,9 @@ export default function Ocupaciones() {
 
   const resumen = useMemo(() => {
     const total = items.length;
-    const vencen = items.filter((x) => {
-      const v = x?.estadoCalculado;
-      if (typeof v === "string") return v.includes("VENC");
-      return Number(v) === 2; // VENCIDA = 2
-    }).length;
-    return { total, vencen };
+    const vencidas = items.filter((x) => Number(x.estadoCalculado ?? x.estado) === 2).length;
+    return { total, vencidas };
   }, [items]);
-
-  function tipoLabel(tipoVal) {
-    const n = typeof tipoVal === "number" ? tipoVal : Number(tipoVal);
-    return TIPOS.find((t) => t.id === n)?.label ?? String(tipoVal);
-  }
 
   async function cargar() {
     const myReqId = ++reqIdRef.current;
@@ -129,63 +121,30 @@ export default function Ocupaciones() {
       if (estado !== "") params.set("estado", String(estado));
       if (cocheraId.trim()) params.set("cocheraId", cocheraId.trim());
       if (clienteId.trim()) params.set("clienteId", clienteId.trim());
-
       if (desde) params.set("desde", new Date(desde).toISOString());
       if (hasta) params.set("hasta", new Date(hasta).toISOString());
-
       if (venceEnDias.trim()) params.set("venceEnDias", venceEnDias.trim());
       params.set("take", String(take || 200));
 
       const res = await http.get(`/Ocupacion?${params.toString()}`);
+
       if (myReqId !== reqIdRef.current) return;
 
-      setItems(Array.isArray(res.data) ? res.data : []);
+      const data = res.data;
+      const arr = Array.isArray(data) ? data : (data?.items ?? []);
+      setItems(arr);
+
+      // DEBUG útil (si querés dejarlo unos minutos)
+      console.log("OCUPACIONES:", arr.length, arr[0]);
     } catch (e) {
       console.error(e);
       toast.error(e?.response?.data?.error || "No pude cargar ocupaciones");
+      setItems([]);
     } finally {
       if (myReqId === reqIdRef.current) setLoading(false);
     }
   }
 
-  // =========================
-  // Cocheras disponibles para el rango (server-side)
-  // GET /api/Cochera/disponibles?desde=...&hasta=...
-  // =========================
-  async function cargarCocherasDisponibles(inicioLocal, finLocal) {
-    if (!inicioLocal || !finLocal) {
-      setCocherasDisp([]);
-      return;
-    }
-
-    const desdeIso = new Date(inicioLocal).toISOString();
-    const hastaIso = new Date(finLocal).toISOString();
-
-    if (new Date(hastaIso) <= new Date(desdeIso)) {
-      setCocherasDisp([]);
-      return;
-    }
-
-    try {
-      setCocherasLoading(true);
-      const res = await http.get(
-        `/Cochera/disponibles?desde=${encodeURIComponent(desdeIso)}&hasta=${encodeURIComponent(
-          hastaIso
-        )}`
-      );
-      setCocherasDisp(Array.isArray(res.data) ? res.data : []);
-    } catch (e) {
-      console.error(e);
-      toast.error(e?.response?.data?.error || "No pude cargar cocheras disponibles");
-      setCocherasDisp([]);
-    } finally {
-      setCocherasLoading(false);
-    }
-  }
-
-  // =========================
-  // Buscar clientes (server-side) con debounce
-  // =========================
   async function buscarClientes(term) {
     const q = (term || "").trim();
     if (!q) {
@@ -198,10 +157,9 @@ export default function Ocupaciones() {
       const res = await http.get(
         `/Cliente?q=${encodeURIComponent(q)}&activos=true&page=1&pageSize=20`
       );
-
-      const data = res.data ?? {};
-      const it = Array.isArray(data.items) ? data.items : [];
-      setClienteOptions(it);
+      const data = res.data;
+      const arr = Array.isArray(data) ? data : (data?.items ?? []);
+      setClienteOptions(arr);
     } catch (e) {
       console.error(e);
       toast.error(e?.response?.data?.error || "No pude buscar clientes");
@@ -228,65 +186,35 @@ export default function Ocupaciones() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clienteInput]);
 
-  // debounce para cocheras disponibles cuando cambia inicio/fin
-  useEffect(() => {
-    if (cocheraTimerRef.current) clearTimeout(cocheraTimerRef.current);
-
-    cocheraTimerRef.current = setTimeout(() => {
-      cargarCocherasDisponibles(cInicio, cFin);
-    }, 300);
-
-    return () => {
-      if (cocheraTimerRef.current) clearTimeout(cocheraTimerRef.current);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cInicio, cFin]);
-
-  // si cambian las disponibles, y la seleccion ya no existe, limpiamos
-  useEffect(() => {
-    if (!cCocheraId) return;
-    const existe = cocherasDisp.some((x) => String(x.id) === String(cCocheraId));
-    if (!existe) setCCocheraId("");
-  }, [cocherasDisp, cCocheraId]);
-
   function abrirCrear() {
     setCCocheraId("");
     setCTipo(TIPOS[0].id);
     setCInicio("");
     setCFin("");
-
     setUsarExcep(false);
     setPrecioExcep("");
     setMotivoExcep("");
-
-    // cliente autocomplete reset
     setClienteSel(null);
     setClienteInput("");
     setClienteOptions([]);
-
-    // cocheras disponibles reset
-    setCocherasDisp([]);
-
     setOpenCrear(true);
   }
 
   async function crear() {
     const coch = Number(cCocheraId);
-
-    if (!coch) return toast.error("Elegí una cochera disponible");
+    if (!coch) return toast.error("Falta CocheraId");
     if (!clienteSel?.id) return toast.error("Elegí un cliente");
     if (!cInicio) return toast.error("Falta Inicio");
     if (!cFin) return toast.error("Falta Fin");
 
     const inicioIso = new Date(cInicio).toISOString();
     const finIso = new Date(cFin).toISOString();
-
     if (new Date(finIso) <= new Date(inicioIso)) return toast.error("Fin debe ser mayor que Inicio");
 
     let payload = {
       cocheraId: coch,
       clienteId: clienteSel.id,
-      tipo: cTipo,
+      tipo: Number(cTipo),
       inicio: inicioIso,
       fin: finIso,
       usarTarifaExcepcional: usarExcep,
@@ -366,7 +294,6 @@ export default function Ocupaciones() {
         </Button>
       </Stack>
 
-      {/* Filtros */}
       <Card variant="outlined" sx={{ mb: 2 }}>
         <CardContent>
           <Typography fontWeight={800} sx={{ mb: 1 }}>
@@ -448,14 +375,13 @@ export default function Ocupaciones() {
         </CardContent>
       </Card>
 
-      {/* Lista */}
       {loading ? (
         <div>Cargando...</div>
       ) : (
         <Stack spacing={1.2}>
           <Typography variant="body2" color="text.secondary">
             Resultados: {resumen.total}
-            {resumen.vencen ? ` · Vencidas: ${resumen.vencen}` : ""}
+            {resumen.vencidas ? ` · Vencidas: ${resumen.vencidas}` : ""}
           </Typography>
 
           {items.map((o) => (
@@ -483,20 +409,16 @@ export default function Ocupaciones() {
                     </Typography>
 
                     <Typography variant="body2">
-                      Total: <b>{money(o.precioTotal)}</b> · Pagado: <b>{money(o.pagado)}</b> ·
-                      Saldo: <b>{money(o.saldo)}</b>
+                      Total: <b>{money(o.precioTotal)}</b> · Pagado: <b>{money(o.pagado)}</b> · Saldo:{" "}
+                      <b>{money(o.saldo)}</b>
                     </Typography>
                   </Stack>
 
                   <Stack direction="row" spacing={1}>
-                    <Button
-                      variant="outlined"
-                      onClick={() => toast(`Ocupación #${o.id} (detalle pendiente)`)}
-                    >
+                    <Button variant="outlined" onClick={() => toast(`Ocupación #${o.id}`)}>
                       Ver
                     </Button>
 
-                    {/* cancelar solo si está ACTIVA en DB: ACTIVA=1 */}
                     {Number(o.estado) === 1 ? (
                       <Button color="error" variant="contained" onClick={() => abrirCancelar(o.id)}>
                         Cancelar
@@ -519,51 +441,13 @@ export default function Ocupaciones() {
         <DialogTitle>Nueva ocupación</DialogTitle>
         <DialogContent dividers>
           <Stack spacing={2}>
-            <Stack direction="row" spacing={2}>
-              <TextField
-                label="Inicio"
-                type="datetime-local"
-                value={cInicio}
-                onChange={(e) => setCInicio(e.target.value)}
-                InputLabelProps={{ shrink: true }}
-                fullWidth
-              />
-              <TextField
-                label="Fin"
-                type="datetime-local"
-                value={cFin}
-                onChange={(e) => setCFin(e.target.value)}
-                InputLabelProps={{ shrink: true }}
-                fullWidth
-              />
-            </Stack>
-
-            {/* Cochera por select (solo disponibles) */}
             <TextField
-              select
-              label="Cochera disponible"
+              label="CocheraId"
               value={cCocheraId}
               onChange={(e) => setCCocheraId(e.target.value)}
               fullWidth
-              disabled={!cInicio || !cFin || cocherasLoading}
-              helperText={
-                !cInicio || !cFin
-                  ? "Elegí Inicio y Fin para ver cocheras disponibles."
-                  : cocherasLoading
-                  ? "Cargando cocheras disponibles..."
-                  : !cocherasDisp.length
-                  ? "No hay cocheras disponibles en ese rango."
-                  : ""
-              }
-            >
-              {cocherasDisp.map((c) => (
-                <MenuItem key={c.id} value={String(c.id)}>
-                  Cochera #{c.numero}
-                </MenuItem>
-              ))}
-            </TextField>
+            />
 
-            {/* Cliente por búsqueda */}
             <Autocomplete
               options={clienteOptions}
               value={clienteSel}
@@ -571,7 +455,9 @@ export default function Ocupaciones() {
               onInputChange={(e, v) => setClienteInput(v)}
               onChange={(e, v) => setClienteSel(v)}
               loading={clienteLoading}
-              getOptionLabel={(opt) => (opt ? `${opt.nombreCompleto} · CI: ${opt.documento}` : "")}
+              getOptionLabel={(opt) =>
+                opt ? `${opt.nombreCompleto ?? opt.nombre ?? ""} · CI: ${opt.documento ?? ""}` : ""
+              }
               isOptionEqualToValue={(opt, val) => opt?.id === val?.id}
               renderInput={(params) => (
                 <TextField
@@ -597,6 +483,25 @@ export default function Ocupaciones() {
               ))}
             </TextField>
 
+            <Stack direction="row" spacing={2}>
+              <TextField
+                label="Inicio"
+                type="datetime-local"
+                value={cInicio}
+                onChange={(e) => setCInicio(e.target.value)}
+                InputLabelProps={{ shrink: true }}
+                fullWidth
+              />
+              <TextField
+                label="Fin"
+                type="datetime-local"
+                value={cFin}
+                onChange={(e) => setCFin(e.target.value)}
+                InputLabelProps={{ shrink: true }}
+                fullWidth
+              />
+            </Stack>
+
             <Divider />
 
             <Stack direction="row" spacing={2} alignItems="center" sx={{ flexWrap: "wrap" }}>
@@ -616,7 +521,6 @@ export default function Ocupaciones() {
                   onChange={(e) => setPrecioExcep(e.target.value)}
                   fullWidth
                 />
-
                 <TextField
                   label="Motivo tarifa excepcional"
                   value={motivoExcep}
@@ -625,10 +529,6 @@ export default function Ocupaciones() {
                 />
               </>
             )}
-
-            <Typography variant="body2" color="text.secondary">
-              Tip: primero poné Inicio/Fin y el sistema te muestra solo cocheras disponibles.
-            </Typography>
           </Stack>
         </DialogContent>
         <DialogActions>
