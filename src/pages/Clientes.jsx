@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { http } from "../api/http";
 import toast from "react-hot-toast";
 import {
@@ -15,8 +15,6 @@ import {
   Stack,
   TextField,
   Typography,
-  Switch,
-  FormControlLabel,
 } from "@mui/material";
 
 function ActivoChip({ activo }) {
@@ -34,16 +32,18 @@ export default function Clientes() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // filtros
+  // filtro
   const [q, setQ] = useState("");
-  const [verInactivos, setVerInactivos] = useState(false);
 
   // paginación real
   const [page, setPage] = useState(1); // 1-based
   const [pageSize, setPageSize] = useState(10);
   const [total, setTotal] = useState(0);
 
-  const totalPages = useMemo(() => Math.max(1, Math.ceil(total / pageSize)), [total, pageSize]);
+  const totalPages = useMemo(
+    () => Math.max(1, Math.ceil(total / pageSize)),
+    [total, pageSize]
+  );
 
   // dialog create/edit
   const [open, setOpen] = useState(false);
@@ -55,6 +55,9 @@ export default function Clientes() {
   const [documento, setDocumento] = useState("");
   const [telefono, setTelefono] = useState("");
   const [email, setEmail] = useState("");
+
+  // evita “lag” por respuestas viejas (race conditions)
+  const reqIdRef = useRef(0);
 
   function resetForm() {
     setNombreCompleto("");
@@ -79,6 +82,8 @@ export default function Clientes() {
   }
 
   async function cargar(p = page) {
+    const myReqId = ++reqIdRef.current;
+
     try {
       setLoading(true);
 
@@ -89,21 +94,20 @@ export default function Clientes() {
       params.set("page", String(p));
       params.set("pageSize", String(pageSize));
 
-      // si NO quiero ver inactivos => solo activos
-      // si verInactivos === true => no mandamos activos => activos=null => trae todos
-      if (!verInactivos) params.set("activos", "true");
+      // ESTA VISTA ES SOLO ACTIVOS
+      params.set("activos", "true");
 
       const res = await http.get(`/Cliente?${params.toString()}`);
+      if (myReqId !== reqIdRef.current) return; // llegó tarde, la ignoro
 
-      // Esperamos: { page, pageSize, total, items }
       const data = res.data ?? {};
-
       setItems(Array.isArray(data.items) ? data.items : []);
       setTotal(typeof data.total === "number" ? data.total : 0);
 
-      // si la API te devuelve la página real, la tomamos (opcional)
+      // opcional: si la API te devuelve page/pageSize, los tomamos
       if (typeof data.page === "number" && data.page > 0) setPage(data.page);
-      if (typeof data.pageSize === "number" && data.pageSize > 0) setPageSize(data.pageSize);
+      if (typeof data.pageSize === "number" && data.pageSize > 0)
+        setPageSize(data.pageSize);
     } catch (e) {
       console.error(e);
       const msg =
@@ -112,20 +116,20 @@ export default function Clientes() {
         "No pude cargar clientes";
       toast.error(msg);
     } finally {
-      setLoading(false);
+      if (myReqId === reqIdRef.current) setLoading(false);
     }
   }
 
   // cuando cambian filtros o pageSize, volvemos a página 1
   useEffect(() => {
     setPage(1);
-  }, [q, verInactivos, pageSize]);
+  }, [q, pageSize]);
 
   // cuando cambia la page (o filtros/pageSize), cargamos
   useEffect(() => {
     cargar(page);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, q, verInactivos, pageSize]);
+  }, [page, q, pageSize]);
 
   async function guardar() {
     const payloadBase = {
@@ -155,8 +159,6 @@ export default function Clientes() {
       }
 
       setOpen(false);
-
-      // recargamos la misma página
       await cargar(page);
     } catch (e) {
       console.error(e);
@@ -177,7 +179,10 @@ export default function Clientes() {
     try {
       await http.patch(`/Cliente/${c.id}/desactivar`);
       toast.success("Cliente desactivado");
-      await cargar(page);
+
+      // si al desactivar te quedaste sin items en la página, bajamos una página
+      if (items.length === 1 && page > 1) setPage((p) => p - 1);
+      else await cargar(page);
     } catch (e) {
       console.error(e);
       const msg =
@@ -189,6 +194,7 @@ export default function Clientes() {
   }
 
   async function reactivar(c) {
+    // esta vista es solo activos; esto casi no se usa, pero lo dejo por si te llega alguno
     const ok = window.confirm(`¿Reactivar a "${c?.nombreCompleto}"?`);
     if (!ok) return;
 
@@ -209,7 +215,7 @@ export default function Clientes() {
   return (
     <Box>
       <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2, flexWrap: "wrap" }}>
-        <Typography variant="h5">Clientes</Typography>
+        <Typography variant="h5">Clientes (Activos)</Typography>
 
         <Button variant="contained" onClick={abrirCrear}>
           Nuevo cliente
@@ -221,17 +227,10 @@ export default function Clientes() {
 
         <TextField
           size="small"
-          label="Buscar (nombre/doc/tel/email)"
+          label="Buscar (nombre/doc/tel)"
           value={q}
           onChange={(e) => setQ(e.target.value)}
           sx={{ minWidth: 280 }}
-        />
-
-        <FormControlLabel
-          control={
-            <Switch checked={verInactivos} onChange={(e) => setVerInactivos(e.target.checked)} />
-          }
-          label="Ver inactivos"
         />
       </Stack>
 
@@ -257,7 +256,6 @@ export default function Clientes() {
             Siguiente
           </Button>
 
-          {/* opcional: pageSize rápido */}
           <TextField
             size="small"
             label="Page size"
@@ -309,7 +307,7 @@ export default function Clientes() {
           ))}
 
           {!items.length && (
-            <Typography color="text.secondary">No hay clientes para mostrar.</Typography>
+            <Typography color="text.secondary">No hay clientes activos para mostrar.</Typography>
           )}
         </Stack>
       )}
