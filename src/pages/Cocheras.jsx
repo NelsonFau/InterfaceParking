@@ -98,8 +98,8 @@ export default function Cocheras() {
       setLoading(true);
       const res = await http.get("/Cochera");
       setItems(Array.isArray(res.data) ? res.data : []);
-      console.log("RESPUESTA AXIOS =", r);
-      console.log("DATA =", r.data);
+      console.log("RESPUESTA AXIOS =", res);
+      console.log("DATA =", res.data);
     } catch (e) {
       console.error(e);
       toast.error("No pude cargar cocheras");
