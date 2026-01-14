@@ -1,7 +1,7 @@
-const baseURL = import.meta.env.VITE_API_BASE_URL;
+import axios from "axios";
 
 export const http = axios.create({
-  baseURL,
+  baseURL: import.meta.env.VITE_API_BASE_URL,
   headers: {
     "ngrok-skip-browser-warning": "true",
   },
