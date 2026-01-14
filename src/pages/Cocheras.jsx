@@ -11,18 +11,15 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
-  Grid,
   Stack,
   TextField,
   Typography,
+  Divider,
+  Skeleton,
 } from "@mui/material";
 
 // =========================
 // Estados cocheras (FRONT)
-// 1 Disponible
-// 2 Bloqueada
-// 3 Ocupada
-// 4 Reservada (nuevo)
 // =========================
 const ESTADO_COCHERA = {
   1: { label: "Disponible", color: "success" },
@@ -32,22 +29,16 @@ const ESTADO_COCHERA = {
 };
 
 function estadoChip(estado) {
-  // normalizamos estado a número
   let n = null;
-
-  if (typeof estado === "number") {
-    n = estado;
-  } else {
+  if (typeof estado === "number") n = estado;
+  else {
     const s = String(estado).trim().toUpperCase();
-
-    // por si el backend algún día devuelve strings
     if (s === "DISPONIBLE") n = 1;
     else if (s === "BLOQUEADA") n = 2;
     else if (s === "OCUPADA") n = 3;
     else if (s === "RESERVADA") n = 4;
     else if (["1", "2", "3", "4"].includes(s)) n = Number(s);
   }
-
   return ESTADO_COCHERA[n] ?? { label: String(estado), color: "default" };
 }
 
@@ -74,6 +65,102 @@ function diffHuman(fin) {
   return ms >= 0 ? `vence en ${txt}` : `venció hace ${txt}`;
 }
 
+function CocheraCard({ c, onClick }) {
+  const chip = estadoChip(c.estado);
+  const ocupa = c.ocupacionActiva;
+
+  const borderColor =
+    chip.color === "success"
+      ? "success.light"
+      : chip.color === "warning"
+      ? "warning.light"
+      : chip.color === "error"
+      ? "error.light"
+      : chip.color === "info"
+      ? "info.light"
+      : "divider";
+
+  return (
+    <Card
+      variant="outlined"
+      onClick={onClick}
+      sx={{
+        cursor: "pointer",
+        borderRadius: 3,
+        borderWidth: 2,
+        borderColor,
+        height: 150, // ✅ altura fija
+        display: "flex",
+        boxShadow: "0 6px 18px rgba(0,0,0,.06)",
+        transition: "transform .08s ease, box-shadow .08s ease",
+        "&:active": { transform: "scale(0.99)" },
+        "&:hover": { boxShadow: "0 10px 22px rgba(0,0,0,.08)" },
+        overflow: "hidden",
+      }}
+    >
+      <CardContent
+        sx={{
+          p: 1.75,
+          width: "100%",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "space-between",
+          gap: 1,
+          "&:last-child": { pb: 1.75 },
+        }}
+      >
+        {/* Header */}
+        <Stack direction="row" justifyContent="space-between" alignItems="center" gap={1}>
+          <Typography variant="subtitle1" sx={{ fontWeight: 900, letterSpacing: -0.2 }}>
+            #{c.numero}
+          </Typography>
+
+          <Chip
+            size="small"
+            label={chip.label}
+            color={chip.color}
+            variant="filled"
+            sx={{ fontWeight: 700 }}
+          />
+        </Stack>
+
+        {/* Body */}
+        {ocupa ? (
+          <Box sx={{ minWidth: 0 }}>
+            <Typography
+              variant="body1"
+              sx={{ fontWeight: 800, lineHeight: 1.15 }}
+              noWrap
+              title={ocupa.clienteNombre}
+            >
+              {ocupa.clienteNombre}
+            </Typography>
+
+            <Typography variant="body2" sx={{ color: "text.secondary" }} noWrap>
+              {chip.label === "Ocupada" || chip.label === "Reservada"
+                ? diffHuman(ocupa.fin)
+                : ""}
+            </Typography>
+          </Box>
+        ) : (
+          <Typography
+            variant="body2"
+            sx={{ color: "text.secondary" }}
+            noWrap
+          >
+            —
+          </Typography>
+        )}
+
+        {/* Footer */}
+        <Typography variant="caption" sx={{ color: "text.secondary" }} noWrap>
+          {ocupa?.fin ? `Fin: ${new Date(ocupa.fin).toLocaleDateString()}` : " "}
+        </Typography>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function Cocheras() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -84,7 +171,7 @@ export default function Cocheras() {
   const [nota, setNota] = useState("");
   const [saving, setSaving] = useState(false);
 
-  // filtro rápido (opcional)
+  // filtro
   const [q, setQ] = useState("");
 
   const filtered = useMemo(() => {
@@ -98,8 +185,6 @@ export default function Cocheras() {
       setLoading(true);
       const res = await http.get("/Cochera");
       setItems(Array.isArray(res.data) ? res.data : []);
-      console.log("RESPUESTA AXIOS =", res);
-      console.log("DATA =", res.data);
     } catch (e) {
       console.error(e);
       toast.error("No pude cargar cocheras");
@@ -147,10 +232,30 @@ export default function Cocheras() {
   }, []);
 
   return (
-    <Box>
-      <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
-        <Typography variant="h5">Cocheras</Typography>
-        <Button variant="outlined" onClick={cargar} disabled={loading}>
+    <Box sx={{ maxWidth: 1100, mx: "auto", px: { xs: 2, sm: 3 }, py: 2 }}>
+      {/* Header */}
+      <Stack spacing={0.5} sx={{ mb: 2 }}>
+        <Typography variant="h5" sx={{ fontWeight: 900, letterSpacing: -0.3 }}>
+          Cocheras
+        </Typography>
+        <Typography variant="body2" sx={{ color: "text.secondary" }}>
+          Visualización rápida del estado de cada cochera.
+        </Typography>
+      </Stack>
+
+      {/* Actions */}
+      <Stack
+        direction={{ xs: "column", sm: "row" }}
+        spacing={1.25}
+        alignItems={{ xs: "stretch", sm: "center" }}
+        sx={{ mb: 2 }}
+      >
+        <Button
+          variant="contained"
+          onClick={cargar}
+          disabled={loading}
+          sx={{ borderRadius: 2, fontWeight: 800 }}
+        >
           Refrescar
         </Button>
 
@@ -159,79 +264,50 @@ export default function Cocheras() {
           label="Buscar por número"
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          sx={{ width: 220 }}
+          sx={{ width: { xs: "100%", sm: 260 } }}
         />
       </Stack>
 
+      <Divider sx={{ mb: 2 }} />
+
+      {/* Grid */}
       {loading ? (
-        <div>Cargando...</div>
+        <Box
+          sx={{
+            display: "grid",
+            gap: 2,
+            gridTemplateColumns: {
+              xs: "repeat(2, 1fr)",
+              sm: "repeat(3, 1fr)",
+              md: "repeat(4, 1fr)",
+              lg: "repeat(6, 1fr)",
+            },
+          }}
+        >
+          {Array.from({ length: 12 }).map((_, i) => (
+            <Skeleton key={i} variant="rounded" height={150} />
+          ))}
+        </Box>
       ) : (
-        <Grid container spacing={1.5}>
-          {filtered.map((c) => {
-            const chip = estadoChip(c.estado);
-            const ocupa = c.ocupacionActiva;
-
-            const borderColor =
-              chip.color === "success"
-                ? "success.light"
-                : chip.color === "warning"
-                ? "warning.light"
-                : chip.color === "error"
-                ? "error.light"
-                : chip.color === "info"
-                ? "info.light"
-                : "divider";
-
-            return (
-              <Grid key={c.id} item xs={6} sm={4} md={3} lg={2}>
-                <Card
-                  variant="outlined"
-                  sx={{
-                    cursor: "pointer",
-                    height: "100%",
-                    borderWidth: 2,
-                    borderColor,
-                  }}
-                  onClick={() => abrirDetalle(c.id)}
-                >
-                  <CardContent sx={{ p: 1.5 }}>
-                    <Stack direction="row" justifyContent="space-between" alignItems="center">
-                      <Typography variant="subtitle1" fontWeight={700}>
-                        #{c.numero}
-                      </Typography>
-                      <Chip size="small" label={chip.label} color={chip.color} variant="filled" />
-                    </Stack>
-
-                    {ocupa ? (
-                      <Box sx={{ mt: 1 }}>
-                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                          {ocupa.clienteNombre}
-                        </Typography>
-
-                        {/* Si estás en OCUPADA: sentido mostrar vencimiento */}
-                        {/* Si estás en RESERVADA: podés querer mostrar "empieza en..." (depende de tu DTO) */}
-                        <Typography variant="caption" color="text.secondary">
-                          {diffHuman(ocupa.fin)}
-                        </Typography>
-                      </Box>
-                    ) : (
-                      <Typography
-                        variant="caption"
-                        color="text.secondary"
-                        sx={{ mt: 1, display: "block" }}
-                      >
-                        —
-                      </Typography>
-                    )}
-                  </CardContent>
-                </Card>
-              </Grid>
-            );
-          })}
-        </Grid>
+        <Box
+          sx={{
+            display: "grid",
+            gap: 2,
+            gridTemplateColumns: {
+              xs: "repeat(2, 1fr)",
+              sm: "repeat(3, 1fr)",
+              md: "repeat(4, 1fr)",
+              lg: "repeat(6, 1fr)",
+            },
+          }}
+        >
+          {filtered.map((c) => (
+            <CocheraCard key={c.id} c={c} onClick={() => abrirDetalle(c.id)} />
+          ))}
+        </Box>
       )}
 
-      {/* Dialog detalle */}
+      {/* Dialog detalle (tuyo, casi igual) */}
       <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth="md">
         <DialogTitle>Detalle cochera</DialogTitle>
         <DialogContent dividers>
@@ -261,7 +337,7 @@ export default function Cocheras() {
                   variant="contained"
                   color="error"
                   disabled={saving}
-                  onClick={() => setEstado(detalle.id, 2, nota)} // BLOQUEADA = 2
+                  onClick={() => setEstado(detalle.id, 2, nota)}
                 >
                   Bloquear
                 </Button>
@@ -270,7 +346,7 @@ export default function Cocheras() {
                   variant="contained"
                   color="success"
                   disabled={saving}
-                  onClick={() => setEstado(detalle.id, 1, nota)} // DISPONIBLE = 1
+                  onClick={() => setEstado(detalle.id, 1, nota)}
                 >
                   Desbloquear
                 </Button>
@@ -282,9 +358,11 @@ export default function Cocheras() {
                 </Typography>
 
                 {detalle.ocupacionActiva ? (
-                  <Card variant="outlined">
+                  <Card variant="outlined" sx={{ borderRadius: 3 }}>
                     <CardContent>
-                      <Typography fontWeight={700}>{detalle.ocupacionActiva.clienteNombre}</Typography>
+                      <Typography fontWeight={900}>
+                        {detalle.ocupacionActiva.clienteNombre}
+                      </Typography>
                       <Typography variant="body2" color="text.secondary">
                         Inicio: {formatDateTime(detalle.ocupacionActiva.inicio)}
                       </Typography>
@@ -325,17 +403,17 @@ export default function Cocheras() {
                           : "divider";
 
                       return (
-                        <Card key={h.id} variant="outlined" sx={{ borderWidth: 2, borderColor }}>
+                        <Card key={h.id} variant="outlined" sx={{ borderWidth: 2, borderColor, borderRadius: 3 }}>
                           <CardContent sx={{ py: 1.2 }}>
-                            <Stack direction="row" justifyContent="space-between" alignItems="center">
-                              <Typography fontWeight={700}>
+                            <Stack direction="row" justifyContent="space-between" alignItems="center" gap={1}>
+                              <Typography fontWeight={800} noWrap title={`${h.id} · ${h.clienteNombre}`} sx={{ minWidth: 0 }}>
                                 #{h.id} · {h.clienteNombre}
                               </Typography>
 
                               <Chip size="small" label={chipH.label} color={chipH.color} variant="filled" />
                             </Stack>
 
-                            <Typography variant="caption" color="text.secondary">
+                            <Typography variant="caption" color="text.secondary" noWrap>
                               {formatDateTime(h.inicio)} → {formatDateTime(h.fin)}
                             </Typography>
 
