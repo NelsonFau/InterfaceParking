@@ -1,23 +1,16 @@
 import axios from "axios";
 
-const baseURL = import.meta.env.VITE_API_BASE_URL; // ej: https://xxxx.ngrok-free.dev/api
+const baseURL = import.meta.env.VITE_API_BASE_URL;
 
 export const http = axios.create({
   baseURL,
-  headers: { "Content-Type": "application/json" },
+  headers: {
+    "ngrok-skip-browser-warning": "true",
+  },
 });
 
-// ✅ agrega el token a TODAS las requests
 http.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
-
-http.interceptors.response.use(
-  (r) => r,
-  (e) => {
-    console.log("HTTP ERROR:", e?.response?.status, e?.response?.data);
-    return Promise.reject(e);
-  }
-);

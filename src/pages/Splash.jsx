@@ -10,7 +10,7 @@ export default function Splash() {
     const t = setTimeout(() => {
       const token = localStorage.getItem("token");
       nav(token ? "/dashboard" : "/login", { replace: true });
-    }, 900);
+    }, 1800);
     return () => clearTimeout(t);
   }, [nav]);
 
