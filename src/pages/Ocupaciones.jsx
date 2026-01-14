@@ -17,6 +17,7 @@ import {
   Stack,
   TextField,
   Typography,
+  Skeleton,
 } from "@mui/material";
 
 // enums C# (numéricos)
@@ -61,7 +62,17 @@ function tipoLabel(v) {
 
 function EstadoChip({ estado }) {
   const label = estadoLabel(estado);
-  return <Chip size="small" label={label} variant="outlined" />;
+  return <Chip size="small" label={label} variant="outlined" sx={{ fontWeight: 700 }} />;
+}
+
+function LoadingList() {
+  return (
+    <Stack spacing={1.25}>
+      {Array.from({ length: 6 }).map((_, i) => (
+        <Skeleton key={i} variant="rounded" height={108} />
+      ))}
+    </Stack>
+  );
 }
 
 export default function Ocupaciones() {
@@ -133,9 +144,6 @@ export default function Ocupaciones() {
       const data = res.data;
       const arr = Array.isArray(data) ? data : (data?.items ?? []);
       setItems(arr);
-
-      // DEBUG útil (si querés dejarlo unos minutos)
-      console.log("OCUPACIONES:", arr.length, arr[0]);
     } catch (e) {
       console.error(e);
       toast.error(e?.response?.data?.error || "No pude cargar ocupaciones");
@@ -281,33 +289,80 @@ export default function Ocupaciones() {
   }
 
   return (
-    <Box>
-      <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2, flexWrap: "wrap" }}>
-        <Typography variant="h5">Ocupaciones</Typography>
+    <Box sx={{ maxWidth: 1100, mx: "auto", px: { xs: 2, sm: 3 }, py: 2 }}>
+      {/* Header */}
+      <Stack spacing={0.5} sx={{ mb: 2 }}>
+        <Typography variant="h5" sx={{ fontWeight: 900, letterSpacing: -0.3 }}>
+          Ocupaciones
+        </Typography>
+        <Typography variant="body2" sx={{ color: "text.secondary" }}>
+          Control de ocupaciones, vencimientos y saldos.
+        </Typography>
+      </Stack>
 
-        <Button variant="contained" onClick={abrirCrear}>
+      {/* Actions */}
+      <Stack
+        direction={{ xs: "column", sm: "row" }}
+        spacing={1.25}
+        alignItems={{ xs: "stretch", sm: "center" }}
+        sx={{ mb: 2 }}
+      >
+        <Button variant="contained" onClick={abrirCrear} sx={{ borderRadius: 2, fontWeight: 900 }}>
           Nueva ocupación
         </Button>
 
-        <Button variant="outlined" onClick={cargar} disabled={loading}>
+        <Button
+          variant="outlined"
+          onClick={cargar}
+          disabled={loading}
+          sx={{ borderRadius: 2, fontWeight: 800 }}
+        >
           Refrescar
         </Button>
       </Stack>
 
-      <Card variant="outlined" sx={{ mb: 2 }}>
+      {/* Filtros (grid responsive) */}
+      <Card
+        variant="outlined"
+        sx={{
+          mb: 2,
+          borderRadius: 3,
+          borderColor: "divider",
+          boxShadow: "0 6px 18px rgba(0,0,0,.06)",
+        }}
+      >
         <CardContent>
-          <Typography fontWeight={800} sx={{ mb: 1 }}>
-            Filtros
-          </Typography>
+          <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
+            <Typography fontWeight={900}>Filtros</Typography>
+            <Button
+              variant="outlined"
+              onClick={cargar}
+              disabled={loading}
+              sx={{ borderRadius: 2, fontWeight: 800 }}
+            >
+              Aplicar
+            </Button>
+          </Stack>
 
-          <Stack direction="row" spacing={2} sx={{ flexWrap: "wrap" }}>
+          <Box
+            sx={{
+              display: "grid",
+              gap: 1.5,
+              gridTemplateColumns: {
+                xs: "1fr",
+                sm: "repeat(2, 1fr)",
+                md: "repeat(4, 1fr)",
+              },
+              alignItems: "start",
+            }}
+          >
             <TextField
               select
               size="small"
               label="Estado"
               value={estado}
               onChange={(e) => setEstado(e.target.value)}
-              sx={{ width: 180 }}
+              fullWidth
             >
               {ESTADOS.map((x) => (
                 <MenuItem key={String(x.id)} value={x.id}>
@@ -321,7 +376,7 @@ export default function Ocupaciones() {
               label="CocheraId"
               value={cocheraId}
               onChange={(e) => setCocheraId(e.target.value)}
-              sx={{ width: 140 }}
+              fullWidth
             />
 
             <TextField
@@ -329,7 +384,15 @@ export default function Ocupaciones() {
               label="ClienteId"
               value={clienteId}
               onChange={(e) => setClienteId(e.target.value)}
-              sx={{ width: 140 }}
+              fullWidth
+            />
+
+            <TextField
+              size="small"
+              label="Vence en días"
+              value={venceEnDias}
+              onChange={(e) => setVenceEnDias(e.target.value)}
+              fullWidth
             />
 
             <TextField
@@ -339,7 +402,7 @@ export default function Ocupaciones() {
               value={desde}
               onChange={(e) => setDesde(e.target.value)}
               InputLabelProps={{ shrink: true }}
-              sx={{ width: 220 }}
+              fullWidth
             />
 
             <TextField
@@ -349,15 +412,7 @@ export default function Ocupaciones() {
               value={hasta}
               onChange={(e) => setHasta(e.target.value)}
               InputLabelProps={{ shrink: true }}
-              sx={{ width: 220 }}
-            />
-
-            <TextField
-              size="small"
-              label="Vence en días"
-              value={venceEnDias}
-              onChange={(e) => setVenceEnDias(e.target.value)}
-              sx={{ width: 140 }}
+              fullWidth
             />
 
             <TextField
@@ -365,62 +420,88 @@ export default function Ocupaciones() {
               label="Take"
               value={take}
               onChange={(e) => setTake(Number(e.target.value) || 200)}
-              sx={{ width: 120 }}
+              fullWidth
             />
 
-            <Button variant="outlined" onClick={cargar} disabled={loading}>
-              Aplicar
-            </Button>
-          </Stack>
+            <Box sx={{ display: { xs: "none", md: "block" } }} />
+          </Box>
         </CardContent>
       </Card>
 
+      {/* Resultados */}
       {loading ? (
-        <div>Cargando...</div>
+        <LoadingList />
       ) : (
-        <Stack spacing={1.2}>
+        <Stack spacing={1.25}>
           <Typography variant="body2" color="text.secondary">
-            Resultados: {resumen.total}
+            Resultados: <b>{resumen.total}</b>
             {resumen.vencidas ? ` · Vencidas: ${resumen.vencidas}` : ""}
           </Typography>
 
           {items.map((o) => (
-            <Card key={o.id} variant="outlined">
-              <CardContent>
+            <Card
+              key={o.id}
+              variant="outlined"
+              sx={{
+                borderRadius: 3,
+                borderColor: "divider",
+                boxShadow: "0 6px 18px rgba(0,0,0,.06)",
+              }}
+            >
+              <CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
                 <Stack
-                  direction="row"
+                  direction={{ xs: "column", sm: "row" }}
+                  spacing={1.5}
+                  alignItems={{ xs: "stretch", sm: "center" }}
                   justifyContent="space-between"
-                  alignItems="center"
-                  sx={{ gap: 2, flexWrap: "wrap" }}
                 >
-                  <Stack spacing={0.5}>
-                    <Stack direction="row" spacing={1} alignItems="center">
-                      <Typography fontWeight={800}>
+                  <Box sx={{ minWidth: 0 }}>
+                    <Stack
+                      direction="row"
+                      spacing={1}
+                      alignItems="center"
+                      sx={{ flexWrap: "wrap", mb: 0.5 }}
+                    >
+                      <Typography sx={{ fontWeight: 900 }} noWrap>
                         Cochera #{o.cocheraNumero ?? o.cocheraId}
                       </Typography>
 
                       <EstadoChip estado={o.estadoCalculado ?? o.estado} />
-                      <Chip size="small" label={`Tipo: ${tipoLabel(o.tipo)}`} variant="outlined" />
+                      <Chip
+                        size="small"
+                        label={`Tipo: ${tipoLabel(o.tipo)}`}
+                        variant="outlined"
+                        sx={{ fontWeight: 700 }}
+                      />
                     </Stack>
 
-                    <Typography variant="body2" color="text.secondary">
-                      Cliente: {o.clienteNombre ?? o.clienteId} · Inicio: {fmtDate(o.inicio)} · Fin:{" "}
-                      {fmtDate(o.fin)}
+                    <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.25 }}>
+                      Cliente: <b>{o.clienteNombre ?? o.clienteId}</b> · Inicio: {fmtDate(o.inicio)} ·
+                      Fin: {fmtDate(o.fin)}
                     </Typography>
 
-                    <Typography variant="body2">
+                    <Typography variant="body2" sx={{ mt: 0.75 }}>
                       Total: <b>{money(o.precioTotal)}</b> · Pagado: <b>{money(o.pagado)}</b> · Saldo:{" "}
                       <b>{money(o.saldo)}</b>
                     </Typography>
-                  </Stack>
+                  </Box>
 
-                  <Stack direction="row" spacing={1}>
-                    <Button variant="outlined" onClick={() => toast(`Ocupación #${o.id}`)}>
+                  <Stack direction="row" spacing={1} justifyContent="flex-end">
+                    <Button
+                      variant="outlined"
+                      onClick={() => toast(`Ocupación #${o.id}`)}
+                      sx={{ borderRadius: 2, fontWeight: 800 }}
+                    >
                       Ver
                     </Button>
 
                     {Number(o.estado) === 1 ? (
-                      <Button color="error" variant="contained" onClick={() => abrirCancelar(o.id)}>
+                      <Button
+                        color="error"
+                        variant="contained"
+                        onClick={() => abrirCancelar(o.id)}
+                        sx={{ borderRadius: 2, fontWeight: 900 }}
+                      >
                         Cancelar
                       </Button>
                     ) : null}
@@ -438,15 +519,38 @@ export default function Ocupaciones() {
 
       {/* Dialog Crear */}
       <Dialog open={openCrear} onClose={() => setOpenCrear(false)} fullWidth maxWidth="sm">
-        <DialogTitle>Nueva ocupación</DialogTitle>
+        <DialogTitle sx={{ fontWeight: 900 }}>Nueva ocupación</DialogTitle>
+
         <DialogContent dividers>
           <Stack spacing={2}>
-            <TextField
-              label="CocheraId"
-              value={cCocheraId}
-              onChange={(e) => setCCocheraId(e.target.value)}
-              fullWidth
-            />
+            <Box
+              sx={{
+                display: "grid",
+                gap: 1.5,
+                gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
+              }}
+            >
+              <TextField
+                label="CocheraId"
+                value={cCocheraId}
+                onChange={(e) => setCCocheraId(e.target.value)}
+                fullWidth
+              />
+
+              <TextField
+                select
+                label="Tipo"
+                value={cTipo}
+                onChange={(e) => setCTipo(Number(e.target.value))}
+                fullWidth
+              >
+                {TIPOS.map((t) => (
+                  <MenuItem key={t.id} value={t.id}>
+                    {t.label}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Box>
 
             <Autocomplete
               options={clienteOptions}
@@ -469,21 +573,13 @@ export default function Ocupaciones() {
               )}
             />
 
-            <TextField
-              select
-              label="Tipo"
-              value={cTipo}
-              onChange={(e) => setCTipo(Number(e.target.value))}
-              fullWidth
+            <Box
+              sx={{
+                display: "grid",
+                gap: 1.5,
+                gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
+              }}
             >
-              {TIPOS.map((t) => (
-                <MenuItem key={t.id} value={t.id}>
-                  {t.label}
-                </MenuItem>
-              ))}
-            </TextField>
-
-            <Stack direction="row" spacing={2}>
               <TextField
                 label="Inicio"
                 type="datetime-local"
@@ -500,19 +596,39 @@ export default function Ocupaciones() {
                 InputLabelProps={{ shrink: true }}
                 fullWidth
               />
-            </Stack>
+            </Box>
 
             <Divider />
 
-            <Stack direction="row" spacing={2} alignItems="center" sx={{ flexWrap: "wrap" }}>
-              <Chip label={usarExcep ? "Tarifa excepcional" : "Tarifa base"} variant="outlined" />
-              <Button variant="outlined" onClick={() => setUsarExcep((v) => !v)}>
+            <Stack
+              direction={{ xs: "column", sm: "row" }}
+              spacing={1}
+              alignItems={{ xs: "stretch", sm: "center" }}
+              justifyContent="space-between"
+            >
+              <Chip
+                label={usarExcep ? "Tarifa excepcional" : "Tarifa base"}
+                variant="outlined"
+                sx={{ fontWeight: 700, width: "fit-content" }}
+              />
+
+              <Button
+                variant="outlined"
+                onClick={() => setUsarExcep((v) => !v)}
+                sx={{ borderRadius: 2, fontWeight: 800 }}
+              >
                 {usarExcep ? "Usar tarifa base" : "Usar tarifa excepcional"}
               </Button>
             </Stack>
 
             {usarExcep && (
-              <>
+              <Box
+                sx={{
+                  display: "grid",
+                  gap: 1.5,
+                  gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
+                }}
+              >
                 <TextField
                   label="Precio unitario excepcional"
                   type="number"
@@ -522,18 +638,21 @@ export default function Ocupaciones() {
                   fullWidth
                 />
                 <TextField
-                  label="Motivo tarifa excepcional"
+                  label="Motivo"
                   value={motivoExcep}
                   onChange={(e) => setMotivoExcep(e.target.value)}
                   fullWidth
                 />
-              </>
+              </Box>
             )}
           </Stack>
         </DialogContent>
+
         <DialogActions>
-          <Button onClick={() => setOpenCrear(false)}>Cancelar</Button>
-          <Button variant="contained" onClick={crear} disabled={saving}>
+          <Button onClick={() => setOpenCrear(false)} sx={{ fontWeight: 800 }}>
+            Cancelar
+          </Button>
+          <Button variant="contained" onClick={crear} disabled={saving} sx={{ fontWeight: 900 }}>
             Crear
           </Button>
         </DialogActions>
@@ -541,7 +660,7 @@ export default function Ocupaciones() {
 
       {/* Dialog Cancelar */}
       <Dialog open={openCancelar} onClose={() => setOpenCancelar(false)} fullWidth maxWidth="sm">
-        <DialogTitle>Cancelar ocupación</DialogTitle>
+        <DialogTitle sx={{ fontWeight: 900 }}>Cancelar ocupación</DialogTitle>
         <DialogContent dividers>
           <Stack spacing={2}>
             <TextField
@@ -564,8 +683,16 @@ export default function Ocupaciones() {
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setOpenCancelar(false)}>Volver</Button>
-          <Button color="error" variant="contained" onClick={cancelar} disabled={saving}>
+          <Button onClick={() => setOpenCancelar(false)} sx={{ fontWeight: 800 }}>
+            Volver
+          </Button>
+          <Button
+            color="error"
+            variant="contained"
+            onClick={cancelar}
+            disabled={saving}
+            sx={{ fontWeight: 900 }}
+          >
             Cancelar ocupación
           </Button>
         </DialogActions>

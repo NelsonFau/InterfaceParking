@@ -15,6 +15,7 @@ import {
   Stack,
   TextField,
   Typography,
+  Skeleton,
 } from "@mui/material";
 
 function ActivoChip({ activo }) {
@@ -24,7 +25,91 @@ function ActivoChip({ activo }) {
       label={activo ? "Activo" : "Inactivo"}
       color={activo ? "success" : "default"}
       variant={activo ? "filled" : "outlined"}
+      sx={{ fontWeight: 700 }}
     />
+  );
+}
+
+function LoadingList() {
+  return (
+    <Stack spacing={1.25}>
+      {Array.from({ length: 6 }).map((_, i) => (
+        <Skeleton key={i} variant="rounded" height={92} />
+      ))}
+    </Stack>
+  );
+}
+
+function ClienteCard({ c, onEdit, onToggle }) {
+  return (
+    <Card
+      variant="outlined"
+      sx={{
+        borderRadius: 3,
+        borderColor: "divider",
+        boxShadow: "0 6px 18px rgba(0,0,0,.06)",
+      }}
+    >
+      <CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          spacing={1.5}
+          alignItems={{ xs: "stretch", sm: "center" }}
+          justifyContent="space-between"
+        >
+          {/* Info */}
+          <Box sx={{ minWidth: 0 }}>
+            <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 0.5 }}>
+              <Typography
+                variant="subtitle1"
+                sx={{ fontWeight: 900, letterSpacing: -0.2 }}
+                noWrap
+                title={c.nombreCompleto}
+              >
+                {c.nombreCompleto}
+              </Typography>
+
+              <ActivoChip activo={c.activo} />
+            </Stack>
+
+            <Typography variant="body2" sx={{ color: "text.secondary" }}>
+              Doc: <b>{c.documento}</b> · Tel: <b>{c.telefono}</b>
+              {c.email ? (
+                <>
+                  {" "}
+                  · Email: <b>{c.email}</b>
+                </>
+              ) : null}
+            </Typography>
+          </Box>
+
+          {/* Actions */}
+          <Stack
+            direction="row"
+            spacing={1}
+            justifyContent={{ xs: "flex-start", sm: "flex-end" }}
+            sx={{ flexWrap: "wrap" }}
+          >
+            <Button
+              variant="outlined"
+              onClick={onEdit}
+              sx={{ borderRadius: 2, fontWeight: 800 }}
+            >
+              Editar
+            </Button>
+
+            <Button
+              variant="contained"
+              color={c.activo ? "error" : "success"}
+              onClick={onToggle}
+              sx={{ borderRadius: 2, fontWeight: 800 }}
+            >
+              {c.activo ? "Desactivar" : "Reactivar"}
+            </Button>
+          </Stack>
+        </Stack>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -98,16 +183,14 @@ export default function Clientes() {
       params.set("activos", "true");
 
       const res = await http.get(`/Cliente?${params.toString()}`);
-      if (myReqId !== reqIdRef.current) return; // llegó tarde, la ignoro
+      if (myReqId !== reqIdRef.current) return;
 
       const data = res.data ?? {};
       setItems(Array.isArray(data.items) ? data.items : []);
       setTotal(typeof data.total === "number" ? data.total : 0);
 
-      // opcional: si la API te devuelve page/pageSize, los tomamos
       if (typeof data.page === "number" && data.page > 0) setPage(data.page);
-      if (typeof data.pageSize === "number" && data.pageSize > 0)
-        setPageSize(data.pageSize);
+      if (typeof data.pageSize === "number" && data.pageSize > 0) setPageSize(data.pageSize);
     } catch (e) {
       console.error(e);
       const msg =
@@ -120,12 +203,10 @@ export default function Clientes() {
     }
   }
 
-  // cuando cambian filtros o pageSize, volvemos a página 1
   useEffect(() => {
     setPage(1);
   }, [q, pageSize]);
 
-  // cuando cambia la page (o filtros/pageSize), cargamos
   useEffect(() => {
     cargar(page);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -150,7 +231,6 @@ export default function Clientes() {
         await http.post("/Cliente", payloadBase);
         toast.success("Cliente creado");
       } else {
-        // Update requiere Activo (según tu DTO), mantenemos el actual
         await http.put(`/Cliente/${edit.id}`, {
           ...payloadBase,
           activo: edit.activo ?? true,
@@ -180,7 +260,6 @@ export default function Clientes() {
       await http.patch(`/Cliente/${c.id}/desactivar`);
       toast.success("Cliente desactivado");
 
-      // si al desactivar te quedaste sin items en la página, bajamos una página
       if (items.length === 1 && page > 1) setPage((p) => p - 1);
       else await cargar(page);
     } catch (e) {
@@ -194,7 +273,6 @@ export default function Clientes() {
   }
 
   async function reactivar(c) {
-    // esta vista es solo activos; esto casi no se usa, pero lo dejo por si te llega alguno
     const ok = window.confirm(`¿Reactivar a "${c?.nombreCompleto}"?`);
     if (!ok) return;
 
@@ -213,15 +291,38 @@ export default function Clientes() {
   }
 
   return (
-    <Box>
-      <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2, flexWrap: "wrap" }}>
-        <Typography variant="h5">Clientes (Activos)</Typography>
+    <Box sx={{ maxWidth: 1100, mx: "auto", px: { xs: 2, sm: 3 }, py: 2 }}>
+      {/* Header */}
+      <Stack spacing={0.5} sx={{ mb: 2 }}>
+        <Typography variant="h5" sx={{ fontWeight: 900, letterSpacing: -0.3 }}>
+          Clientes (Activos)
+        </Typography>
+        <Typography variant="body2" sx={{ color: "text.secondary" }}>
+          Gestión de clientes activos. Buscá por nombre, documento o teléfono.
+        </Typography>
+      </Stack>
 
-        <Button variant="contained" onClick={abrirCrear}>
+      {/* Actions */}
+      <Stack
+        direction={{ xs: "column", sm: "row" }}
+        spacing={1.25}
+        alignItems={{ xs: "stretch", sm: "center" }}
+        sx={{ mb: 2 }}
+      >
+        <Button
+          variant="contained"
+          onClick={abrirCrear}
+          sx={{ borderRadius: 2, fontWeight: 900 }}
+        >
           Nuevo cliente
         </Button>
 
-        <Button variant="outlined" onClick={() => cargar(page)} disabled={loading}>
+        <Button
+          variant="outlined"
+          onClick={() => cargar(page)}
+          disabled={loading}
+          sx={{ borderRadius: 2, fontWeight: 800 }}
+        >
           Refrescar
         </Button>
 
@@ -230,90 +331,92 @@ export default function Clientes() {
           label="Buscar (nombre/doc/tel)"
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          sx={{ minWidth: 280 }}
+          sx={{ width: { xs: "100%", sm: 320 } }}
         />
       </Stack>
 
+      {/* Pagination toolbar */}
       {!loading && (
-        <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 1, flexWrap: "wrap" }}>
-          <Typography variant="body2" color="text.secondary">
-            Mostrando {items.length} de {total} · Página {page} / {totalPages}
-          </Typography>
+        <Card
+          variant="outlined"
+          sx={{
+            mb: 2,
+            borderRadius: 3,
+            borderColor: "divider",
+            boxShadow: "0 6px 18px rgba(0,0,0,.06)",
+          }}
+        >
+          <CardContent sx={{ py: 1.5, "&:last-child": { pb: 1.5 } }}>
+            <Stack
+              direction={{ xs: "column", sm: "row" }}
+              spacing={1}
+              alignItems={{ xs: "stretch", sm: "center" }}
+              justifyContent="space-between"
+            >
+              <Typography variant="body2" color="text.secondary">
+                Mostrando <b>{items.length}</b> de <b>{total}</b> · Página{" "}
+                <b>{page}</b> / <b>{totalPages}</b>
+              </Typography>
 
-          <Button
-            variant="outlined"
-            disabled={page <= 1}
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-          >
-            Anterior
-          </Button>
+              <Stack direction="row" spacing={1} alignItems="center" sx={{ flexWrap: "wrap" }}>
+                <Button
+                  variant="outlined"
+                  disabled={page <= 1}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  sx={{ borderRadius: 2, fontWeight: 800 }}
+                >
+                  Anterior
+                </Button>
 
-          <Button
-            variant="outlined"
-            disabled={page >= totalPages}
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-          >
-            Siguiente
-          </Button>
+                <Button
+                  variant="outlined"
+                  disabled={page >= totalPages}
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  sx={{ borderRadius: 2, fontWeight: 800 }}
+                >
+                  Siguiente
+                </Button>
 
-          <TextField
-            size="small"
-            label="Page size"
-            value={pageSize}
-            onChange={(e) => setPageSize(Number(e.target.value) || 10)}
-            sx={{ width: 120 }}
-          />
-        </Stack>
+                <TextField
+                  size="small"
+                  label="Page size"
+                  value={pageSize}
+                  onChange={(e) => setPageSize(Number(e.target.value) || 10)}
+                  sx={{ width: 130 }}
+                />
+              </Stack>
+            </Stack>
+          </CardContent>
+        </Card>
       )}
 
+      {/* List */}
       {loading ? (
-        <div>Cargando...</div>
+        <LoadingList />
       ) : (
-        <Stack spacing={1.2}>
+        <Stack spacing={1.25}>
           {items.map((c) => (
-            <Card key={c.id} variant="outlined">
-              <CardContent>
-                <Stack direction="row" justifyContent="space-between" alignItems="center">
-                  <Stack spacing={0.3}>
-                    <Stack direction="row" spacing={1} alignItems="center">
-                      <Typography fontWeight={800}>{c.nombreCompleto}</Typography>
-                      <ActivoChip activo={c.activo} />
-                    </Stack>
-
-                    <Typography variant="body2" color="text.secondary">
-                      Doc: {c.documento} · Tel: {c.telefono}
-                      {c.email ? ` · Email: ${c.email}` : ""}
-                    </Typography>
-                  </Stack>
-
-                  <Stack direction="row" spacing={1}>
-                    <Button variant="outlined" onClick={() => abrirEditar(c)}>
-                      Editar
-                    </Button>
-
-                    {c.activo ? (
-                      <Button color="error" variant="contained" onClick={() => desactivar(c)}>
-                        Desactivar
-                      </Button>
-                    ) : (
-                      <Button color="success" variant="contained" onClick={() => reactivar(c)}>
-                        Reactivar
-                      </Button>
-                    )}
-                  </Stack>
-                </Stack>
-              </CardContent>
-            </Card>
+            <ClienteCard
+              key={c.id}
+              c={c}
+              onEdit={() => abrirEditar(c)}
+              onToggle={() => (c.activo ? desactivar(c) : reactivar(c))}
+            />
           ))}
 
           {!items.length && (
-            <Typography color="text.secondary">No hay clientes activos para mostrar.</Typography>
+            <Typography color="text.secondary">
+              No hay clientes activos para mostrar.
+            </Typography>
           )}
         </Stack>
       )}
 
+      {/* Dialog */}
       <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth="sm">
-        <DialogTitle>{edit ? "Editar cliente" : "Nuevo cliente"}</DialogTitle>
+        <DialogTitle sx={{ fontWeight: 900 }}>
+          {edit ? "Editar cliente" : "Nuevo cliente"}
+        </DialogTitle>
 
         <DialogContent dividers>
           <Stack spacing={2}>
@@ -362,8 +465,10 @@ export default function Clientes() {
         </DialogContent>
 
         <DialogActions>
-          <Button onClick={() => setOpen(false)}>Cancelar</Button>
-          <Button variant="contained" onClick={guardar} disabled={saving}>
+          <Button onClick={() => setOpen(false)} sx={{ fontWeight: 800 }}>
+            Cancelar
+          </Button>
+          <Button variant="contained" onClick={guardar} disabled={saving} sx={{ fontWeight: 900 }}>
             Guardar
           </Button>
         </DialogActions>
