@@ -5,7 +5,7 @@ import Cocheras from "./pages/Cocheras.jsx";
 import Clientes from "./pages/Clientes.jsx";
 import Ocupaciones from "./pages/Ocupaciones.jsx";
 import Tarifas from "./pages/Tarifas.jsx";
-// import Auditoria from "./pages/Auditoria.jsx";
+import Auditoria from "./pages/Auditoria.jsx";
 
 export default function App() {
   return (
@@ -17,7 +17,7 @@ export default function App() {
         <Route path="/ocupaciones" element={<Ocupaciones />} />
         <Route path="/clientes" element={<Clientes />} />
         <Route path="/tarifas" element={<Tarifas />} />
-        {/* <Route path="/auditoria" element={<Auditoria />} /> */}
+        <Route path="/auditoria" element={<Auditoria />} />
       </Route>
     </Routes>
   );
