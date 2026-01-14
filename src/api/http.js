@@ -14,7 +14,6 @@ http.interceptors.request.use((config) => {
   return config;
 });
 
-(opcional) 
 http.interceptors.response.use(
   (r) => r,
   (e) => {
