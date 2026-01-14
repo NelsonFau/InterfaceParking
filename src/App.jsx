@@ -1,10 +1,5 @@
 import { Navigate, Route, Routes } from "react-router-dom";
-
 import Layout from "./componentes/Layout.jsx";
-import RequireAuth from "./componentes/RequireAuth.jsx";
-
-import Splash from "./pages/Splash.jsx";
-import Login from "./pages/Login.jsx";
 
 import Dashboard from "./pages/Dashboard.jsx";
 import Cocheras from "./pages/Cocheras.jsx";
@@ -12,22 +7,32 @@ import Clientes from "./pages/Clientes.jsx";
 import Ocupaciones from "./pages/Ocupaciones.jsx";
 import Tarifas from "./pages/Tarifas.jsx";
 import Auditoria from "./pages/Auditoria.jsx";
+import Login from "./pages/Login.jsx";
+import Splash from "./pages/Splash.jsx";
+
+function isAuthed() {
+  return !!localStorage.getItem("token");
+}
+
+function PrivateRoute({ children }) {
+  return isAuthed() ? children : <Navigate to="/login" replace />;
+}
 
 export default function App() {
   return (
     <Routes>
-      {/* SPLASH */}
+      {/* splash inicial */}
       <Route path="/" element={<Splash />} />
 
-      {/* LOGIN */}
-      <Route path="/login" element={<Login />} />
+      {/* login */}
+      <Route path="/login" element={isAuthed() ? <Navigate to="/dashboard" replace /> : <Login />} />
 
-      {/* APP PROTEGIDA */}
+      {/* app protegida */}
       <Route
         element={
-          <RequireAuth>
+          <PrivateRoute>
             <Layout />
-          </RequireAuth>
+          </PrivateRoute>
         }
       >
         <Route path="/dashboard" element={<Dashboard />} />
@@ -36,12 +41,9 @@ export default function App() {
         <Route path="/clientes" element={<Clientes />} />
         <Route path="/tarifas" element={<Tarifas />} />
         <Route path="/auditoria" element={<Auditoria />} />
-
-        {/* fallback interno */}
-        <Route path="/app" element={<Navigate to="/dashboard" replace />} />
       </Route>
 
-      {/* cualquier cosa rara vuelve al splash */}
+      {/* fallback */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
