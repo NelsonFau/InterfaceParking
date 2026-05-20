@@ -1,6 +1,6 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import Layout from "./componentes/Layout.jsx";
-
+import OperationalAlerts from "./pages/OperationalAlerts.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
 import Cocheras from "./pages/Cocheras.jsx";
 import Clientes from "./pages/Clientes.jsx";
@@ -9,6 +9,9 @@ import Tarifas from "./pages/Tarifas.jsx";
 import Auditoria from "./pages/Auditoria.jsx";
 import Login from "./pages/Login.jsx";
 import Splash from "./pages/Splash.jsx";
+import OperationalDashboard from "./pages/OperationalDashboard.jsx";
+import CajaDiaria from "./pages/CajaDiaria.jsx";
+
 
 function isAuthed() {
   return !!localStorage.getItem("token");
@@ -41,6 +44,9 @@ export default function App() {
         <Route path="/clientes" element={<Clientes />} />
         <Route path="/tarifas" element={<Tarifas />} />
         <Route path="/auditoria" element={<Auditoria />} />
+        <Route path="/alertas-operativas" element={<OperationalAlerts />} />
+        <Route path="/operaciones" element={<OperationalDashboard />} />
+        <Route path="/caja-diaria" element={<CajaDiaria />} />
       </Route>
 
       {/* fallback */}

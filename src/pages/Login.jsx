@@ -52,10 +52,16 @@ export default function Login() {
       toast.success("Bienvenido");
       nav("/dashboard");
     } catch (e2) {
-      const msg =
-        (typeof e2?.response?.data === "string" && e2.response.data) ||
-        e2?.response?.data?.error ||
-        "No pude iniciar sesión";
+    const status = e2?.response?.status;
+
+    const msg =
+      e2?.response?.data?.message ||
+      e2?.response?.data?.error ||
+      (typeof e2?.response?.data === "string" && e2.response.data) ||
+      (status === 429
+        ? "Demasiados intentos de login. Intente nuevamente en unos minutos."
+        : "No pude iniciar sesión");
+
       setErr(msg);
       toast.error(msg);
     } finally {
@@ -92,7 +98,7 @@ export default function Login() {
                 Iniciar sesión
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Accedé al panel de Charlie&apos;s Parking
+                Accedé al panel de tu garage
               </Typography>
             </Box>
 
@@ -131,9 +137,7 @@ export default function Login() {
               </Stack>
             </Box>
 
-            <Typography variant="caption" color="text.secondary">
-              Tip: usuario <b>dueno</b> / pass <b>dueno123</b> (dev)
-            </Typography>
+           
           </Stack>
         </CardContent>
       </Card>

@@ -20,7 +20,6 @@ import {
   Skeleton,
 } from "@mui/material";
 
-// enums C# (numéricos)
 const ESTADOS = [
   { id: "", label: "Todos" },
   { id: 1, label: "ACTIVA" },
@@ -34,10 +33,20 @@ const TIPOS = [
   { id: 3, label: "MES" },
 ];
 
+const METODOS_PAGO = [
+  { id: 1, label: "EFECTIVO" },
+  { id: 2, label: "TRANSFERENCIA" },
+  { id: 3, label: "TARJETA" },
+  { id: 4, label: "OTRO" },
+];
+
 function money(n) {
   const x = Number(n ?? 0);
   try {
-    return new Intl.NumberFormat("es-UY", { style: "currency", currency: "UYU" }).format(x);
+    return new Intl.NumberFormat("es-UY", {
+      style: "currency",
+      currency: "UYU",
+    }).format(x);
   } catch {
     return `$ ${x}`;
   }
@@ -81,8 +90,7 @@ export default function Ocupaciones() {
 
   const [items, setItems] = useState([]);
 
-  // filtros
-  const [estado, setEstado] = useState(""); // "" => todos
+  const [estado, setEstado] = useState("");
   const [cocheraId, setCocheraId] = useState("");
   const [clienteId, setClienteId] = useState("");
   const [desde, setDesde] = useState("");
@@ -90,7 +98,12 @@ export default function Ocupaciones() {
   const [venceEnDias, setVenceEnDias] = useState("");
   const [take, setTake] = useState(200);
 
-  // dialog crear
+  const [filtroClienteSel, setFiltroClienteSel] = useState(null);
+  const [filtroClienteInput, setFiltroClienteInput] = useState("");
+  const [filtroClienteOptions, setFiltroClienteOptions] = useState([]);
+  const [filtroClienteLoading, setFiltroClienteLoading] = useState(false);
+  const filtroClienteTimerRef = useRef(null);
+
   const [openCrear, setOpenCrear] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -99,22 +112,26 @@ export default function Ocupaciones() {
   const [cInicio, setCInicio] = useState("");
   const [cFin, setCFin] = useState("");
 
+  const [crearClienteSel, setCrearClienteSel] = useState(null);
+  const [crearClienteInput, setCrearClienteInput] = useState("");
+  const [crearClienteOptions, setCrearClienteOptions] = useState([]);
+  const [crearClienteLoading, setCrearClienteLoading] = useState(false);
+  const crearClienteTimerRef = useRef(null);
+
   const [usarExcep, setUsarExcep] = useState(false);
   const [precioExcep, setPrecioExcep] = useState("");
   const [motivoExcep, setMotivoExcep] = useState("");
 
-  // cliente autocomplete
-  const [clienteSel, setClienteSel] = useState(null);
-  const [clienteInput, setClienteInput] = useState("");
-  const [clienteOptions, setClienteOptions] = useState([]);
-  const [clienteLoading, setClienteLoading] = useState(false);
-  const clienteTimerRef = useRef(null);
-
-  // dialog cancelar
   const [openCancelar, setOpenCancelar] = useState(false);
   const [cancelId, setCancelId] = useState(null);
   const [motivoCancel, setMotivoCancel] = useState("");
   const [finRealCancel, setFinRealCancel] = useState("");
+
+  const [openPago, setOpenPago] = useState(false);
+  const [ocupacionPago, setOcupacionPago] = useState(null);
+  const [pagoMonto, setPagoMonto] = useState("");
+  const [pagoMetodo, setPagoMetodo] = useState(1);
+  const [pagoComentario, setPagoComentario] = useState("");
 
   const resumen = useMemo(() => {
     const total = items.length;
@@ -142,7 +159,7 @@ export default function Ocupaciones() {
       if (myReqId !== reqIdRef.current) return;
 
       const data = res.data;
-      const arr = Array.isArray(data) ? data : (data?.items ?? []);
+      const arr = Array.isArray(data) ? data : data?.items ?? [];
       setItems(arr);
     } catch (e) {
       console.error(e);
@@ -153,26 +170,29 @@ export default function Ocupaciones() {
     }
   }
 
-  async function buscarClientes(term) {
+  async function buscarClientes(term, setOptions, setLoadingFn) {
     const q = (term || "").trim();
+
     if (!q) {
-      setClienteOptions([]);
+      setOptions([]);
       return;
     }
 
     try {
-      setClienteLoading(true);
+      setLoadingFn(true);
+
       const res = await http.get(
         `/Cliente?q=${encodeURIComponent(q)}&activos=true&page=1&pageSize=20`
       );
+
       const data = res.data;
-      const arr = Array.isArray(data) ? data : (data?.items ?? []);
-      setClienteOptions(arr);
+      const arr = Array.isArray(data) ? data : data?.items ?? [];
+      setOptions(arr);
     } catch (e) {
       console.error(e);
       toast.error(e?.response?.data?.error || "No pude buscar clientes");
     } finally {
-      setClienteLoading(false);
+      setLoadingFn(false);
     }
   }
 
@@ -182,46 +202,63 @@ export default function Ocupaciones() {
   }, []);
 
   useEffect(() => {
-    if (clienteTimerRef.current) clearTimeout(clienteTimerRef.current);
+    if (filtroClienteTimerRef.current) clearTimeout(filtroClienteTimerRef.current);
 
-    clienteTimerRef.current = setTimeout(() => {
-      buscarClientes(clienteInput);
+    filtroClienteTimerRef.current = setTimeout(() => {
+      buscarClientes(filtroClienteInput, setFiltroClienteOptions, setFiltroClienteLoading);
     }, 300);
 
     return () => {
-      if (clienteTimerRef.current) clearTimeout(clienteTimerRef.current);
+      if (filtroClienteTimerRef.current) clearTimeout(filtroClienteTimerRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [clienteInput]);
+  }, [filtroClienteInput]);
+
+  useEffect(() => {
+    if (crearClienteTimerRef.current) clearTimeout(crearClienteTimerRef.current);
+
+    crearClienteTimerRef.current = setTimeout(() => {
+      buscarClientes(crearClienteInput, setCrearClienteOptions, setCrearClienteLoading);
+    }, 300);
+
+    return () => {
+      if (crearClienteTimerRef.current) clearTimeout(crearClienteTimerRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [crearClienteInput]);
 
   function abrirCrear() {
     setCCocheraId("");
     setCTipo(TIPOS[0].id);
     setCInicio("");
     setCFin("");
+    setCrearClienteSel(null);
+    setCrearClienteInput("");
+    setCrearClienteOptions([]);
     setUsarExcep(false);
     setPrecioExcep("");
     setMotivoExcep("");
-    setClienteSel(null);
-    setClienteInput("");
-    setClienteOptions([]);
     setOpenCrear(true);
   }
 
   async function crear() {
     const coch = Number(cCocheraId);
+
     if (!coch) return toast.error("Falta CocheraId");
-    if (!clienteSel?.id) return toast.error("Elegí un cliente");
+    if (!crearClienteSel?.id) return toast.error("Elegí un cliente");
     if (!cInicio) return toast.error("Falta Inicio");
     if (!cFin) return toast.error("Falta Fin");
 
     const inicioIso = new Date(cInicio).toISOString();
     const finIso = new Date(cFin).toISOString();
-    if (new Date(finIso) <= new Date(inicioIso)) return toast.error("Fin debe ser mayor que Inicio");
+
+    if (new Date(finIso) <= new Date(inicioIso)) {
+      return toast.error("Fin debe ser mayor que Inicio");
+    }
 
     let payload = {
       cocheraId: coch,
-      clienteId: clienteSel.id,
+      clienteId: crearClienteSel.id,
       tipo: Number(cTipo),
       inicio: inicioIso,
       fin: finIso,
@@ -232,6 +269,7 @@ export default function Ocupaciones() {
 
     if (usarExcep) {
       const pe = Number(precioExcep);
+
       if (!pe || pe <= 0) return toast.error("Precio excepcional inválido");
       if (!motivoExcep.trim()) return toast.error("Falta motivo excepcional");
 
@@ -268,10 +306,13 @@ export default function Ocupaciones() {
     if (!motivoCancel.trim()) return toast.error("Falta motivo");
 
     const finReal =
-      finRealCancel && finRealCancel.trim() ? new Date(finRealCancel).toISOString() : null;
+      finRealCancel && finRealCancel.trim()
+        ? new Date(finRealCancel).toISOString()
+        : null;
 
     try {
       setSaving(true);
+
       await http.post(`/Ocupacion/${cancelId}/cancelar`, {
         motivo: motivoCancel.trim(),
         finReal,
@@ -288,9 +329,65 @@ export default function Ocupaciones() {
     }
   }
 
+  async function finalizarOcupacion(ocupacion) {
+    if (!ocupacion?.id) return;
+
+    try {
+      setSaving(true);
+
+      await http.post(`/Ocupacion/${ocupacion.id}/finalizar`);
+
+      toast.success("Ocupación finalizada");
+      await cargar();
+    } catch (e) {
+      console.error(e);
+      toast.error(e?.response?.data?.error || "No se pudo finalizar");
+    } finally {
+      setSaving(false);
+    }
+  }
+  
+  function abrirPago(ocupacion) {
+    setOcupacionPago(ocupacion);
+    setPagoMonto(String(ocupacion.saldo ?? ""));
+    setPagoMetodo(1);
+    setPagoComentario("");
+    setOpenPago(true);
+  }
+
+  async function registrarPago() {
+    if (!ocupacionPago?.id) return;
+
+    const monto = Number(pagoMonto);
+
+    if (!monto || monto <= 0) {
+      return toast.error("Monto inválido");
+    }
+
+    try {
+      setSaving(true);
+
+     await http.post("/Pagos", {
+      ocupacionId: ocupacionPago.id,
+      monto,
+      metodo: Number(pagoMetodo),
+      referencia: pagoComentario.trim() || null,
+     });
+      
+      toast.success("Pago registrado");
+      setOpenPago(false);
+      setOcupacionPago(null);
+      await cargar();
+    } catch (e) {
+      console.error(e);
+      toast.error(e?.response?.data?.error || "No pude registrar el pago");
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
     <Box sx={{ maxWidth: 1100, mx: "auto", px: { xs: 2, sm: 3 }, py: 2 }}>
-      {/* Header */}
       <Stack spacing={0.5} sx={{ mb: 2 }}>
         <Typography variant="h5" sx={{ fontWeight: 900, letterSpacing: -0.3 }}>
           Ocupaciones
@@ -300,7 +397,6 @@ export default function Ocupaciones() {
         </Typography>
       </Stack>
 
-      {/* Actions */}
       <Stack
         direction={{ xs: "column", sm: "row" }}
         spacing={1.25}
@@ -321,7 +417,6 @@ export default function Ocupaciones() {
         </Button>
       </Stack>
 
-      {/* Filtros (grid responsive) */}
       <Card
         variant="outlined"
         sx={{
@@ -373,18 +468,36 @@ export default function Ocupaciones() {
 
             <TextField
               size="small"
-              label="CocheraId"
+              label="Cochera"
               value={cocheraId}
               onChange={(e) => setCocheraId(e.target.value)}
               fullWidth
             />
 
-            <TextField
-              size="small"
-              label="ClienteId"
-              value={clienteId}
-              onChange={(e) => setClienteId(e.target.value)}
-              fullWidth
+            <Autocomplete
+              options={filtroClienteOptions}
+              value={filtroClienteSel}
+              inputValue={filtroClienteInput}
+              onInputChange={(e, v) => setFiltroClienteInput(v)}
+              onChange={(e, v) => {
+                setFiltroClienteSel(v);
+                setClienteId(v?.id ? String(v.id) : "");
+              }}
+              loading={filtroClienteLoading}
+              getOptionLabel={(opt) =>
+                opt
+                  ? `${opt.nombreCompleto ?? opt.nombre ?? ""} · CI: ${opt.documento ?? ""}`
+                  : ""
+              }
+              isOptionEqualToValue={(opt, val) => opt?.id === val?.id}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Filtrar por cliente"
+                  placeholder="Nombre o CI..."
+                  fullWidth
+                />
+              )}
             />
 
             <TextField
@@ -422,13 +535,10 @@ export default function Ocupaciones() {
               onChange={(e) => setTake(Number(e.target.value) || 200)}
               fullWidth
             />
-
-            <Box sx={{ display: { xs: "none", md: "block" } }} />
           </Box>
         </CardContent>
       </Card>
 
-      {/* Resultados */}
       {loading ? (
         <LoadingList />
       ) : (
@@ -467,6 +577,7 @@ export default function Ocupaciones() {
                       </Typography>
 
                       <EstadoChip estado={o.estadoCalculado ?? o.estado} />
+
                       <Chip
                         size="small"
                         label={`Tipo: ${tipoLabel(o.tipo)}`}
@@ -476,13 +587,13 @@ export default function Ocupaciones() {
                     </Stack>
 
                     <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.25 }}>
-                      Cliente: <b>{o.clienteNombre ?? o.clienteId}</b> · Inicio: {fmtDate(o.inicio)} ·
-                      Fin: {fmtDate(o.fin)}
+                      Cliente: <b>{o.clienteNombre ?? o.clienteId}</b> · Inicio:{" "}
+                      {fmtDate(o.inicio)} · Fin: {fmtDate(o.fin)}
                     </Typography>
 
                     <Typography variant="body2" sx={{ mt: 0.75 }}>
-                      Total: <b>{money(o.precioTotal)}</b> · Pagado: <b>{money(o.pagado)}</b> · Saldo:{" "}
-                      <b>{money(o.saldo)}</b>
+                      Total: <b>{money(o.precioTotal)}</b> · Pagado:{" "}
+                      <b>{money(o.pagado)}</b> · Saldo: <b>{money(o.saldo)}</b>
                     </Typography>
                   </Box>
 
@@ -495,7 +606,19 @@ export default function Ocupaciones() {
                       Ver
                     </Button>
 
-                    {Number(o.estado) === 1 ? (
+                    {Number(o.saldo ?? 0) > 0 && Number(o.estado) !== 3 ? (
+                      <Button
+                        color="success"
+                        variant="contained"
+                        onClick={() => abrirPago(o)}
+                        sx={{ borderRadius: 2, fontWeight: 900 }}
+                      >
+                        Registrar pago
+                      </Button>
+                    ) : null}
+
+                    {Number(o.estado) === 1 &&
+                    new Date(o.inicio) > new Date() ? (
                       <Button
                         color="error"
                         variant="contained"
@@ -505,6 +628,20 @@ export default function Ocupaciones() {
                         Cancelar
                       </Button>
                     ) : null}
+
+                   {[1, 2].includes(Number(o.estadoCalculado ?? o.estado)) &&
+                    new Date(o.inicio) <= new Date() ? (
+                      <Button
+                        color="success"
+                        variant="contained"
+                        onClick={() => finalizarOcupacion(o)}
+                        disabled={saving}
+                        sx={{ borderRadius: 2, fontWeight: 900 }}
+                      >
+                        Finalizar
+                      </Button>
+                    ) : null}
+
                   </Stack>
                 </Stack>
               </CardContent>
@@ -517,7 +654,6 @@ export default function Ocupaciones() {
         </Stack>
       )}
 
-      {/* Dialog Crear */}
       <Dialog open={openCrear} onClose={() => setOpenCrear(false)} fullWidth maxWidth="sm">
         <DialogTitle sx={{ fontWeight: 900 }}>Nueva ocupación</DialogTitle>
 
@@ -553,20 +689,22 @@ export default function Ocupaciones() {
             </Box>
 
             <Autocomplete
-              options={clienteOptions}
-              value={clienteSel}
-              inputValue={clienteInput}
-              onInputChange={(e, v) => setClienteInput(v)}
-              onChange={(e, v) => setClienteSel(v)}
-              loading={clienteLoading}
+              options={crearClienteOptions}
+              value={crearClienteSel}
+              inputValue={crearClienteInput}
+              onInputChange={(e, v) => setCrearClienteInput(v)}
+              onChange={(e, v) => setCrearClienteSel(v)}
+              loading={crearClienteLoading}
               getOptionLabel={(opt) =>
-                opt ? `${opt.nombreCompleto ?? opt.nombre ?? ""} · CI: ${opt.documento ?? ""}` : ""
+                opt
+                  ? `${opt.nombreCompleto ?? opt.nombre ?? ""} · CI: ${opt.documento ?? ""}`
+                  : ""
               }
               isOptionEqualToValue={(opt, val) => opt?.id === val?.id}
               renderInput={(params) => (
                 <TextField
                   {...params}
-                  label="Cliente (nombre o CI)"
+                  label="Cliente para la ocupación"
                   placeholder="Escribí las primeras letras..."
                   fullWidth
                 />
@@ -588,6 +726,7 @@ export default function Ocupaciones() {
                 InputLabelProps={{ shrink: true }}
                 fullWidth
               />
+
               <TextField
                 label="Fin"
                 type="datetime-local"
@@ -637,6 +776,7 @@ export default function Ocupaciones() {
                   onChange={(e) => setPrecioExcep(e.target.value)}
                   fullWidth
                 />
+
                 <TextField
                   label="Motivo"
                   value={motivoExcep}
@@ -652,15 +792,16 @@ export default function Ocupaciones() {
           <Button onClick={() => setOpenCrear(false)} sx={{ fontWeight: 800 }}>
             Cancelar
           </Button>
+
           <Button variant="contained" onClick={crear} disabled={saving} sx={{ fontWeight: 900 }}>
             Crear
           </Button>
         </DialogActions>
       </Dialog>
 
-      {/* Dialog Cancelar */}
       <Dialog open={openCancelar} onClose={() => setOpenCancelar(false)} fullWidth maxWidth="sm">
         <DialogTitle sx={{ fontWeight: 900 }}>Cancelar ocupación</DialogTitle>
+
         <DialogContent dividers>
           <Stack spacing={2}>
             <TextField
@@ -669,6 +810,7 @@ export default function Ocupaciones() {
               onChange={(e) => setMotivoCancel(e.target.value)}
               fullWidth
             />
+
             <TextField
               label="Fin real (opcional)"
               type="datetime-local"
@@ -677,15 +819,18 @@ export default function Ocupaciones() {
               InputLabelProps={{ shrink: true }}
               fullWidth
             />
+
             <Typography variant="body2" color="text.secondary">
               Si no ponés fin real, se usa “ahora (UTC)”.
             </Typography>
           </Stack>
         </DialogContent>
+
         <DialogActions>
           <Button onClick={() => setOpenCancelar(false)} sx={{ fontWeight: 800 }}>
             Volver
           </Button>
+
           <Button
             color="error"
             variant="contained"
@@ -694,6 +839,67 @@ export default function Ocupaciones() {
             sx={{ fontWeight: 900 }}
           >
             Cancelar ocupación
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={openPago} onClose={() => setOpenPago(false)} fullWidth maxWidth="sm">
+        <DialogTitle sx={{ fontWeight: 900 }}>Registrar pago</DialogTitle>
+
+        <DialogContent dividers>
+          <Stack spacing={2}>
+            <Typography>
+              Ocupación #{ocupacionPago?.id} · Saldo pendiente:{" "}
+              <b>{money(ocupacionPago?.saldo)}</b>
+            </Typography>
+
+            <TextField
+              label="Monto"
+              type="number"
+              inputProps={{ step: "0.01", min: "0" }}
+              value={pagoMonto}
+              onChange={(e) => setPagoMonto(e.target.value)}
+              fullWidth
+            />
+
+            <TextField
+              select
+              label="Método de pago"
+              value={pagoMetodo}
+              onChange={(e) => setPagoMetodo(Number(e.target.value))}
+              fullWidth
+            >
+              {METODOS_PAGO.map((m) => (
+                <MenuItem key={m.id} value={m.id}>
+                  {m.label}
+                </MenuItem>
+              ))}
+            </TextField>
+
+            <TextField
+              label="Comentario opcional"
+              value={pagoComentario}
+              onChange={(e) => setPagoComentario(e.target.value)}
+              multiline
+              minRows={2}
+              fullWidth
+            />
+          </Stack>
+        </DialogContent>
+
+        <DialogActions>
+          <Button onClick={() => setOpenPago(false)} sx={{ fontWeight: 800 }}>
+            Cancelar
+          </Button>
+
+          <Button
+            color="success"
+            variant="contained"
+            onClick={registrarPago}
+            disabled={saving}
+            sx={{ fontWeight: 900 }}
+          >
+            Registrar pago
           </Button>
         </DialogActions>
       </Dialog>

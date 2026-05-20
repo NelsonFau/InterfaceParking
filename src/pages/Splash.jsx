@@ -12,7 +12,7 @@ export default function Splash() {
       nav(token ? "/dashboard" : "/login", { replace: true });
     }, 1800);
     return () => clearTimeout(t);
-  }, [nav]);
+  }, [nav]);  
 
   return (
     <Box

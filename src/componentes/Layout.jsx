@@ -18,11 +18,14 @@ const drawerWidth = 220;
 
 const items = [
   { to: "/dashboard", label: "Dashboard" },
+  { to: "/operaciones", label: "Monitor operativo" },
   { to: "/cocheras", label: "Cocheras" },
   { to: "/ocupaciones", label: "Ocupaciones" },
   { to: "/clientes", label: "Clientes" },
   { to: "/tarifas", label: "Tarifas" },
   { to: "/auditoria", label: "Auditoría" },
+  { to: "/alertas-operativas", label: "Alertas operativas" },
+  { to: "/caja-diaria", label: "Caja diaria" }
 ];
 
 export default function Layout() {
