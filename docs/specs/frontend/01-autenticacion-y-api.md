@@ -208,6 +208,7 @@ El aviso es un `toast` de `react-hot-toast`, que ya usa el repo. `showApiError(e
 | P-FA11 | **Resuelto el 09/11/2026 por el desarrollador: se deja de trackear en esta spec** (paso 1: `git rm --cached .env` y `.env` en `.gitignore`; el archivo local queda intacto; las versiones viejas siguen en el historial, con valores `VITE_` que no son secretos). Texto original: **El `.env` está trackeado en git** (desde `7c8ae7c`) y no está en `.gitignore`. Choca con la verificación 12 ("`git status` no muestra el `.env`") y con el sentido de `.env.example`. Detectado al ejecutar el paso 1 (09/11/2026). Hay que decidir si se deja de trackear (`git rm --cached .env` y `.env` en `.gitignore`) en esta spec o fuera de ella | 1 |
 | P-FA12 | **Resuelto el 09/11/2026 por el desarrollador: excepción en ESLint.** `eslint.config.js` apaga `no-unused-vars` solo para `src/pages/CajaDiaria.jsx`, marcada como temporal; se retira con la spec de dinero, que reescribe ese archivo. `CajaDiaria.jsx` no se toca (DV-FA2 se mantiene). Texto original: **`npm run lint` falla por un error previo** en `src/pages/CajaDiaria.jsx:167` (`otros` asignada y sin uso, `no-unused-vars`), que ya está en `master`. Las reglas de la sección 6 exigen lint en verde, pero DV-FA2 prohíbe tocar `CajaDiaria.jsx`. Detectado al ejecutar el paso 1 (09/11/2026) | 1 |
 | P-FA13 | **A confirmar.** La spec define el estado `error` de `/me` (D-FA7) pero no qué ve el usuario. Se construyó lo mínimo: un aviso con el mensaje del error y un botón "Reintentar" (reintento manual, como en D-FA6), en lugar de la app. Detectado al ejecutar el paso 4 (09/11/2026). Si el desarrollador prefiere otra cosa, se cambia | 4 |
+| P-FA14 | **A confirmar.** D-FA8 dice que la ruta inicial es la primera accesible del mapa, pero D-FA9 fija `/dashboard` como destino por defecto tras el login (y `Splash`/`Login` van ahí) antes de que `/me` esté cargado. Se construyó así: el destino por defecto sigue siendo `/dashboard`, y `RequirePermission` muestra "Sin acceso" si el usuario no tiene ninguna ruta (el caso `SUPERADMIN`) y "No tenés permiso" si le falta solo esa. Con la matriz actual la primera ruta accesible es `/dashboard` para los cuatro roles de negocio, así que el resultado coincide. Si un rol futuro no tuviera `panel.ver`, al entrar vería "No tenés permiso" en `/dashboard` en vez de ir a su primera ruta; resolverlo exige una ruta o pantalla intermedia que la spec no prevé. Detectado al ejecutar el paso 5 (09/11/2026) | 5 |
 
 **Locales, el ejecutor los resuelve y los informa.**
 
@@ -345,9 +346,11 @@ Rutas relativas a la raíz del repo del frontend. Los nombres de archivo son los
 
 ### Paso 5 — Guardas por permiso, mapa de rutas y menú
 
-- [ ] **5.1** Crear `src/auth/RequirePermission.jsx`, `src/auth/Forbidden.jsx` y `src/pages/NoAccess.jsx`.
-- [ ] **5.2** Armar las `<Route>` de `src/App.jsx` desde `src/auth/routes.js`, cada una envuelta en `RequirePermission`. La ruta inicial es la primera accesible; sin ninguna, se muestra `NoAccess`.
-- [ ] **5.3** Filtrar el menú de `src/componentes/Layout.jsx` con el mismo mapa.
+- [x] **5.1** Crear `src/auth/RequirePermission.jsx`, `src/auth/Forbidden.jsx` y `src/pages/NoAccess.jsx`.
+- [x] **5.2** Armar las `<Route>` de `src/App.jsx` desde `src/auth/routes.js`, cada una envuelta en `RequirePermission`. La ruta inicial es la primera accesible; sin ninguna, se muestra `NoAccess`.
+- [x] **5.3** Filtrar el menú de `src/componentes/Layout.jsx` con el mismo mapa.
+
+  *Estado (09/11/2026):* código hecho; lint y build en verde. Verificación manual y `npm test` pendientes para el final (indicación del desarrollador). Ver P-FA14 sobre la ruta inicial.
 
   *Aceptación (manual):* (1) `dueno@demo.test` ve los 9 ítems del menú; (2) `encargado@demo.test` y `operado@demo.test` no ven "Auditoría", y al escribir `/auditoria` en la barra ven "No tenés permiso", sin redirect ni bucle; (3) el menú y las rutas salen del mismo mapa (un ítem agregado al mapa aparece en las dos); (4) `/ocupaciones` y `/caja-diaria` están guardadas por `ocupaciones.ver` y `caja.ver`. `npm test` pasa con los tests de `routes` del paso 2.
 
@@ -390,7 +393,7 @@ Con el backend en `develop` corriendo en Development contra `parkingcontrol-dev`
 
 ## 8. Cómo retomar
 
-**Estado:** Aprobada el 09/11/2026 por el desarrollador, con las decisiones D-FA5 a D-FA12 (Propuesta) incluidas. En ejecución en `feature/front-auth` (DV-FA5). Paso 0 (manual), pasos 1 y 2 hechos el 09/11/2026; pasos 3 y 4 con código hecho y verificación manual pendiente. Sigue el paso 5. Por indicación del desarrollador, `npm test` y las verificaciones manuales se corren juntas al final.
+**Estado:** Aprobada el 09/11/2026 por el desarrollador, con las decisiones D-FA5 a D-FA12 (Propuesta) incluidas. En ejecución en `feature/front-auth` (DV-FA5). Paso 0 (manual), pasos 1 y 2 hechos el 09/11/2026; pasos 3 a 5 con código hecho y verificación manual pendiente. Sigue el paso 6. Por indicación del desarrollador, `npm test` y las verificaciones manuales se corren juntas al final.
 
 **Modelo y esfuerzo por paso.** La ejecución es liviana: las decisiones difíciles ya están tomadas (ARQ-1, DV-1 y D-FA2). Cada paso se ejecuta en un chat nuevo.
 

@@ -13,6 +13,26 @@ import OperationalDashboard from "./pages/OperationalDashboard.jsx";
 import CajaDiaria from "./pages/CajaDiaria.jsx";
 import Callback from "./pages/Callback.jsx";
 import RequireAuth from "./auth/RequireAuth.jsx";
+import RequirePermission from "./auth/RequirePermission.jsx";
+import { PRIVATE_ROUTES } from "./auth/routes.js";
+
+// Pantalla de cada ruta privada. La ruta, su permiso y su ítem de menú salen de PRIVATE_ROUTES (D-FA8).
+const PAGES = {
+  "/dashboard": Dashboard,
+  "/operaciones": OperationalDashboard,
+  "/cocheras": Cocheras,
+  "/ocupaciones": Ocupaciones,
+  "/clientes": Clientes,
+  "/tarifas": Tarifas,
+  "/auditoria": Auditoria,
+  "/alertas-operativas": OperationalAlerts,
+  "/caja-diaria": CajaDiaria,
+};
+
+function PrivatePage({ path }) {
+  const Page = PAGES[path];
+  return Page ? <Page /> : null;
+}
 
 export default function App() {
   return (
@@ -32,15 +52,17 @@ export default function App() {
           </RequireAuth>
         }
       >
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/cocheras" element={<Cocheras />} />
-        <Route path="/ocupaciones" element={<Ocupaciones />} />
-        <Route path="/clientes" element={<Clientes />} />
-        <Route path="/tarifas" element={<Tarifas />} />
-        <Route path="/auditoria" element={<Auditoria />} />
-        <Route path="/alertas-operativas" element={<OperationalAlerts />} />
-        <Route path="/operaciones" element={<OperationalDashboard />} />
-        <Route path="/caja-diaria" element={<CajaDiaria />} />
+        {PRIVATE_ROUTES.map((route) => (
+          <Route
+            key={route.path}
+            path={route.path}
+            element={
+              <RequirePermission permiso={route.permiso}>
+                <PrivatePage path={route.path} />
+              </RequirePermission>
+            }
+          />
+        ))}
       </Route>
 
       {/* fallback */}

@@ -2,7 +2,7 @@
 
 Describe **cómo funciona lo construido** por la spec [`docs/specs/frontend/01-autenticacion-y-api.md`](../../specs/frontend/01-autenticacion-y-api.md). Las decisiones y sus motivos viven en la spec; acá solo el funcionamiento. Si este manual y el código se contradicen, gana el código.
 
-Estado: se completa paso a paso. Último paso reflejado: **4**.
+Estado: se completa paso a paso. Último paso reflejado: **5**.
 
 ## Mapa de archivos
 
@@ -24,6 +24,9 @@ Estado: se completa paso a paso. Último paso reflejado: **4**.
 | `src/auth/MeProvider.jsx` | Carga `/me` una vez por sesión y registra el puente |
 | `src/auth/usePermissions.js` | Contexto de `/me`, `useMe()` y `usePermissions()` |
 | `src/pages/AccountBlocked.jsx` | Pantalla completa de cuenta bloqueada |
+| `src/auth/RequirePermission.jsx` | Guarda por permiso de cada ruta privada |
+| `src/auth/Forbidden.jsx` | "No tenés permiso" |
+| `src/pages/NoAccess.jsx` | "Sin acceso" (ninguna ruta permitida) |
 
 ## 1. Configuración (`src/config.js`)
 
@@ -150,3 +153,18 @@ Los tests de `routes` y `permissions` usan los permisos de cada rol copiados de 
 - `RequireAuth`, con sesión, espera a `/me`: `bloqueado` → `AccountBlocked` (pantalla completa con el `title` de la API y "Cerrar sesión"); `cargando` → "Cargando tu cuenta…"; `error` → aviso con "Reintentar" (P-FA13); `listo` → la app.
 - La barra (`Layout.jsx`) muestra `me.nombre` y `me.tenant.nombre`.
 - Un cambio de rol se ve en el próximo inicio de sesión; mientras tanto la API rechaza con `sin_permiso` lo que ya no corresponde.
+
+## 10. Rutas, guardas y menú desde un solo mapa (`src/auth/routes.js`, `src/App.jsx`, `src/componentes/Layout.jsx`)
+
+**Un solo mapa.** `PRIVATE_ROUTES` (`path`, `label`, `permiso`) es la fuente de las rutas privadas y del menú:
+- `App.jsx` recorre el mapa y arma una `<Route>` por entrada, envuelta en `RequirePermission` con su permiso. La pantalla de cada ruta sale de `PAGES` (path → componente), que vive en `App.jsx` porque `routes.js` es lógica pura y se prueba sin React.
+- `Layout.jsx` arma el menú con `accessibleRoutes(permisos)`: solo los ítems que el usuario puede ver, en el orden del mapa.
+
+**Para agregar una pantalla privada:** crear el componente en `src/pages/`, agregar la entrada en `PRIVATE_ROUTES` (con el permiso de la matriz del backend) y el componente en `PAGES` de `App.jsx`. La ruta, la guarda y el ítem del menú salen solos.
+
+**Guardas en cadena.** `RequireAuth` (sesión) → `RequireMe` (cuenta cargada, no bloqueada) → `Layout` → `RequirePermission` (permiso de la ruta):
+- sin ninguna ruta accesible (por ejemplo, un `SUPERADMIN`, que solo tiene `tenants.*`) → `NoAccess` ("Sin acceso");
+- sin el permiso de esa ruta → `Forbidden` ("No tenés permiso"), dentro del layout, **sin redirigir** (no puede entrar en bucle);
+- con permiso → la pantalla.
+
+**Ruta inicial.** El destino por defecto después del login es `/dashboard` (D-FA9), que con la matriz actual es la primera ruta accesible para los cuatro roles de negocio. Ver P-FA14 en la spec.

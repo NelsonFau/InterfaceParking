@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Outlet, Link, useLocation } from "react-router-dom";
 import { useAuth0 } from "@auth0/auth0-react";
-import { useMe } from "../auth/usePermissions.js";
+import { usePermissions, useMe } from "../auth/usePermissions.js";
+import { accessibleRoutes } from "../auth/routes.js";
 import {
   Box,
   Button,
@@ -19,18 +20,6 @@ import MenuIcon from "@mui/icons-material/Menu";
 
 const drawerWidth = 220;
 
-const items = [
-  { to: "/dashboard", label: "Dashboard" },
-  { to: "/operaciones", label: "Monitor operativo" },
-  { to: "/cocheras", label: "Cocheras" },
-  { to: "/ocupaciones", label: "Ocupaciones" },
-  { to: "/clientes", label: "Clientes" },
-  { to: "/tarifas", label: "Tarifas" },
-  { to: "/auditoria", label: "Auditoría" },
-  { to: "/alertas-operativas", label: "Alertas operativas" },
-  { to: "/caja-diaria", label: "Caja diaria" }
-];
-
 export default function Layout() {
   const { pathname } = useLocation();
   const isMobile = useMediaQuery("(max-width:900px)");
@@ -38,6 +27,9 @@ export default function Layout() {
 
   const { logout } = useAuth0();
   const { me } = useMe();
+  const { permisos } = usePermissions();
+  // Menú desde el mapa único de rutas, solo con lo que el usuario puede ver (D-FA8).
+  const items = accessibleRoutes(permisos);
 
   // Cierra la sesión en Auth0 y limpia la memoria del SDK; Auth0 vuelve a /login (D-FA9).
   const salir = () => logout({ logoutParams: { returnTo: `${window.location.origin}/login` } });
@@ -51,10 +43,10 @@ export default function Layout() {
       <List>
         {items.map((it) => (
           <ListItemButton
-            key={it.to}
+            key={it.path}
             component={Link}
-            to={it.to}
-            selected={pathname === it.to}
+            to={it.path}
+            selected={pathname === it.path}
             onClick={isMobile ? closeDrawer : undefined} // 👈 en móvil cierra al navegar
           >
             <ListItemText primary={it.label} />
