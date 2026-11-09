@@ -195,6 +195,7 @@ El aviso es un `toast` de `react-hot-toast`, que ya usa el repo. `showApiError(e
 | DV-FA2 | D-FA10, D-FA6 | Errores por `code` y acciones por permiso en todas las pantallas | `Ocupaciones.jsx`, `CajaDiaria.jsx` y `pagosApi.js` **no se tocan**: usan el cliente nuevo (reciben el token y la normalización) pero conservan sus `catch`, que leen `data.error` y caen a su texto genérico | Esperan a las specs de la etapa 2 y a la decisión de ocupaciones; `Ocupaciones.jsx` tiene cambios sin commitear | La spec que ataque esas pantallas |
 | DV-FA3 | `ai-playbook/06-frontend.md` (proyecto de origen) | Sesión por cookie con `credentials: "include"`; guarda por roles; `apiFetch` y `fetch` prohibido; `fields` y `message` | Bearer en memoria; guarda por permisos; axios; `errors` y `title` | El backend manda: ARQ-1/DV-1, ARQ-4 y ARQ-9. El playbook describe otro proyecto y avisa que lo marcado como referencia se traduce | — |
 | DV-FA4 | `ai-playbook/08-git-ci-entornos.md` | Rama de integración `develop` | `master` (D-FA1) | El repo no tiene `develop` | P-FA6 |
+| DV-FA5 | Paso 1.1 y D-FA1 | `feature/front-auth` se crea desde `master` | Se creó desde `feature/spec-front-auth` (09/11/2026), por indicación del desarrollador. Va todo en un único PR a `master` que incluye los commits de la spec | La spec todavía no está en `master`; un PR aparte para la spec no aporta | — |
 
 ### 4.2 Pendientes
 
@@ -204,12 +205,14 @@ El aviso es un `toast` de `react-hot-toast`, que ya usa el repo. `showApiError(e
 |---|---|---|
 | P-FA1 | Configurar la aplicación de Auth0 de FrontParking y la API (checklist del paso 0.1). Es un paso manual | 0.1 |
 | P-FA2 | **Resuelto el 09/11/2026** (valores en el paso 0.1). Texto original: **Vencimientos.** ARQ-1 pide un access token "corto" sin cifra. Hay que decidir el vencimiento del access token, del refresh token (absoluto y por inactividad) y el período de superposición de la rotación. Propuesta para desarrollo: superposición de 10 s; el resto, valores a definir. Una superposición mayor que 0 es lo que evita que dos renovaciones concurrentes revoquen la familia de tokens | 0.1 |
+| P-FA11 | **Resuelto el 09/11/2026 por el desarrollador: se deja de trackear en esta spec** (paso 1: `git rm --cached .env` y `.env` en `.gitignore`; el archivo local queda intacto; las versiones viejas siguen en el historial, con valores `VITE_` que no son secretos). Texto original: **El `.env` está trackeado en git** (desde `7c8ae7c`) y no está en `.gitignore`. Choca con la verificación 12 ("`git status` no muestra el `.env`") y con el sentido de `.env.example`. Detectado al ejecutar el paso 1 (09/11/2026). Hay que decidir si se deja de trackear (`git rm --cached .env` y `.env` en `.gitignore`) en esta spec o fuera de ella | 1 |
+| P-FA12 | **Resuelto el 09/11/2026 por el desarrollador: excepción en ESLint.** `eslint.config.js` apaga `no-unused-vars` solo para `src/pages/CajaDiaria.jsx`, marcada como temporal; se retira con la spec de dinero, que reescribe ese archivo. `CajaDiaria.jsx` no se toca (DV-FA2 se mantiene). Texto original: **`npm run lint` falla por un error previo** en `src/pages/CajaDiaria.jsx:167` (`otros` asignada y sin uso, `no-unused-vars`), que ya está en `master`. Las reglas de la sección 6 exigen lint en verde, pero DV-FA2 prohíbe tocar `CajaDiaria.jsx`. Detectado al ejecutar el paso 1 (09/11/2026) | 1 |
 
 **Locales, el ejecutor los resuelve y los informa.**
 
 | Id | Qué verificar | Qué hacer según el resultado |
 |---|---|---|
-| P-FA3 | Que la versión instalada de `@auth0/auth0-react` mantenga las opciones de D-FA2 con esos nombres | Si cambiaron, ajustar al nombre vigente. Si una opción ya no existe y cambia el comportamiento, frenar |
+| P-FA3 | **Resuelto el 09/11/2026.** Que la versión instalada de `@auth0/auth0-react` mantenga las opciones de D-FA2 con esos nombres | Si cambiaron, ajustar al nombre vigente. Si una opción ya no existe y cambia el comportamiento, frenar. *Resultado:* `@auth0/auth0-react` 2.30.0 con `@auth0/auth0-spa-js` 2.30.0. `cacheLocation` (`'memory' \| 'localstorage'`), `useRefreshTokens`, `useRefreshTokensFallback`, `onRedirectCallback(appState, user)` y `getAccessTokenSilently({ cacheMode: 'on' \| 'off' \| 'cache-only' })` existen con esos nombres. Verificado en el código del SDK (`_getTokenUsingRefreshToken`): sin refresh token en memoria y con `useRefreshTokensFallback: false` lanza `MissingRefreshTokenError` (`missing_refresh_token`) y no usa el iframe, como pide D-FA2 |
 | P-FA4 | `/operaciones` (Monitor operativo) mezcla alertas (`alertas.ver`) y caja (`caja.ver`). Hoy los cuatro roles construidos tienen ambos permisos | Se guarda con `alertas.ver`. La spec de dinero revisa si exige también `caja.ver` |
 
 **Abiertos, sin bloquear.**
@@ -304,9 +307,9 @@ Rutas relativas a la raíz del repo del frontend. Los nombres de archivo son los
 
 ### Paso 1 — Dependencias, configuración y reglas de lint
 
-- [ ] **1.1** Crear `feature/front-auth` desde `master`. Instalar `@auth0/auth0-react` y `vitest` (esta última como `devDependency`) y agregar el script `test`. Resolver P-FA3.
-- [ ] **1.2** Crear `src/config.js` (D-FA11) y `.env.example`.
-- [ ] **1.3** Agregar a `eslint.config.js` las reglas que prohíben `localStorage`, `sessionStorage` y la decisión por `rol`, `role` o `userRole`.
+- [x] **1.1** Crear `feature/front-auth` desde `master` *(se creó desde `feature/spec-front-auth`: DV-FA5)*. Instalar `@auth0/auth0-react` y `vitest` (esta última como `devDependency`) y agregar el script `test`. Resolver P-FA3. *(Hecho el 09/11/2026; además, P-FA11: `.env` deja de trackearse.)*
+- [x] **1.2** Crear `src/config.js` (D-FA11) y `.env.example`.
+- [x] **1.3** *(Más la excepción de P-FA12 para `CajaDiaria.jsx`.)* Agregar a `eslint.config.js` las reglas que prohíben `localStorage`, `sessionStorage` y la decisión por `rol`, `role` o `userRole`.
 
   *Aceptación:* `npm test` pasa con `test/unit/config.test.js` (falta cada variable → el mensaje nombra esa variable; dominio con `https://` → falla; base de la API sin `/api/v1` → falla). `npm run lint` marca los usos actuales de `localStorage` en `App.jsx`, `Login.jsx`, `Splash.jsx`, `RequireAuth.jsx` y `http.js` como errores: es lo esperado, y esos archivos se corrigen en los pasos 3 y 5. Para que el commit quede en verde, las reglas se agregan con esos cinco archivos como excepciones temporales, que se retiran en los pasos 3 y 5. `npm run build` pasa.
 
@@ -382,7 +385,7 @@ Con el backend en `develop` corriendo en Development contra `parkingcontrol-dev`
 
 ## 8. Cómo retomar
 
-**Estado:** Aprobada el 09/11/2026 por el desarrollador, con las decisiones D-FA5 a D-FA12 (Propuesta) incluidas. No se ejecutó ningún paso. Paso 0 (manual) hecho el 09/11/2026. Sigue el paso 1.
+**Estado:** Aprobada el 09/11/2026 por el desarrollador, con las decisiones D-FA5 a D-FA12 (Propuesta) incluidas. En ejecución en `feature/front-auth` (DV-FA5). Paso 0 (manual) y paso 1 hechos el 09/11/2026. Sigue el paso 2.
 
 **Modelo y esfuerzo por paso.** La ejecución es liviana: las decisiones difíciles ya están tomadas (ARQ-1, DV-1 y D-FA2). Cada paso se ejecuta en un chat nuevo.
 

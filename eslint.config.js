@@ -26,4 +26,59 @@ export default defineConfig([
       'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
     },
   },
+  // ARQ-1 (sin localStorage) y ARQ-4 (nunca decidir por rol), D-FA11 de la spec frontend 01.
+  {
+    files: ['src/**/*.{js,jsx}'],
+    rules: {
+      'no-restricted-globals': [
+        'error',
+        { name: 'localStorage', message: 'ARQ-1: la sesión vive en memoria; no se usa localStorage.' },
+        { name: 'sessionStorage', message: 'ARQ-1: la sesión vive en memoria; no se usa sessionStorage.' },
+      ],
+      'no-restricted-properties': [
+        'error',
+        { object: 'window', property: 'localStorage', message: 'ARQ-1: no se usa localStorage.' },
+        { object: 'window', property: 'sessionStorage', message: 'ARQ-1: no se usa sessionStorage.' },
+      ],
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector:
+            'BinaryExpression[operator=/^[!=]==?$/] > MemberExpression[property.name=/^(rol|role|userRole)$/]',
+          message: 'ARQ-4: se decide por permisos (usePermissions), nunca por rol.',
+        },
+        {
+          selector:
+            'BinaryExpression[operator=/^[!=]==?$/] > Identifier[name=/^(rol|role|userRole)$/]',
+          message: 'ARQ-4: se decide por permisos (usePermissions), nunca por rol.',
+        },
+        {
+          selector: 'SwitchStatement > MemberExpression.discriminant[property.name=/^(rol|role|userRole)$/]',
+          message: 'ARQ-4: se decide por permisos (usePermissions), nunca por rol.',
+        },
+      ],
+    },
+  },
+  // P-FA12: error previo (variable `otros` sin uso) en un archivo que la spec frontend 01 no toca (DV-FA2).
+  // Temporal: se retira con la spec de dinero, que reescribe CajaDiaria.jsx.
+  {
+    files: ['src/pages/CajaDiaria.jsx'],
+    rules: {
+      'no-unused-vars': 'off',
+    },
+  },
+  // Excepciones temporales: estos archivos todavía usan localStorage y se corrigen en los pasos 3 y 4/5.
+  // Se retiran a medida que se reescriben (spec frontend 01, paso 1.3).
+  {
+    files: [
+      'src/App.jsx',
+      'src/pages/Login.jsx',
+      'src/pages/Splash.jsx',
+      'src/componentes/RequireAuth.jsx',
+      'src/api/http.js',
+    ],
+    rules: {
+      'no-restricted-globals': 'off',
+    },
+  },
 ])
