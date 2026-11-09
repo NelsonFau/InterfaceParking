@@ -1,6 +1,6 @@
 # 01 — Autenticación con Auth0, consumo de `/api/v1` y errores por `code`
 
-> Frontend · **Borrador** · `feature/spec-front-auth` (esta spec) y `feature/front-auth` (ejecución, a crear desde `master`) · Última actualización 09/11/2026
+> Frontend · **Aprobada** (09/11/2026) · `feature/spec-front-auth` (esta spec) y `feature/front-auth` (ejecución, a crear desde `master`) · Última actualización 09/11/2026
 >
 > Primera spec del frontend. Cierra el pendiente **P-26** del backend. Hasta que se ejecute, el frontend no funciona contra la API: el login propio (`/Auth/login`) ya no existe.
 
@@ -381,7 +381,7 @@ Con el backend en `develop` corriendo en Development contra `parkingcontrol-dev`
 
 ## 8. Cómo retomar
 
-**Estado:** Borrador. Esta spec está redactada y no se ejecutó ningún paso. Falta que el desarrollador la revise y la apruebe; al aprobarla, el estado pasa a **Aprobada**. Después se cierran P-FA1 y P-FA2 (paso 0).
+**Estado:** Aprobada el 09/11/2026 por el desarrollador, con las decisiones D-FA5 a D-FA12 (Propuesta) incluidas. No se ejecutó ningún paso. Sigue el paso 0 (P-FA1 y P-FA2), manual.
 
 **Modelo y esfuerzo por paso.** La ejecución es liviana: las decisiones difíciles ya están tomadas (ARQ-1, DV-1 y D-FA2). Cada paso se ejecuta en un chat nuevo.
 

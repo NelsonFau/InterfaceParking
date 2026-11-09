@@ -4,4 +4,4 @@
 
 | Spec | Área | Estado | Rama |
 |---|---|---|---|
-| [01 — Autenticación con Auth0, consumo de `/api/v1` y errores por `code`](frontend/01-autenticacion-y-api.md) | Frontend | Borrador | `feature/spec-front-auth` (spec), `feature/front-auth` (ejecución) |
+| [01 — Autenticación con Auth0, consumo de `/api/v1` y errores por `code`](frontend/01-autenticacion-y-api.md) | Frontend | Aprobada | `feature/spec-front-auth` (spec), `feature/front-auth` (ejecución) |
