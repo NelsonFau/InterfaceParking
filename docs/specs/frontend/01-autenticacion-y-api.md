@@ -323,10 +323,12 @@ Rutas relativas a la raíz del repo del frontend. Los nombres de archivo son los
 
 ### Paso 3 — Login, callback, logout y guarda de autenticación
 
-- [ ] **3.1** Crear `src/auth/AuthProvider.jsx` con la configuración de D-FA2 y D-FA3, y `onRedirectCallback` con `rutaDeRetornoSegura`. Envolver la app en `src/main.jsx`.
-- [ ] **3.2** Crear `src/auth/RequireAuth.jsx` y `src/pages/Callback.jsx`. Reemplazar `PrivateRoute` e `isAuthed` en `src/App.jsx`. Borrar `src/componentes/RequireAuth.jsx`.
-- [ ] **3.3** Reescribir `src/pages/Login.jsx` (botón "Ingresar", avisos por motivo, sin la llamada a `/Auth/login` ni los valores por defecto precargados) y `src/pages/Splash.jsx`.
-- [ ] **3.4** Agregar el botón "Salir" a `src/componentes/Layout.jsx` (`logout` con `returnTo = origin + "/login"`).
+- [x] **3.1** Crear `src/auth/AuthProvider.jsx` con la configuración de D-FA2 y D-FA3, y `onRedirectCallback` con `rutaDeRetornoSegura`. Envolver la app en `src/main.jsx`.
+- [x] **3.2** Crear `src/auth/RequireAuth.jsx` y `src/pages/Callback.jsx`. Reemplazar `PrivateRoute` e `isAuthed` en `src/App.jsx`. Borrar `src/componentes/RequireAuth.jsx`.
+- [x] **3.3** Reescribir `src/pages/Login.jsx` (botón "Ingresar", avisos por motivo, sin la llamada a `/Auth/login` ni los valores por defecto precargados) y `src/pages/Splash.jsx`.
+- [x] **3.4** Agregar el botón "Salir" a `src/componentes/Layout.jsx` (`logout` con `returnTo = origin + "/login"`).
+
+  *Estado (09/11/2026):* código hecho; lint y build en verde. **Verificación manual pendiente**: el desarrollador la hace junto con las de los pasos 4 a 6, cuando el backend esté levantado (lo indicó así en el chat de ejecución).
 
   *Aceptación (manual, con `npm run dev` en `http://localhost:5173`):* (1) entrar a `/clientes` sin sesión redirige a Auth0; (2) con `dueno@demo.test` se vuelve a `/clientes` y no a `/dashboard` (`returnTo`); (3) recargar la página vuelve a `/clientes` pasando por Auth0 **sin pedir la clave**; (4) "Salir" lleva a `/login`, y una nueva entrada a una ruta privada pide la clave; (5) `localStorage` no tiene ninguna clave de sesión ni token (DevTools → Application); (6) un `returnTo` manipulado (`/callback?…` con `//otro.com` en el estado) no sale del sitio. `npm run lint` y `npm run build` pasan. Se retiran las excepciones temporales de lint de `App.jsx`, `Login.jsx`, `Splash.jsx` y `RequireAuth.jsx`.
 
@@ -385,7 +387,7 @@ Con el backend en `develop` corriendo en Development contra `parkingcontrol-dev`
 
 ## 8. Cómo retomar
 
-**Estado:** Aprobada el 09/11/2026 por el desarrollador, con las decisiones D-FA5 a D-FA12 (Propuesta) incluidas. En ejecución en `feature/front-auth` (DV-FA5). Paso 0 (manual), paso 1 y paso 2 hechos el 09/11/2026. Sigue el paso 3.
+**Estado:** Aprobada el 09/11/2026 por el desarrollador, con las decisiones D-FA5 a D-FA12 (Propuesta) incluidas. En ejecución en `feature/front-auth` (DV-FA5). Paso 0 (manual), pasos 1 y 2 hechos el 09/11/2026; paso 3 con código hecho y verificación manual pendiente. Sigue el paso 4. Por indicación del desarrollador, `npm test` y las verificaciones manuales se corren juntas al final.
 
 **Modelo y esfuerzo por paso.** La ejecución es liviana: las decisiones difíciles ya están tomadas (ARQ-1, DV-1 y D-FA2). Cada paso se ejecuta en un chat nuevo.
 

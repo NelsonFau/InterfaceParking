@@ -2,7 +2,7 @@
 
 Describe **cómo funciona lo construido** por la spec [`docs/specs/frontend/01-autenticacion-y-api.md`](../../specs/frontend/01-autenticacion-y-api.md). Las decisiones y sus motivos viven en la spec; acá solo el funcionamiento. Si este manual y el código se contradicen, gana el código.
 
-Estado: se completa paso a paso. Último paso reflejado: **2**.
+Estado: se completa paso a paso. Último paso reflejado: **3**.
 
 ## Mapa de archivos
 
@@ -14,6 +14,10 @@ Estado: se completa paso a paso. Último paso reflejado: **2**.
 | `src/auth/permissions.js` | `can` y `canAny` sobre una lista de permisos |
 | `src/auth/safeReturnTo.js` | Valida la ruta de retorno después del login |
 | `src/auth/routes.js` | Mapa único de rutas privadas y su permiso |
+| `src/auth/AuthProvider.jsx` | Configura `Auth0Provider` y la vuelta del login |
+| `src/auth/RequireAuth.jsx` | Guarda de autenticación de las rutas privadas |
+| `src/pages/Callback.jsx` | Ruta `/callback`: "Ingresando…" o error de Auth0 |
+| `src/pages/Login.jsx` | Botón "Ingresar" y aviso según el motivo |
 
 ## 1. Configuración (`src/config.js`)
 
@@ -46,7 +50,7 @@ Dos garantías de arquitectura se bloquean con lint, no solo con documentación.
 | `no-restricted-syntax` | Comparar con `==`/`===`/`!=`/`!==` una propiedad o variable `rol`, `role` o `userRole`, o usarla como discriminante de un `switch` | ARQ-4: la UI decide por permisos, nunca por rol |
 
 Excepciones temporales (bloques finales de `eslint.config.js`):
-- `App.jsx`, `Login.jsx`, `Splash.jsx`, `componentes/RequireAuth.jsx` y `api/http.js` todavía usan `localStorage`. Se retiran al reescribirlos (pasos 3 y 4).
+- `api/http.js` todavía lee el token de `localStorage`. Se retira en el paso 4. (Las de `App.jsx`, `Login.jsx`, `Splash.jsx` y `componentes/RequireAuth.jsx` se retiraron en el paso 3.)
 - `pages/CajaDiaria.jsx` tiene `no-unused-vars` apagado por un error previo que esta spec no toca (P-FA12). Se retira con la spec de dinero.
 
 ## 4. Variables de entorno y git
@@ -88,3 +92,25 @@ La API devuelve todo error como Problem Details (RFC 9457) con `status`, `title`
 - `safeReturnTo.js` (en la spec, `rutaDeRetornoSegura`): acepta solo rutas internas (empiezan con `/`, no con `//` ni `/\`, sin caracteres de control) y devuelve `null` si no. Evita un open redirect con un `returnTo` manipulado.
 
 Los tests de `routes` y `permissions` usan los permisos de cada rol copiados de `RolPermisos.cs` del backend (`test/unit/auth/rolePermissions.fixture.js`); si la matriz cambia, se actualiza ese archivo.
+
+## 7. Inicio y cierre de sesión con Auth0 (`src/auth/`, `src/pages/`)
+
+**Librería.** `@auth0/auth0-react` (Authorization Code + PKCE; la SPA es un cliente público, sin secretos). `main.jsx` arma el árbol `StrictMode > BrowserRouter > AuthProvider > App`: `AuthProvider` va dentro del router para poder navegar al volver de Auth0.
+
+**Dónde vive el token.** `AuthProvider.jsx` configura el SDK con `cacheLocation="memory"`, `useRefreshTokens` y `useRefreshTokensFallback={false}`: access y refresh token solo en la memoria del SDK, renovación con refresh token rotativo y **sin iframe** (que dependería de cookies de terceros). El SDK sí guarda una cookie propia, `auth0.<clientId>.is.authenticated`, que solo indica que hubo sesión y no contiene tokens. Nada se escribe en `localStorage`.
+
+**Recorrido de un login.**
+1. El usuario entra a una ruta privada. `RequireAuth` espera a que el SDK termine de inicializar (`isLoading`).
+2. Sin sesión y sin error, llama **una sola vez** (un `ref` lo garantiza, también con el doble montaje de StrictMode) a `loginWithRedirect({ appState: { returnTo } })`, con la ruta actual completa (path, query y hash).
+3. Auth0 autentica y vuelve a `/callback?code=…&state=…` (`redirect_uri` = `origin + "/callback"`).
+4. `Auth0Provider` detecta el código, lo canjea (una sola vez) y llama a `onRedirectCallback(appState)`, que navega a `safeReturnTo(appState.returnTo)` o a `/dashboard` si la ruta no es interna. Mientras tanto `Callback.jsx` muestra "Ingresando…".
+
+**Recarga.** La memoria se pierde: el SDK no tiene refresh token, falla con `missing_refresh_token` sin probar el iframe y queda sin sesión. `RequireAuth` vuelve a redirigir a Auth0, que tiene su propia sesión y devuelve un código sin pedir la clave. Se ve como un redirect rápido.
+
+**Errores de Auth0.** Si Auth0 vuelve con `?error=…` (por ejemplo, usuario bloqueado), el SDK no llama a `onRedirectCallback` y deja el error en `useAuth0().error`. `Callback` y `RequireAuth` navegan a `/login` con `state = { reason: "auth0_error", message }` y **no** vuelven a redirigir: así una configuración rota no entra en bucle.
+
+**`/login`.** Pantalla pública con el botón "Ingresar" (`loginWithRedirect` sin `returnTo`: vuelve a `/dashboard`). El aviso sale del `state` de la navegación (`LOGIN_REASON` en `errorCodes.js`): `sesion_vencida` → "Tu sesión venció"; `auth0_error` → el mensaje de Auth0. Si ya hay sesión y no hay motivo, redirige a `/dashboard`.
+
+**Splash (`/`).** Muestra el logo al menos 1,8 s y, cuando el SDK terminó de inicializar, va a `/dashboard` o a `/login`.
+
+**Logout.** El botón "Salir" de la barra (`Layout.jsx`) llama a `logout({ logoutParams: { returnTo: origin + "/login" } })`: el SDK limpia su memoria, Auth0 cierra su sesión y vuelve a `/login`. La siguiente entrada a una ruta privada pide la clave.

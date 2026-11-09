@@ -11,15 +11,8 @@ import Login from "./pages/Login.jsx";
 import Splash from "./pages/Splash.jsx";
 import OperationalDashboard from "./pages/OperationalDashboard.jsx";
 import CajaDiaria from "./pages/CajaDiaria.jsx";
-
-
-function isAuthed() {
-  return !!localStorage.getItem("token");
-}
-
-function PrivateRoute({ children }) {
-  return isAuthed() ? children : <Navigate to="/login" replace />;
-}
+import Callback from "./pages/Callback.jsx";
+import RequireAuth from "./auth/RequireAuth.jsx";
 
 export default function App() {
   return (
@@ -27,15 +20,16 @@ export default function App() {
       {/* splash inicial */}
       <Route path="/" element={<Splash />} />
 
-      {/* login */}
-      <Route path="/login" element={isAuthed() ? <Navigate to="/dashboard" replace /> : <Login />} />
+      {/* públicas: login y vuelta de Auth0 */}
+      <Route path="/login" element={<Login />} />
+      <Route path="/callback" element={<Callback />} />
 
       {/* app protegida */}
       <Route
         element={
-          <PrivateRoute>
+          <RequireAuth>
             <Layout />
-          </PrivateRoute>
+          </RequireAuth>
         }
       >
         <Route path="/dashboard" element={<Dashboard />} />

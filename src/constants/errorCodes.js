@@ -48,3 +48,9 @@ export const GENERIC_ERROR_MESSAGE = "Ocurrió un error inesperado. Intentá de 
 export function treatmentFor(code) {
   return ERROR_CODES[code]?.treatment ?? TREATMENT.NOTICE;
 }
+
+// Motivo por el que se llega a /login, para mostrar el aviso (D-FA9). Viaja en el state de la navegación.
+export const LOGIN_REASON = {
+  AUTH0_ERROR: "auth0_error",
+  SESSION_EXPIRED: "sesion_vencida",
+};

@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { Outlet, Link, useLocation } from "react-router-dom";
+import { useAuth0 } from "@auth0/auth0-react";
 import {
   Box,
+  Button,
   Drawer,
   List,
   ListItemButton,
@@ -32,6 +34,11 @@ export default function Layout() {
   const { pathname } = useLocation();
   const isMobile = useMediaQuery("(max-width:900px)");
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  const { logout } = useAuth0();
+
+  // Cierra la sesión en Auth0 y limpia la memoria del SDK; Auth0 vuelve a /login (D-FA9).
+  const salir = () => logout({ logoutParams: { returnTo: `${window.location.origin}/login` } });
 
   const toggleDrawer = () => setMobileOpen((v) => !v);
   const closeDrawer = () => setMobileOpen(false);
@@ -71,9 +78,13 @@ export default function Layout() {
             </IconButton>
           )}
 
-          <Typography variant="h6" noWrap component="div">
+          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
             ParkingControl
           </Typography>
+
+          <Button color="inherit" onClick={salir}>
+            Salir
+          </Button>
         </Toolbar>
       </AppBar>
 

@@ -67,16 +67,10 @@ export default defineConfig([
       'no-unused-vars': 'off',
     },
   },
-  // Excepciones temporales: estos archivos todavía usan localStorage y se corrigen en los pasos 3 y 4/5.
-  // Se retiran a medida que se reescriben (spec frontend 01, paso 1.3).
+  // Excepción temporal: http.js todavía lee el token de localStorage; se reescribe en el paso 4
+  // (spec frontend 01, paso 1.3).
   {
-    files: [
-      'src/App.jsx',
-      'src/pages/Login.jsx',
-      'src/pages/Splash.jsx',
-      'src/componentes/RequireAuth.jsx',
-      'src/api/http.js',
-    ],
+    files: ['src/api/http.js'],
     rules: {
       'no-restricted-globals': 'off',
     },
