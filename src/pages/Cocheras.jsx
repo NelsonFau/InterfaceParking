@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { http } from "../api/http";
+import { showApiError } from "../api/errors";
+import { usePermissions } from "../auth/usePermissions";
 import toast from "react-hot-toast";
 import {
   Box,
@@ -162,6 +164,8 @@ function CocheraCard({ c, onClick }) {
 }
 
 export default function Cocheras() {
+  const { can } = usePermissions();
+  const canChangeState = can("cocheras.cambiar_estado");
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -186,8 +190,7 @@ export default function Cocheras() {
       const res = await http.get("/Cochera");
       setItems(Array.isArray(res.data) ? res.data : []);
     } catch (e) {
-      console.error(e);
-      toast.error("No pude cargar cocheras");
+      showApiError(e);
     } finally {
       setLoading(false);
     }
@@ -200,8 +203,7 @@ export default function Cocheras() {
       setNota(res.data?.nota ?? "");
       setOpen(true);
     } catch (e) {
-      console.error(e);
-      toast.error("No pude cargar detalle");
+      showApiError(e);
     }
   }
 
@@ -216,12 +218,7 @@ export default function Cocheras() {
       await cargar();
       await abrirDetalle(cocheraId);
     } catch (e) {
-      console.error(e);
-      const msg =
-        (typeof e?.response?.data === "string" && e.response.data) ||
-        e?.response?.data?.error ||
-        "No pude actualizar estado";
-      toast.error(msg);
+      showApiError(e);
     } finally {
       setSaving(false);
     }
@@ -325,6 +322,9 @@ export default function Cocheras() {
                 );
               })()}
 
+              {/* Cambio de estado: solo con cocheras.cambiar_estado (D-FA10) */}
+              {canChangeState ? (
+                <>
               <TextField
                 label="Nota (ej: en reparación)"
                 value={nota}
@@ -351,6 +351,8 @@ export default function Cocheras() {
                   Desbloquear
                 </Button>
               </Stack>
+                </>
+              ) : null}
 
               <Box>
                 <Typography variant="subtitle1" sx={{ mb: 1 }}>

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { http } from "../api/http";
+import { showApiError } from "../api/errors";
 import {
   Box,
   Paper,
@@ -9,7 +10,6 @@ import {
   Chip,
   Divider,
 } from "@mui/material";
-import toast from "react-hot-toast";
 
 function StatCard({ title, value, hint }) {
   return (
@@ -100,8 +100,7 @@ export default function Dashboard() {
         const res = await http.get("/Panel/resumen");
         setData(res.data);
       } catch (e) {
-        toast.error("No pude cargar el resumen");
-        console.error(e);
+        showApiError(e);
       }
     })();
   }, []);

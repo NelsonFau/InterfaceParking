@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { http } from "../api/http";
+import { showApiError } from "../api/errors";
+import { usePermissions } from "../auth/usePermissions";
 import toast from "react-hot-toast";
 import {
   Box,
@@ -50,6 +52,9 @@ function fmtDate(dt) {
 }
 
 export default function Tarifas() {
+  const { can } = usePermissions();
+  // Actualizar precios: solo con tarifas.editar (D-FA10).
+  const canEdit = can("tarifas.editar");
   const [loading, setLoading] = useState(true);
 
   const [activas, setActivas] = useState([]);
@@ -77,18 +82,17 @@ export default function Tarifas() {
   // CARGAS
   // ======================
   async function cargarActivas() {
-    const res = await http.get("/Tarifas/activas");
+    const res = await http.get("/Tarifa/activas");
     setActivas(Array.isArray(res.data) ? res.data : []);
   }
 
   async function cargarHistorial(tipoEnum) {
     try {
-      const res = await http.get(`/Tarifas/historial?tipo=${tipoEnum}`);
+      const res = await http.get(`/Tarifa/historial?tipo=${tipoEnum}`);
       setHistorial(Array.isArray(res.data) ? res.data : []);
     } catch (e) {
-      console.error(e);
       setHistorial([]);
-      toast.error(e?.response?.data?.error || "No pude cargar historial");
+      showApiError(e);
     }
   }
 
@@ -97,8 +101,7 @@ export default function Tarifas() {
       setLoading(true);
       await cargarActivas();
     } catch (e) {
-      console.error(e);
-      toast.error(e?.response?.data?.error || "No pude cargar tarifas");
+      showApiError(e);
     } finally {
       setLoading(false);
     }
@@ -139,7 +142,7 @@ export default function Tarifas() {
     try {
       setSaving(true);
 
-      await http.put("/Tarifas", {
+      await http.put("/Tarifa", {
         tipo: tipoUpd,
         nuevoPrecio: precio,
         vigenteDesde,
@@ -151,8 +154,7 @@ export default function Tarifas() {
       await cargarActivas();
       await cargarHistorial(tipoHist);
     } catch (e) {
-      console.error(e);
-      toast.error(e?.response?.data?.error || "No pude actualizar tarifa");
+      showApiError(e);
     } finally {
       setSaving(false);
     }
@@ -204,12 +206,14 @@ export default function Tarifas() {
                         <Typography fontWeight={800}>
                           {t ? money(t.precio) : "-"}
                         </Typography>
-                        <Button
-                          variant="contained"
-                          onClick={() => abrirActualizar(tipo.id)}
-                        >
-                          Actualizar
-                        </Button>
+                        {canEdit ? (
+                          <Button
+                            variant="contained"
+                            onClick={() => abrirActualizar(tipo.id)}
+                          >
+                            Actualizar
+                          </Button>
+                        ) : null}
                       </Stack>
                     </Stack>
                   );

@@ -2,7 +2,7 @@
 
 Describe **cómo funciona lo construido** por la spec [`docs/specs/frontend/01-autenticacion-y-api.md`](../../specs/frontend/01-autenticacion-y-api.md). Las decisiones y sus motivos viven en la spec; acá solo el funcionamiento. Si este manual y el código se contradicen, gana el código.
 
-Estado: se completa paso a paso. Último paso reflejado: **5**.
+Estado: se completa paso a paso. Último paso reflejado: **6**.
 
 ## Mapa de archivos
 
@@ -168,3 +168,22 @@ Los tests de `routes` y `permissions` usan los permisos de cada rol copiados de 
 - con permiso → la pantalla.
 
 **Ruta inicial.** El destino por defecto después del login es `/dashboard` (D-FA9), que con la matriz actual es la primera ruta accesible para los cuatro roles de negocio. Ver P-FA14 en la spec.
+
+## 11. Pantallas en alcance: errores y acciones por permiso
+
+**Errores.** En Clientes, Cocheras, Tarifas, Auditoría, Dashboard, Monitor operativo y Alertas operativas, cada `catch` llama a `showApiError(e)` en lugar de armar su texto. Los `finally`, el estado de carga, la limpieza de listas (`setItems([])`, `setHistorial([])`) y los mensajes de éxito no cambian. Las validaciones locales de formulario ("Falta Documento", "El precio debe ser mayor a 0") siguen con su `toast.error` propio: no son errores de la API.
+
+**Acciones de escritura.** Cada pantalla toma `can` de `usePermissions()` y **oculta** (no deshabilita) la acción si falta el permiso:
+
+| Pantalla | Qué se oculta | Permiso |
+|---|---|---|
+| Clientes | "Nuevo cliente", "Editar", "Desactivar"/"Reactivar" | `clientes.gestionar` |
+| Cocheras | Campo "Nota" y botones "Bloquear"/"Desbloquear" del detalle | `cocheras.cambiar_estado` |
+| Tarifas | Botón "Actualizar" de cada tarifa activa | `tarifas.editar` |
+| Alertas operativas | Botón "Resolver alerta" | `alertas.resolver` |
+
+Ocultar es solo UX: la API rechaza igual con `sin_permiso`, y `showApiError` lo muestra con su `title`.
+
+**Fuera de alcance (DV-FA2).** `Ocupaciones.jsx`, `CajaDiaria.jsx` y `pagosApi.js` no se tocaron: pasan por el cliente nuevo (token y normalización), pero sus `catch` siguen leyendo `e.response.data.error`; como el `ApiError` conserva `response`, no se rompen y caen a su texto genérico.
+
+**Rutas de la API.** Tarifas pasó de `/Tarifas/…` a `/Tarifa/…` (singular, como el controller; DV-FA1).

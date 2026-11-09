@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import toast from "react-hot-toast";
 import {
   Box,
   Button,
@@ -16,6 +15,7 @@ import {
 
 import { operationalAlertsApi } from "../api/operationalAlertsApi";
 import { pagosApi } from "../api/pagosApi";
+import { showApiError } from "../api/errors";
 import {
   SEVERIDAD_ALERTA,
   TIPO_ALERTA,
@@ -117,8 +117,7 @@ export default function OperationalDashboard() {
       setAlertas(Array.isArray(alertasRes.data) ? alertasRes.data : []);
       setCaja(cajaRes.data);
     } catch (e) {
-      console.error(e);
-      toast.error("No se pudo cargar el monitor operativo");
+      showApiError(e);
     } finally {
       setLoading(false);
     }

@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { http } from "../api/http";
+import { showApiError } from "../api/errors";
+import { usePermissions } from "../auth/usePermissions";
 import toast from "react-hot-toast";
 import {
   Box,
@@ -40,7 +42,7 @@ function LoadingList() {
   );
 }
 
-function ClienteCard({ c, onEdit, onToggle }) {
+function ClienteCard({ c, onEdit, onToggle, canManage }) {
   return (
     <Card
       variant="outlined"
@@ -83,7 +85,8 @@ function ClienteCard({ c, onEdit, onToggle }) {
             </Typography>
           </Box>
 
-          {/* Actions */}
+          {/* Actions (solo con clientes.gestionar, D-FA10) */}
+          {canManage ? (
           <Stack
             direction="row"
             spacing={1}
@@ -107,6 +110,7 @@ function ClienteCard({ c, onEdit, onToggle }) {
               {c.activo ? "Desactivar" : "Reactivar"}
             </Button>
           </Stack>
+          ) : null}
         </Stack>
       </CardContent>
     </Card>
@@ -114,6 +118,8 @@ function ClienteCard({ c, onEdit, onToggle }) {
 }
 
 export default function Clientes() {
+  const { can } = usePermissions();
+  const canManage = can("clientes.gestionar");
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -192,12 +198,7 @@ export default function Clientes() {
       if (typeof data.page === "number" && data.page > 0) setPage(data.page);
       if (typeof data.pageSize === "number" && data.pageSize > 0) setPageSize(data.pageSize);
     } catch (e) {
-      console.error(e);
-      const msg =
-        (typeof e?.response?.data === "string" && e.response.data) ||
-        e?.response?.data?.error ||
-        "No pude cargar clientes";
-      toast.error(msg);
+      showApiError(e);
     } finally {
       if (myReqId === reqIdRef.current) setLoading(false);
     }
@@ -241,12 +242,7 @@ export default function Clientes() {
       setOpen(false);
       await cargar(page);
     } catch (e) {
-      console.error(e);
-      const msg =
-        (typeof e?.response?.data === "string" && e.response.data) ||
-        e?.response?.data?.error ||
-        "No pude guardar el cliente";
-      toast.error(msg);
+      showApiError(e);
     } finally {
       setSaving(false);
     }
@@ -263,12 +259,7 @@ export default function Clientes() {
       if (items.length === 1 && page > 1) setPage((p) => p - 1);
       else await cargar(page);
     } catch (e) {
-      console.error(e);
-      const msg =
-        (typeof e?.response?.data === "string" && e.response.data) ||
-        e?.response?.data?.error ||
-        "No pude desactivar el cliente";
-      toast.error(msg);
+      showApiError(e);
     }
   }
 
@@ -281,12 +272,7 @@ export default function Clientes() {
       toast.success("Cliente reactivado");
       await cargar(page);
     } catch (e) {
-      console.error(e);
-      const msg =
-        (typeof e?.response?.data === "string" && e.response.data) ||
-        e?.response?.data?.error ||
-        "No pude reactivar el cliente";
-      toast.error(msg);
+      showApiError(e);
     }
   }
 
@@ -309,13 +295,15 @@ export default function Clientes() {
         alignItems={{ xs: "stretch", sm: "center" }}
         sx={{ mb: 2 }}
       >
-        <Button
-          variant="contained"
-          onClick={abrirCrear}
-          sx={{ borderRadius: 2, fontWeight: 900 }}
-        >
-          Nuevo cliente
-        </Button>
+        {canManage ? (
+          <Button
+            variant="contained"
+            onClick={abrirCrear}
+            sx={{ borderRadius: 2, fontWeight: 900 }}
+          >
+            Nuevo cliente
+          </Button>
+        ) : null}
 
         <Button
           variant="outlined"
@@ -401,6 +389,7 @@ export default function Clientes() {
               c={c}
               onEdit={() => abrirEditar(c)}
               onToggle={() => (c.activo ? desactivar(c) : reactivar(c))}
+              canManage={canManage}
             />
           ))}
 

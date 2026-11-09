@@ -19,6 +19,8 @@ import {
 } from "@mui/material";
 
 import { operationalAlertsApi } from "../api/operationalAlertsApi";
+import { showApiError } from "../api/errors";
+import { usePermissions } from "../auth/usePermissions";
 import {
   SEVERIDAD_ALERTA,
   TIPO_ALERTA,
@@ -48,6 +50,9 @@ function AlertChip({ severidad }) {
 }
 
 export default function OperationalAlerts() {
+  const { can } = usePermissions();
+  // Resolver alertas: solo con alertas.resolver (D-FA10).
+  const canResolve = can("alertas.resolver");
   const [alertas, setAlertas] = useState([]);
   const [loading, setLoading] = useState(false);
 
@@ -75,8 +80,7 @@ export default function OperationalAlerts() {
       const { data } = await operationalAlertsApi.getAll(params);
       setAlertas(Array.isArray(data) ? data : []);
     } catch (e) {
-      console.error(e);
-      toast.error("No se pudieron cargar las alertas operativas");
+      showApiError(e);
     } finally {
       setLoading(false);
     }
@@ -120,8 +124,7 @@ export default function OperationalAlerts() {
       cerrarResolver();
       await cargarAlertas();
     } catch (e) {
-      console.error(e);
-      toast.error("No se pudo resolver la alerta");
+      showApiError(e);
     } finally {
       setResolving(false);
     }
@@ -297,7 +300,7 @@ export default function OperationalAlerts() {
                         <Typography variant="body2" color="text.secondary">
                           Resuelta: {fmtDate(a.fechaResolucion)}
                         </Typography>
-                      ) : (
+                      ) : canResolve ? (
                         <Button
                           variant="contained"
                           color="error"
@@ -305,7 +308,7 @@ export default function OperationalAlerts() {
                         >
                           Resolver alerta
                         </Button>
-                      )}
+                      ) : null}
                     </Stack>
                   </Stack>
                 </CardContent>

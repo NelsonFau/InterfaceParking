@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { http } from "../api/http";
-import toast from "react-hot-toast";
+import { showApiError } from "../api/errors";
 import {
   Box,
   Button,
@@ -112,8 +112,7 @@ export default function Auditoria() {
 
       setItems(Array.isArray(res.data) ? res.data : []);
     } catch (e) {
-      console.error(e);
-      toast.error(e?.response?.data?.error || "No pude cargar auditoría");
+      showApiError(e);
       setItems([]);
     } finally {
       if (myReqId === reqIdRef.current) setLoading(false);

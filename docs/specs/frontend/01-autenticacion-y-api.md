@@ -356,9 +356,11 @@ Rutas relativas a la raíz del repo del frontend. Los nombres de archivo son los
 
 ### Paso 6 — Pantallas en alcance
 
-- [ ] **6.1** `Tarifas.jsx`: `/Tarifas/…` → `/Tarifa/…` (DV-FA1).
-- [ ] **6.2** En `Clientes.jsx`, `Cocheras.jsx`, `Tarifas.jsx`, `Auditoria.jsx`, `Dashboard.jsx`, `OperationalDashboard.jsx` y `OperationalAlerts.jsx`, reemplazar cada `catch` que arma su propio texto por `showApiError(error)`. Los `finally`, el estado de carga y los mensajes de éxito no se tocan.
-- [ ] **6.3** Ocultar las acciones de escritura de la tabla de D-FA10 con `can(permiso)`.
+- [x] **6.1** `Tarifas.jsx`: `/Tarifas/…` → `/Tarifa/…` (DV-FA1).
+- [x] **6.2** En `Clientes.jsx`, `Cocheras.jsx`, `Tarifas.jsx`, `Auditoria.jsx`, `Dashboard.jsx`, `OperationalDashboard.jsx` y `OperationalAlerts.jsx`, reemplazar cada `catch` que arma su propio texto por `showApiError(error)`. Los `finally`, el estado de carga y los mensajes de éxito no se tocan.
+- [x] **6.3** Ocultar las acciones de escritura de la tabla de D-FA10 con `can(permiso)`.
+
+  *Estado (09/11/2026):* código hecho; lint y build en verde; `git diff master HEAD` sobre `Ocupaciones.jsx`, `CajaDiaria.jsx` y `pagosApi.js` vacío. Rutas verificadas contra los controllers del backend (`TarifaController` en `api/v1/Tarifa`). En Cocheras, sin `cocheras.cambiar_estado` se ocultan los botones Bloquear/Desbloquear **y** el campo Nota, que solo sirve para ese cambio. Verificación manual y `npm test` pendientes para el final.
 
   *Aceptación (manual):* (1) Tarifas carga las tarifas activas y el historial; (2) con `operado@demo.test`: Clientes muestra el alta y la edición, Cocheras permite cambiar el estado, Tarifas **no** muestra el botón de actualizar, Alertas permite resolver; con `encargado@demo.test`, Tarifas tampoco; con `dueno@demo.test`, todo; (3) un 403 `sin_permiso` forzado (por ejemplo, llamando a `PUT /Tarifa` con `operado@demo.test` desde DevTools) muestra el `title` de la API en un aviso y la pantalla sigue; (4) con el backend apagado se ve "No pudimos conectarnos…" y no un mensaje de axios; (5) `Ocupaciones.jsx`, `CajaDiaria.jsx` y `pagosApi.js` no tienen diferencias en `git diff`. `npm run lint`, `npm test` y `npm run build` pasan.
 
@@ -393,7 +395,7 @@ Con el backend en `develop` corriendo en Development contra `parkingcontrol-dev`
 
 ## 8. Cómo retomar
 
-**Estado:** Aprobada el 09/11/2026 por el desarrollador, con las decisiones D-FA5 a D-FA12 (Propuesta) incluidas. En ejecución en `feature/front-auth` (DV-FA5). Paso 0 (manual), pasos 1 y 2 hechos el 09/11/2026; pasos 3 a 5 con código hecho y verificación manual pendiente. Sigue el paso 6. Por indicación del desarrollador, `npm test` y las verificaciones manuales se corren juntas al final.
+**Estado:** Aprobada el 09/11/2026 por el desarrollador, con las decisiones D-FA5 a D-FA12 (Propuesta) incluidas. En ejecución en `feature/front-auth` (DV-FA5). Paso 0 (manual), pasos 1 y 2 hechos el 09/11/2026; pasos 3 a 6 con código hecho y verificación manual pendiente. Sigue el paso 7. Por indicación del desarrollador, `npm test` y las verificaciones manuales se corren juntas al final.
 
 **Modelo y esfuerzo por paso.** La ejecución es liviana: las decisiones difíciles ya están tomadas (ARQ-1, DV-1 y D-FA2). Cada paso se ejecuta en un chat nuevo.
 
