@@ -419,6 +419,16 @@ Rama `feature/front-auth` (local, **sin push**), un commit por paso: `11bcd20` (
 4. **Cierre** (autorizado por el desarrollador solo para este trabajo): spec en **Terminada** (cabecera, esta sección y `docs/specs/README.md`, paso 7.3) y commit; `git push -u origin feature/front-auth`; `gh pr create` a `master` (título corto en español; resumen: login con Auth0, cliente HTTP, `/me` y permisos, errores por `code`; qué se verificó; qué queda fuera: pantallas de dinero y ocupaciones; **sin atribución de IA**); merge normal (sin squash); borrar la rama remota `feature/front-auth`. **No** pushear ni borrar `feature/spec-front-auth` sin preguntar. Si algo falla (lint, build, conflicto, `gh` sin sesión), frenar y consultar; nada de force push ni de saltear hooks.
 5. **Al cerrar**: informar pendientes (P-FA5 a P-FA10, P-FA13, P-FA14) y los comandos para dejar el repo local en `master` actualizado y borrar las ramas locales.
 
+### 8.2 Avance posterior (09/11/2026, segunda sesión)
+
+- **`npm test`: 6 archivos, 66 tests, todos en verde.** El punto 1 de "Falta" está hecho.
+- **Decisiones aceptadas por el desarrollador:** P-FA10 (commitear `CLAUDE.md`), P-FA13, P-FA14, nombres en inglés (`safeReturnTo`, `sharePromise`) y `rol` fuera de `usePermissions()`. Falta anotarlas como resueltas en la sección 4 y commitear `CLAUDE.md` (por ruta explícita) al cerrar.
+- **Verificación manual, ronda 1 (login), en curso:**
+  - El primer intento dio `Callback URL mismatch` en Auth0: las Allowed Callback URLs del tenant no tenían `http://localhost:5173/callback` (el origen enviado era correcto). Después de corregirlo en Auth0, **el login funcionó** (la app llegó a pedir `/me`).
+  - Luego apareció "No pudimos conectarnos con el servidor" (`sin_conexion` al pedir `/me`). Causa a confirmar, no es del código del frontend: el esquema o el puerto de la API en `VITE_API_BASE_URL`. El `docker-compose.yml` del backend publica la API en `http://localhost:7076` (HTTP, puerto 8080 interno); `dotnet run` con el perfil https usa `https://localhost:7076`. Si el `.env` dice `https://` y la API corre en Docker, el pedido falla. CORS del backend (`Development`) acepta `http://localhost:5173`, así que no es CORS.
+  - **Para retomar:** confirmar cómo corre la API, abrir `/api/v1/me` en el navegador (debe dar 401 `no_autenticado`), ajustar `VITE_API_BASE_URL` en el `.env` (sin leerlo ni mostrarlo; lo edita el desarrollador) y reiniciar `npm run dev`. Después, seguir con el resto de la verificación manual (puntos 2 a 5 de "Falta", más las rondas de los pasos 4 a 6).
+- **Aviso sobre el backend (no se toca desde esta spec):** el servicio `frontend` del `docker-compose.yml` del backend tiene `VITE_API_BASE_URL: http://localhost:7076/api` (sin `/v1`) y no define las variables de Auth0, así que con la configuración nueva ese contenedor no arranca. Si se va a usar, hay que actualizarlo desde el repo del backend.
+
 **Modelo para retomar:** Sonnet, esfuerzo bajo (tests, verificación guiada y cierre; las únicas decisiones abiertas son las listadas, y las toma el desarrollador).
 
 **Prompt para retomar:**
