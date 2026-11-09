@@ -203,7 +203,7 @@ El aviso es un `toast` de `react-hot-toast`, que ya usa el repo. `showApiError(e
 | Id | Pendiente | Paso |
 |---|---|---|
 | P-FA1 | Configurar la aplicación de Auth0 de FrontParking y la API (checklist del paso 0.1). Es un paso manual | 0.1 |
-| P-FA2 | **Vencimientos.** ARQ-1 pide un access token "corto" sin cifra. Hay que decidir el vencimiento del access token, del refresh token (absoluto y por inactividad) y el período de superposición de la rotación. Propuesta para desarrollo: superposición de 10 s; el resto, valores a definir. Una superposición mayor que 0 es lo que evita que dos renovaciones concurrentes revoquen la familia de tokens | 0.1 |
+| P-FA2 | **Resuelto el 09/11/2026** (valores en el paso 0.1). Texto original: **Vencimientos.** ARQ-1 pide un access token "corto" sin cifra. Hay que decidir el vencimiento del access token, del refresh token (absoluto y por inactividad) y el período de superposición de la rotación. Propuesta para desarrollo: superposición de 10 s; el resto, valores a definir. Una superposición mayor que 0 es lo que evita que dos renovaciones concurrentes revoquen la familia de tokens | 0.1 |
 
 **Locales, el ejecutor los resuelve y los informa.**
 
@@ -292,13 +292,14 @@ Rutas relativas a la raíz del repo del frontend. Los nombres de archivo son los
 
 ### Paso 0 — Preparación manual
 
-- [ ] **0.1 (paso manual)** Dejar el tenant `parkingcontrol-dev` listo para FrontParking (P-FA1, P-FA2):
+- [x] **0.1 (paso manual)** *(hecho el 09/11/2026; ver el resultado al final del paso)* Dejar el tenant `parkingcontrol-dev` listo para FrontParking (P-FA1, P-FA2):
   1. Aplicación SPA de FrontParking: *Application Type* "Single Page Application"; **Allowed Callback URLs** `http://localhost:5173/callback`; **Allowed Logout URLs** `http://localhost:5173/login`; **Allowed Web Origins** y **Allowed Origins (CORS)** `http://localhost:5173`. Se usa `localhost`, nunca `127.0.0.1` (el CORS de la API compara el origen de forma exacta).
   2. En esa aplicación: **Refresh Token Rotation** activada, con un período de superposición mayor que 0 y los vencimientos que defina P-FA2.
   3. En la API `https://api.parkingcontrol.dev`: **Allow Offline Access** activado y el vencimiento del access token de P-FA2. La política de acceso delegado de usuario ya está en "All applications allowed" para desarrollo (errata del paso 1.2 del backend); para producción vuelve a *Per-app authorization*.
 
   *Aceptación:* el desarrollador confirma las tres cosas y deja anotados los valores de P-FA2 en esta spec.
-- [ ] **0.2 (paso manual)** En el `.env` (sin copiarlo al chat ni al repo): `VITE_API_BASE_URL` con el sufijo `/api/v1` y las variables `VITE_AUTH0_DOMAIN`, `VITE_AUTH0_CLIENT_ID` y `VITE_AUTH0_AUDIENCE` con los valores de la sección 2.
+  *Resultado (09/11/2026):* callbacks corregidos a `http://localhost:5173/callback` y logout a `http://localhost:5173/login` (estaban sin la ruta); web origins y CORS en `http://localhost:5173`; Allow Offline Access activado; acceso delegado de usuario en "All applications allowed" (desarrollo). Valores de P-FA2: **Maximum Access Token Lifetime 3600 s** (estaba en 86400; el 7200 que se había mirado era el del flujo implícito, que no se usa), **Implicit/Hybrid 3600 s**, rotación de refresh token activada con **superposición de 10 s**, vencimiento absoluto de **30 días** y por inactividad de **7 días**. Los dos últimos controles (Token Sender-Constraining en "Never" y RBAC desactivado) los confirmó el desarrollador sin captura: si el login falla con un error de token, se revisan primero.
+- [x] **0.2 (paso manual)** *(hecho el 09/11/2026, confirmado por el desarrollador; el `.env` no se lee)* En el `.env` (sin copiarlo al chat ni al repo): `VITE_API_BASE_URL` con el sufijo `/api/v1` y las variables `VITE_AUTH0_DOMAIN`, `VITE_AUTH0_CLIENT_ID` y `VITE_AUTH0_AUDIENCE` con los valores de la sección 2.
   *Aceptación:* el desarrollador confirma que las cuatro variables existen.
 
 ### Paso 1 — Dependencias, configuración y reglas de lint
@@ -381,7 +382,7 @@ Con el backend en `develop` corriendo en Development contra `parkingcontrol-dev`
 
 ## 8. Cómo retomar
 
-**Estado:** Aprobada el 09/11/2026 por el desarrollador, con las decisiones D-FA5 a D-FA12 (Propuesta) incluidas. No se ejecutó ningún paso. Sigue el paso 0 (P-FA1 y P-FA2), manual.
+**Estado:** Aprobada el 09/11/2026 por el desarrollador, con las decisiones D-FA5 a D-FA12 (Propuesta) incluidas. No se ejecutó ningún paso. Paso 0 (manual) hecho el 09/11/2026. Sigue el paso 1.
 
 **Modelo y esfuerzo por paso.** La ejecución es liviana: las decisiones difíciles ya están tomadas (ARQ-1, DV-1 y D-FA2). Cada paso se ejecuta en un chat nuevo.
 
