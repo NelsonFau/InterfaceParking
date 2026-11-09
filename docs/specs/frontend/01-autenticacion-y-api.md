@@ -399,6 +399,32 @@ Con el backend en `develop` corriendo en Development contra `parkingcontrol-dev`
 
 **Estado:** Aprobada el 09/11/2026 por el desarrollador, con las decisiones D-FA5 a D-FA12 (Propuesta) incluidas. En ejecución en `feature/front-auth` (DV-FA5). Paso 0 (manual), pasos 1 y 2 hechos el 09/11/2026; pasos 3 a 6 con código hecho y verificación manual pendiente; paso 7.1 y 7.2 hechos. Falta: `npm test`, las verificaciones manuales de los pasos 3 a 6 y la sección 7, decidir P-FA10, P-FA13 y P-FA14, y el cierre (7.3, push, PR y merge). Por indicación del desarrollador, `npm test` y las verificaciones manuales se corren juntas al final.
 
+### 8.1 Dónde quedó (09/11/2026, al cerrar el chat de ejecución)
+
+Rama `feature/front-auth` (local, **sin push**), un commit por paso: `11bcd20` (1), `c24cd86` (2), `bd6f9fb` (3), `2e0bae4` (4), `cf271b2` (5), `f197f2f` (6), `c53a273` (7.1 y 7.2). `npm run lint` (0 errores; 4 warnings previos que no son de esta spec) y `npm run build` en verde en cada paso. En el working tree siguen sin commitear, a propósito: `src/pages/Ocupaciones.jsx` (cambios del desarrollador), `CLAUDE.md` (actualizado por el paso 7.2, ver P-FA10), `ai-playbook/`, `Dockerfile` y `.dockerignore`.
+
+**Falta, en este orden:**
+
+1. **`npm test`.** No se corrió desde el paso 1 (por indicación del desarrollador). Nunca se ejecutaron los tests de los pasos 2 y 4: `errors`, `permissions`, `safeReturnTo`, `routes` y `authBridge`. Si alguno falla, se corrige antes de seguir.
+2. **Decisiones del desarrollador:**
+   - **P-FA10**: ¿se commitea el `CLAUDE.md` ya actualizado (y, aparte, `ai-playbook/`, `Dockerfile`, `.dockerignore`)?
+   - **P-FA13**: pantalla de error de `/me` (aviso + "Reintentar"): ¿se acepta?
+   - **P-FA14**: destino por defecto `/dashboard` en vez de "primera ruta accesible": ¿se acepta y queda anotado?
+   - **Nombres**: se exportaron `safeReturnTo` y `sharePromise` (en esta spec, `rutaDeRetornoSegura` y `compartirPromesa`). ¿Se dejan en inglés?
+   - **`rol` fuera de `usePermissions()`** (paso 7, para cumplir la verificación 11; el texto sigue en `useMe().me.rol`): ¿se acepta?
+3. **Verificaciones manuales** de los pasos 3 a 6 y de la sección 7, con el backend levantado (Docker) y `npm run dev` en `http://localhost:5173`. Usuarios demo: `dueno@demo.test`, `encargado@demo.test`, `operado@demo.test`, `sinregistro@demo.test`, `dueno2@demo.test`. Notas:
+   - En DevTools → Application, `localStorage` no debe tener token ni claves de sesión. La cookie `auth0.<clientId>.is.authenticated` y la transacción temporal del SDK en `sessionStorage` durante el redirect son del SDK y no guardan tokens.
+   - El `returnTo` manipulado (paso 3, punto 6) lo cubren los tests de `safeReturnTo`; a mano no es práctico.
+   - 401 forzado (paso 4, punto 5): en `src/auth/MeProvider.jsx` cambiar temporalmente **`getToken` y `refreshToken`** por `() => Promise.resolve("x")`; esperar **un** reintento en Network y después `/login` con "Tu sesión venció", sin bucle. Deshacer con `git checkout -- src/auth/MeProvider.jsx`.
+4. **Cierre** (autorizado por el desarrollador solo para este trabajo): spec en **Terminada** (cabecera, esta sección y `docs/specs/README.md`, paso 7.3) y commit; `git push -u origin feature/front-auth`; `gh pr create` a `master` (título corto en español; resumen: login con Auth0, cliente HTTP, `/me` y permisos, errores por `code`; qué se verificó; qué queda fuera: pantallas de dinero y ocupaciones; **sin atribución de IA**); merge normal (sin squash); borrar la rama remota `feature/front-auth`. **No** pushear ni borrar `feature/spec-front-auth` sin preguntar. Si algo falla (lint, build, conflicto, `gh` sin sesión), frenar y consultar; nada de force push ni de saltear hooks.
+5. **Al cerrar**: informar pendientes (P-FA5 a P-FA10, P-FA13, P-FA14) y los comandos para dejar el repo local en `master` actualizado y borrar las ramas locales.
+
+**Modelo para retomar:** Sonnet, esfuerzo bajo (tests, verificación guiada y cierre; las únicas decisiones abiertas son las listadas, y las toma el desarrollador).
+
+**Prompt para retomar:**
+
+> Trabajás en el frontend de ParkingControl (`C:\Users\Equipo\source\repos\FrontParking\parkingcontrol-front`, remoto `origin` = InterfaceParking). Respondé en español rioplatense. No modifiques el backend. Leé `CLAUDE.md` y `docs/specs/frontend/01-autenticacion-y-api.md`, sobre todo la sección 8.1 "Dónde quedó", y seguí su lista "Falta" en orden, en la rama `feature/front-auth`. No toques ni commitees `src/pages/Ocupaciones.jsx`, `ai-playbook/`, `Dockerfile` ni `.dockerignore`; agregá archivos siempre por ruta explícita. No leas ni muestres el `.env`. Commits en español, cortos, sin `Co-Authored-By` ni ninguna atribución de IA. Si aparece algo que la spec no prevé, frená, anotalo en la sección 4 y preguntame.
+
 **Modelo y esfuerzo por paso.** La ejecución es liviana: las decisiones difíciles ya están tomadas (ARQ-1, DV-1 y D-FA2). Cada paso se ejecuta en un chat nuevo.
 
 | Paso | Modelo | Esfuerzo | Nota |
