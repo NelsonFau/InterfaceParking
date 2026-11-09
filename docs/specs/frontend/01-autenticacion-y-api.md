@@ -315,9 +315,9 @@ Rutas relativas a la raíz del repo del frontend. Los nombres de archivo son los
 
 ### Paso 2 — Núcleo puro: errores, permisos y ruta de retorno
 
-- [ ] **2.1** Crear `src/constants/errorCodes.js` y `src/api/errors.js` (`ApiError`, `normalizeError`, `showApiError`) según la tabla de D-FA6.
-- [ ] **2.2** Crear `src/auth/permissions.js` (`can`, `canAny` sobre una lista de permisos) y `src/auth/safeReturnTo.js` (D-FA9).
-- [ ] **2.3** Crear `src/auth/routes.js` con el mapa de D-FA8 y una función que devuelve las rutas accesibles dada una lista de permisos (la primera es la ruta inicial).
+- [x] **2.1** Crear `src/constants/errorCodes.js` y `src/api/errors.js` (`ApiError`, `normalizeError`, `showApiError`) según la tabla de D-FA6.
+- [x] **2.2** Crear `src/auth/permissions.js` (`can`, `canAny` sobre una lista de permisos) y `src/auth/safeReturnTo.js` (D-FA9).
+- [x] **2.3** Crear `src/auth/routes.js` con el mapa de D-FA8 y una función que devuelve las rutas accesibles dada una lista de permisos (la primera es la ruta inicial).
 
   *Aceptación:* `npm test` pasa con tests que cubren: un Problem Details por cada `code` de la tabla, con su tratamiento; cuerpo HTML y cuerpo vacío → `respuesta_invalida`; sin respuesta → `sin_conexion`; timeout → `tiempo_agotado`; un `code` desconocido se muestra con su `title`; un 403 `sin_permiso` y uno `usuario_inactivo` **no** reciben el mismo tratamiento; `rutaDeRetornoSegura` rechaza `//otro.com`, `https://otro.com`, `javascript:` y rutas sin `/` inicial, y acepta `/clientes?x=1`; `routes` devuelve para `OPERADOR` (con los permisos de la matriz) todas las rutas menos `/auditoria`, para `AUDITOR` todas las rutas con `can("clientes.gestionar")` falso, y ninguna para un usuario con solo `tenants.*`.
 
@@ -385,7 +385,7 @@ Con el backend en `develop` corriendo en Development contra `parkingcontrol-dev`
 
 ## 8. Cómo retomar
 
-**Estado:** Aprobada el 09/11/2026 por el desarrollador, con las decisiones D-FA5 a D-FA12 (Propuesta) incluidas. En ejecución en `feature/front-auth` (DV-FA5). Paso 0 (manual) y paso 1 hechos el 09/11/2026. Sigue el paso 2.
+**Estado:** Aprobada el 09/11/2026 por el desarrollador, con las decisiones D-FA5 a D-FA12 (Propuesta) incluidas. En ejecución en `feature/front-auth` (DV-FA5). Paso 0 (manual), paso 1 y paso 2 hechos el 09/11/2026. Sigue el paso 3.
 
 **Modelo y esfuerzo por paso.** La ejecución es liviana: las decisiones difíciles ya están tomadas (ARQ-1, DV-1 y D-FA2). Cada paso se ejecuta en un chat nuevo.
 
