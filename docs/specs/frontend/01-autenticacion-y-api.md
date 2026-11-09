@@ -366,9 +366,11 @@ Rutas relativas a la raíz del repo del frontend. Los nombres de archivo son los
 
 ### Paso 7 — Retiro del legado y documentación
 
-- [ ] **7.1** Crear `src/auth/legacyCleanup.js` (D-FA12) y llamarlo al arrancar. Confirmar que no queda ningún uso de `localStorage` fuera de ese archivo y que no quedan excepciones temporales de lint.
-- [ ] **7.2** Actualizar `CLAUDE.md` (autenticación, HTTP, endpoints, variables, comandos, `npm test`) y completar el manual `docs/manual/frontend/01-autenticacion-y-api.md`.
+- [x] **7.1** Crear `src/auth/legacyCleanup.js` (D-FA12) y llamarlo al arrancar. Confirmar que no queda ningún uso de `localStorage` fuera de ese archivo y que no quedan excepciones temporales de lint.
+- [x] **7.2** Actualizar `CLAUDE.md` (autenticación, HTTP, endpoints, variables, comandos, `npm test`) y completar el manual `docs/manual/frontend/01-autenticacion-y-api.md`.
 - [ ] **7.3** Actualizar el estado de esta spec en `docs/specs/README.md` y en su cabecera: **Terminada** una vez mergeada a `master`.
+
+  *Estado (09/11/2026):* 7.1 y 7.2 hechos; lint y build en verde; `localStorage`, `sessionStorage`, `userRole` y `.rol` solo aparecen en `legacyCleanup.js` (para cumplir la verificación 11, `usePermissions()` ya no expone `rol`: el texto para mostrar sigue en `useMe().me.rol`). El `CLAUDE.md` está actualizado en el disco pero **sin commitear**: está sin trackear y su commit lo decide el desarrollador (P-FA10). 7.3 se hace después del merge.
 
   *Aceptación:* `npm run lint`, `npm test` y `npm run build` pasan; una búsqueda de `localStorage` en `src/` solo encuentra `legacyCleanup.js`; el `CLAUDE.md` ya no menciona `/Auth/login`, `userRole` ni "token presence in localStorage".
 
@@ -395,7 +397,7 @@ Con el backend en `develop` corriendo en Development contra `parkingcontrol-dev`
 
 ## 8. Cómo retomar
 
-**Estado:** Aprobada el 09/11/2026 por el desarrollador, con las decisiones D-FA5 a D-FA12 (Propuesta) incluidas. En ejecución en `feature/front-auth` (DV-FA5). Paso 0 (manual), pasos 1 y 2 hechos el 09/11/2026; pasos 3 a 6 con código hecho y verificación manual pendiente. Sigue el paso 7. Por indicación del desarrollador, `npm test` y las verificaciones manuales se corren juntas al final.
+**Estado:** Aprobada el 09/11/2026 por el desarrollador, con las decisiones D-FA5 a D-FA12 (Propuesta) incluidas. En ejecución en `feature/front-auth` (DV-FA5). Paso 0 (manual), pasos 1 y 2 hechos el 09/11/2026; pasos 3 a 6 con código hecho y verificación manual pendiente; paso 7.1 y 7.2 hechos. Falta: `npm test`, las verificaciones manuales de los pasos 3 a 6 y la sección 7, decidir P-FA10, P-FA13 y P-FA14, y el cierre (7.3, push, PR y merge). Por indicación del desarrollador, `npm test` y las verificaciones manuales se corren juntas al final.
 
 **Modelo y esfuerzo por paso.** La ejecución es liviana: las decisiones difíciles ya están tomadas (ARQ-1, DV-1 y D-FA2). Cada paso se ejecuta en un chat nuevo.
 

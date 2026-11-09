@@ -2,7 +2,7 @@
 
 Describe **cómo funciona lo construido** por la spec [`docs/specs/frontend/01-autenticacion-y-api.md`](../../specs/frontend/01-autenticacion-y-api.md). Las decisiones y sus motivos viven en la spec; acá solo el funcionamiento. Si este manual y el código se contradicen, gana el código.
 
-Estado: se completa paso a paso. Último paso reflejado: **6**.
+Estado: completo (pasos 1 a 7).
 
 ## Mapa de archivos
 
@@ -27,6 +27,7 @@ Estado: se completa paso a paso. Último paso reflejado: **6**.
 | `src/auth/RequirePermission.jsx` | Guarda por permiso de cada ruta privada |
 | `src/auth/Forbidden.jsx` | "No tenés permiso" |
 | `src/pages/NoAccess.jsx` | "Sin acceso" (ninguna ruta permitida) |
+| `src/auth/legacyCleanup.js` | Borra al arrancar las claves del login viejo |
 
 ## 1. Configuración (`src/config.js`)
 
@@ -149,7 +150,7 @@ Los tests de `routes` y `permissions` usan los permisos de cada rol copiados de 
 ## 9. `/me` y permisos (`src/auth/MeProvider.jsx`, `src/auth/usePermissions.js`)
 
 - `MeProvider` va dentro de `AuthProvider` y envuelve la app. Cuando hay sesión, pide `GET /me` **una vez** y guarda `{ status, me, error }` solo en memoria. Estados: `cargando`, `listo`, `bloqueado` (con el `ApiError`) y `error`. Un bloqueo no se pisa con un resultado posterior.
-- `useMe()` devuelve ese estado y `reload()` (reintento manual). `usePermissions()` devuelve `can(permiso)`, `canAny(lista)`, `permisos` y `rol`; el `rol` es solo texto para mostrar.
+- `useMe()` devuelve ese estado y `reload()` (reintento manual); `me.rol` es solo texto para mostrar. `usePermissions()` devuelve `can(permiso)`, `canAny(lista)` y `permisos`: es lo único que decide qué se muestra.
 - `RequireAuth`, con sesión, espera a `/me`: `bloqueado` → `AccountBlocked` (pantalla completa con el `title` de la API y "Cerrar sesión"); `cargando` → "Cargando tu cuenta…"; `error` → aviso con "Reintentar" (P-FA13); `listo` → la app.
 - La barra (`Layout.jsx`) muestra `me.nombre` y `me.tenant.nombre`.
 - Un cambio de rol se ve en el próximo inicio de sesión; mientras tanto la API rechaza con `sin_permiso` lo que ya no corresponde.
@@ -187,3 +188,7 @@ Ocultar es solo UX: la API rechaza igual con `sin_permiso`, y `showApiError` lo 
 **Fuera de alcance (DV-FA2).** `Ocupaciones.jsx`, `CajaDiaria.jsx` y `pagosApi.js` no se tocaron: pasan por el cliente nuevo (token y normalización), pero sus `catch` siguen leyendo `e.response.data.error`; como el `ApiError` conserva `response`, no se rompen y caen a su texto genérico.
 
 **Rutas de la API.** Tarifas pasó de `/Tarifas/…` a `/Tarifa/…` (singular, como el controller; DV-FA1).
+
+## 12. Limpieza del login viejo (`src/auth/legacyCleanup.js`)
+
+El login propio guardaba `token` (un JWT), `userId`, `userName` y `userRole` en `localStorage`. `main.jsx` llama a `cleanLegacySession()` antes de montar la app y las borra; si el navegador bloquea `localStorage`, no hace nada. Es el único archivo de `src/` que toca `localStorage`, con la excepción de lint declarada y justificada en el propio archivo. Se retira cuando ningún navegador de desarrollo conserve las claves viejas (P-FA7).

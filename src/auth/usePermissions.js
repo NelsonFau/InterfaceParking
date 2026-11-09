@@ -18,14 +18,13 @@ export function useMe() {
   return value;
 }
 
-// `rol` es solo texto para mostrar: nunca se usa para decidir (ARQ-4; lo bloquea el lint).
+// Se decide solo por permisos (ARQ-4). El rol, como texto para mostrar, está en useMe().me.
 export function usePermissions() {
   const { me } = useMe();
   return useMemo(() => {
     const permisos = me?.permisos ?? [];
     return {
       permisos,
-      rol: me?.rol ?? null,
       can: (permiso) => can(permisos, permiso),
       canAny: (lista) => canAny(permisos, lista),
     };
