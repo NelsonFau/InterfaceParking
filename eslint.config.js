@@ -67,12 +67,4 @@ export default defineConfig([
       'no-unused-vars': 'off',
     },
   },
-  // Excepción temporal: http.js todavía lee el token de localStorage; se reescribe en el paso 4
-  // (spec frontend 01, paso 1.3).
-  {
-    files: ['src/api/http.js'],
-    rules: {
-      'no-restricted-globals': 'off',
-    },
-  },
 ])

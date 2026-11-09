@@ -2,7 +2,7 @@
 
 Describe **cómo funciona lo construido** por la spec [`docs/specs/frontend/01-autenticacion-y-api.md`](../../specs/frontend/01-autenticacion-y-api.md). Las decisiones y sus motivos viven en la spec; acá solo el funcionamiento. Si este manual y el código se contradicen, gana el código.
 
-Estado: se completa paso a paso. Último paso reflejado: **3**.
+Estado: se completa paso a paso. Último paso reflejado: **4**.
 
 ## Mapa de archivos
 
@@ -18,6 +18,12 @@ Estado: se completa paso a paso. Último paso reflejado: **3**.
 | `src/auth/RequireAuth.jsx` | Guarda de autenticación de las rutas privadas |
 | `src/pages/Callback.jsx` | Ruta `/callback`: "Ingresando…" o error de Auth0 |
 | `src/pages/Login.jsx` | Botón "Ingresar" y aviso según el motivo |
+| `src/api/authBridge.js` | Puente entre `http.js` y el SDK; `sharePromise` |
+| `src/api/http.js` | Cliente axios único: token, timeout, reintento ante 401 y errores normalizados |
+| `src/api/meApi.js` | `GET /me` |
+| `src/auth/MeProvider.jsx` | Carga `/me` una vez por sesión y registra el puente |
+| `src/auth/usePermissions.js` | Contexto de `/me`, `useMe()` y `usePermissions()` |
+| `src/pages/AccountBlocked.jsx` | Pantalla completa de cuenta bloqueada |
 
 ## 1. Configuración (`src/config.js`)
 
@@ -50,7 +56,7 @@ Dos garantías de arquitectura se bloquean con lint, no solo con documentación.
 | `no-restricted-syntax` | Comparar con `==`/`===`/`!=`/`!==` una propiedad o variable `rol`, `role` o `userRole`, o usarla como discriminante de un `switch` | ARQ-4: la UI decide por permisos, nunca por rol |
 
 Excepciones temporales (bloques finales de `eslint.config.js`):
-- `api/http.js` todavía lee el token de `localStorage`. Se retira en el paso 4. (Las de `App.jsx`, `Login.jsx`, `Splash.jsx` y `componentes/RequireAuth.jsx` se retiraron en el paso 3.)
+- Las de `App.jsx`, `Login.jsx`, `Splash.jsx` y `componentes/RequireAuth.jsx` se retiraron en el paso 3, y la de `api/http.js` en el paso 4: ya no queda ninguna por `localStorage`.
 - `pages/CajaDiaria.jsx` tiene `no-unused-vars` apagado por un error previo que esta spec no toca (P-FA12). Se retira con la spec de dinero.
 
 ## 4. Variables de entorno y git
@@ -114,3 +120,33 @@ Los tests de `routes` y `permissions` usan los permisos de cada rol copiados de 
 **Splash (`/`).** Muestra el logo al menos 1,8 s y, cuando el SDK terminó de inicializar, va a `/dashboard` o a `/login`.
 
 **Logout.** El botón "Salir" de la barra (`Layout.jsx`) llama a `logout({ logoutParams: { returnTo: origin + "/login" } })`: el SDK limpia su memoria, Auth0 cierra su sesión y vuelve a `/login`. La siguiente entrada a una ruta privada pide la clave.
+
+## 8. Cliente HTTP y puente al token (`src/api/http.js`, `src/api/authBridge.js`)
+
+**Un solo cliente.** Toda llamada a la API pasa por la instancia `http` (axios) con `baseURL` = `VITE_API_BASE_URL` (termina en `/api/v1`, así que las pantallas usan rutas como `/Cliente`), timeout de 20 s y el header `ngrok-skip-browser-warning` (P-FA5). El frontend nunca manda un `TenantId`: el backend lo saca del token.
+
+**Puente.** `http.js` no es React y no puede usar `useAuth0()`. `authBridge.js` guarda cuatro funciones que registra `MeProvider` (hijo de `AuthProvider`) al montarse:
+
+| Función | Qué hace |
+|---|---|
+| `getToken` | `getAccessTokenSilently()`: el token de la caché en memoria o uno renovado si venció |
+| `refreshToken` | `getAccessTokenSilently({ cacheMode: "off" })`: fuerza la renovación con el refresh token |
+| `onSessionLost` | Navega a `/login` con el aviso "Tu sesión venció", sin redirigir sola a Auth0 |
+| `onAccountBlocked` | Pone el estado de `/me` en `bloqueado` con el `ApiError` |
+
+**Interceptor de request.** Pide el token al puente y agrega `Authorization: Bearer`. Si el SDK no puede darlo (falla o no devuelve nada), llama a `onSessionLost` y rechaza con un `ApiError` local `no_autenticado`, sin mandar el pedido.
+
+**Interceptor de response.** Todo error sale como `ApiError` (`normalizeError`).
+- `no_autenticado` (401): si el pedido no se reintentó, pide un token nuevo a `refreshToken` y repite el pedido **una vez** con ese token (marcas `_authRetried` y `_retryToken` en la config del pedido). Si la renovación falla o el reintento vuelve a dar 401, llama a `onSessionLost`.
+- `usuario_no_registrado`, `usuario_inactivo`, `tenant_inactivo` (403): llama a `onAccountBlocked`.
+- El resto se rechaza tal cual; la pantalla decide con `showApiError`.
+
+**Renovación compartida (`sharePromise`, en la spec `compartirPromesa`).** Con Refresh Token Rotation, dos renovaciones simultáneas con el mismo refresh token harían que Auth0 detecte un reuso y revoque la sesión. `refreshToken` está envuelta en `sharePromise`: mientras hay una renovación en curso, todo pedido que reciba un 401 espera **esa misma** promesa; cuando termina (bien o mal), la próxima llamada renueva de nuevo. Es una función pura, probada en `test/unit/api/authBridge.test.js`. El SDK además serializa sus renovaciones con un lock y deduplica llamadas concurrentes con el mismo `cacheMode`, pero el cliente no depende de ese detalle interno.
+
+## 9. `/me` y permisos (`src/auth/MeProvider.jsx`, `src/auth/usePermissions.js`)
+
+- `MeProvider` va dentro de `AuthProvider` y envuelve la app. Cuando hay sesión, pide `GET /me` **una vez** y guarda `{ status, me, error }` solo en memoria. Estados: `cargando`, `listo`, `bloqueado` (con el `ApiError`) y `error`. Un bloqueo no se pisa con un resultado posterior.
+- `useMe()` devuelve ese estado y `reload()` (reintento manual). `usePermissions()` devuelve `can(permiso)`, `canAny(lista)`, `permisos` y `rol`; el `rol` es solo texto para mostrar.
+- `RequireAuth`, con sesión, espera a `/me`: `bloqueado` → `AccountBlocked` (pantalla completa con el `title` de la API y "Cerrar sesión"); `cargando` → "Cargando tu cuenta…"; `error` → aviso con "Reintentar" (P-FA13); `listo` → la app.
+- La barra (`Layout.jsx`) muestra `me.nombre` y `me.tenant.nombre`.
+- Un cambio de rol se ve en el próximo inicio de sesión; mientras tanto la API rechaza con `sin_permiso` lo que ya no corresponde.

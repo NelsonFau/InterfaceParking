@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Outlet, Link, useLocation } from "react-router-dom";
 import { useAuth0 } from "@auth0/auth0-react";
+import { useMe } from "../auth/usePermissions.js";
 import {
   Box,
   Button,
@@ -36,6 +37,7 @@ export default function Layout() {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const { logout } = useAuth0();
+  const { me } = useMe();
 
   // Cierra la sesión en Auth0 y limpia la memoria del SDK; Auth0 vuelve a /login (D-FA9).
   const salir = () => logout({ logoutParams: { returnTo: `${window.location.origin}/login` } });
@@ -81,6 +83,17 @@ export default function Layout() {
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
             ParkingControl
           </Typography>
+
+          {me ? (
+            <Box sx={{ textAlign: "right", mr: 2, lineHeight: 1.2, display: { xs: "none", sm: "block" } }}>
+              <Typography variant="body2" fontWeight={700} noWrap>
+                {me.nombre}
+              </Typography>
+              <Typography variant="caption" noWrap sx={{ opacity: 0.85 }}>
+                {me.tenant?.nombre}
+              </Typography>
+            </Box>
+          ) : null}
 
           <Button color="inherit" onClick={salir}>
             Salir
