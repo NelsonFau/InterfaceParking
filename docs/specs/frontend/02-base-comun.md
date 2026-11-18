@@ -1,6 +1,6 @@
 # 02 — Base común: fechas con zona del tenant, enums, paginación y módulos de API
 
-> Frontend · **Aprobada** (18/11/2026) · `feature/spec-front-base` (esta spec) y `feature/front-base` (ejecución, en un worktree aparte, a crear desde `develop` una vez mergeada esta spec) · Última actualización 18/11/2026
+> Frontend · **Terminada** (18/11/2026; se vuelve verdadera al mergear el PR a `develop`) · `feature/spec-front-base` (esta spec) y `feature/front-base` (ejecución, en un worktree aparte, a crear desde `develop` una vez mergeada esta spec) · Última actualización 18/11/2026
 >
 > Segunda spec del frontend. Es la base que usan las specs 03 a 12: define cómo se manejan las fechas, dónde viven los enums, cómo se pagina y cómo se escribe un módulo de `src/api/`. Arregla además el 400 por fechas sin zona que hoy rompe el alta y los filtros de Ocupaciones.
 
@@ -463,7 +463,7 @@ La 02 no modifica estas páginas (salvo Ocupaciones, D-FB10, y las dos de alerta
 
 - [x] **8.1** Agregar la regla de D-FB9 a `eslint.config.js`, con las 7 excepciones temporales y su comentario "se retira con la spec NN".
 - [x] **8.2** Crear `docs/manual/frontend/02-base-comun.md` (cómo usar fechas, enums, paginación y el patrón de API; el caso de la hora repetida; la tabla de contrato de D-FB3) y actualizar `CLAUDE.md` (P-FB7).
-- [ ] **8.3** Actualizar el estado de esta spec en `docs/specs/README.md` y en su cabecera: **Terminada** una vez mergeada a `develop`.
+- [x] **8.3** Actualizar el estado de esta spec en `docs/specs/README.md` y en su cabecera: **Terminada** una vez mergeada a `develop`.
 
   *Aceptación:* `npm run lint`, `npm test` y `npm run build` pasan; el lint falla si se agrega un `toLocaleString()` a una página que no esté en la lista de excepciones; `CLAUDE.md` ya no menciona `operationalAlerts.js` como fuente de enums.
 
@@ -489,7 +489,7 @@ Con el backend en `develop` corriendo y `npm run dev` en `http://localhost:5173`
 
 ## 8. Cómo retomar
 
-**Estado:** Aprobada (18/11/2026). El desarrollador aprobó todas las decisiones. La revisión del chat orquestador agregó `dateRangeToInstants` (D-FB5), cerró P-FB1 y P-FB2, sumó `formatNumber` (D-FB9 y D-FB12) y el desvío DV-FB2.
+**Estado:** Terminada (18/11/2026), con el PR a `develop` (el estado vale desde que se mergea). El desarrollador aprobó todas las decisiones. La revisión del chat orquestador agregó `dateRangeToInstants` (D-FB5), cerró P-FB1 y P-FB2, sumó `formatNumber` (D-FB9 y D-FB12) y el desvío DV-FB2.
 
 **Ejecución en dos chats**, los dos en el worktree `C:\Users\Equipo\source\repos\FrontParking\parkingcontrol-front-base` (rama `feature/front-base`), uno después del otro:
 
