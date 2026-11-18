@@ -1,6 +1,6 @@
 # Manual 02 — Base común
 
-Cómo funciona y cómo se usa la base común del frontend (spec `docs/specs/frontend/02-base-comun.md`). Se completa paso a paso; hoy cubre los pasos 1 y 2 (fechas) y 3 (formato).
+Cómo funciona y cómo se usa la base común del frontend (spec `docs/specs/frontend/02-base-comun.md`). Se completa paso a paso; hoy cubre los pasos 1 y 2 (fechas) 3 (formato) y 4 (enums).
 
 ## 1. Fechas con la zona del tenant
 
@@ -98,3 +98,32 @@ Módulo: `src/utils/formato.js`. Fija en un solo lugar el locale `es-UY` y la mo
 Un valor `null`, `undefined`, `""`, solo espacios, no numérico o no finito devuelve `—`, no `$ 0,00` ni `0`: `precioTotal` es `null` hasta finalizar la ocupación y mostrar cero sería falso. El `0` sí es un valor y se formatea. Se aceptan números y textos numéricos (`"1234.5"`).
 
 `toLocaleString` queda prohibido fuera de `fechas.js` y `formato.js` (regla de ESLint del paso 8), también para números.
+
+## 4. Enums
+
+Módulo: `src/constants/enums.js`. Los 15 enums del inventario (`docs/inventario/backend.md`, sección 2), que es la única fuente de valores. Un test compara cada enum contra esa tabla.
+
+### Forma
+Cada enum se declara con `defineEnum(nombre, entradas)`. La constante expone sus claves como valores (`TipoOcupacion.HORA === 1`) y guarda por entrada `{ key, value, label, color?, calculado?, dinero? }`. `value` puede ser **número o texto** (no se asume entero), para que la spec 04 sume `Fuente` y `AccionTrazabilidad` con la misma forma. `defineEnum` lanza si hay un valor duplicado, un `value` inválido o falta la etiqueta. Los valores retirados del backend no se declaran (`RolUsuario` sin el 2, `TipoAlertaOperativa` sin el 4).
+
+| Helper | Qué hace |
+|---|---|
+| `labelOf(E, value)` | Etiqueta. Desconocido o retirado → `String(value)`. `null`/`undefined` → `""`. La comparación es estricta: `"1"` no es `1` |
+| `colorOf(E, value)` | Color de MUI; sin color o desconocido → `"default"` |
+| `labelOfKey(E, key)` | Etiqueta desde el nombre en texto (`"DUENO"` → "Dueño"). Solo para mostrar, nunca para decidir (ARQ-4) |
+| `optionsOf(E, { only, exclude, excludeCalculated, allLabel })` | `{ value, label }[]` para un `<TextField select>`. `only` y `exclude` son listas de claves; `allLabel` agrega `{ value: "", label }` al principio |
+| `entriesOf(E)` | Las entradas completas, para quien necesite `calculado` o `dinero` |
+
+```jsx
+<Chip label={labelOf(EstadoCochera, c.estado)} color={colorOf(EstadoCochera, c.estado)} />
+<TextField select value={tipo}>
+  {optionsOf(TipoAlertaOperativa, { allLabel: "Todos" }).map((o) => (
+    <MenuItem key={o.value} value={o.value}>{o.label}</MenuItem>
+  ))}
+</TextField>
+```
+
+Marcas: `calculado` (VENCIDA, OCUPADA, RESERVADA: las calcula el backend y no se envían; `excludeCalculated` las saca de un selector) y `dinero` (las 7 alertas de dinero: 5, 6, 7, 8, 9, 11 y 12).
+
+### Migración de alertas
+`src/constants/operationalAlerts.js` se borró (tenía los tipos 1 a 4 mal y no conocía el 5 al 12). `OperationalAlerts.jsx` y `OperationalDashboard.jsx` usan `labelOf`/`colorOf` de `SeveridadAlerta` y `labelOf` de `TipoAlertaOperativa`. Un tipo desconocido muestra ahora el número en vez de "Tipo desconocido"; la severidad desconocida sigue mostrando "SIN SEVERIDAD". El filtro de tipo de alertas se arma con `optionsOf`. Las constantes locales del resto de las páginas las retira cada spec (spec 02, sección 5.4).

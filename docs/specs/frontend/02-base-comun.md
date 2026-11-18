@@ -436,8 +436,8 @@ La 02 no modifica estas páginas (salvo Ocupaciones, D-FB10, y las dos de alerta
 
 ### Paso 4 — Enums
 
-- [ ] **4.1** Crear `src/constants/enums.js` con `defineEnum`, los helpers y los 15 enums de D-FB11, y `test/unit/constants/enums.test.js`.
-- [ ] **4.2** Borrar `src/constants/operationalAlerts.js` y pasar `OperationalAlerts.jsx` y `OperationalDashboard.jsx` a `enums.js`.
+- [x] **4.1** Crear `src/constants/enums.js` con `defineEnum`, los helpers y los 15 enums de D-FB11, y `test/unit/constants/enums.test.js`.
+- [x] **4.2** Borrar `src/constants/operationalAlerts.js` y pasar `OperationalAlerts.jsx` y `OperationalDashboard.jsx` a `enums.js`.
 
   *Aceptación:* `npm test` pasa con: cada enum tiene exactamente los valores del inventario (sección 2), sin duplicados; `RolUsuario` no tiene el 2 y `TipoAlertaOperativa` no tiene el 4; `labelOf` devuelve `String(value)` para un valor desconocido y `""` para `null`; `colorOf` devuelve `"default"` sin color; `optionsOf(EstadoCochera, { only: ["DISPONIBLE", "BLOQUEADA"] })` tiene solo esas dos y `optionsOf(EstadoOcupacion, { excludeCalculated: true })` no trae `VENCIDA`; `optionsOf(…, { allLabel: "Todos" })` empieza con `{ value: "", label: "Todos" }`; `labelOfKey(RolUsuario, "DUENO")` da "Dueño"; las alertas con `dinero` son exactamente 5, 6, 7, 8, 9, 11 y 12. `npm run lint` y `npm run build` pasan. A mano: `/alertas-operativas` muestra bien el tipo y la severidad de cada alerta.
 

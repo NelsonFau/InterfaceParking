@@ -17,9 +17,11 @@ import { operationalAlertsApi } from "../api/operationalAlertsApi";
 import { pagosApi } from "../api/pagosApi";
 import { showApiError } from "../api/errors";
 import {
-  SEVERIDAD_ALERTA,
-  TIPO_ALERTA,
-} from "../constants/operationalAlerts";
+  SeveridadAlerta,
+  TipoAlertaOperativa,
+  colorOf,
+  labelOf,
+} from "../constants/enums";
 
 function todayISO() {
   return new Date().toISOString().slice(0, 10);
@@ -79,10 +81,10 @@ function KpiCard({ title, value, subtitle, danger }) {
 }
 
 function SeverityChip({ severidad }) {
-  const data = SEVERIDAD_ALERTA[Number(severidad)] ?? {
-    label: "SIN SEVERIDAD",
-    color: "default",
-  };
+  const valor = Number(severidad);
+  const data = Object.values(SeveridadAlerta).includes(valor)
+    ? { label: labelOf(SeveridadAlerta, valor), color: colorOf(SeveridadAlerta, valor) }
+    : { label: "SIN SEVERIDAD", color: "default" };
 
   return (
     <Chip
@@ -319,8 +321,7 @@ export default function OperationalDashboard() {
 
                             <Box>
                               <Typography sx={{ fontWeight: 800 }}>
-                                {TIPO_ALERTA[Number(a.tipo)] ??
-                                  "Tipo desconocido"}
+                                {labelOf(TipoAlertaOperativa, Number(a.tipo))}
                               </Typography>
 
                               <Typography

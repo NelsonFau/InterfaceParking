@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { formatMoney, formatNumber } from "../../../src/utils/formato.js";
 
-// Los espacios (incluidos los no cortables) se normalizan antes de comparar.
-const norm = (s) => s.replace(/[\s  ]+/g, " ");
+// \s ya incluye U+00A0 y U+202F: no hace falta nombrarlos ni pegar invisibles en el fuente.
+const norm = (s) => s.replace(/\s+/g, " ");
 
 describe("formatMoney", () => {
   it("usa separador de miles y coma decimal", () => {
@@ -21,7 +21,7 @@ describe("formatMoney", () => {
     expect(formatMoney(null)).toBe("—");
     expect(formatMoney(undefined)).toBe("—");
     expect(formatMoney("")).toBe("—");
-    expect(formatMoney("   ")).toBe("—");
+    expect(formatMoney(" ")).toBe("—");
     expect(formatMoney("abc")).toBe("—");
     expect(formatMoney(NaN)).toBe("—");
     expect(formatMoney(Infinity)).toBe("—");

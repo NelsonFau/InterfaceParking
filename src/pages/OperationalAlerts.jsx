@@ -22,9 +22,12 @@ import { operationalAlertsApi } from "../api/operationalAlertsApi";
 import { showApiError } from "../api/errors";
 import { usePermissions } from "../auth/usePermissions";
 import {
-  SEVERIDAD_ALERTA,
-  TIPO_ALERTA,
-} from "../constants/operationalAlerts";
+  SeveridadAlerta,
+  TipoAlertaOperativa,
+  colorOf,
+  labelOf,
+  optionsOf,
+} from "../constants/enums";
 
 function fmtDate(dt) {
   if (!dt) return "-";
@@ -34,10 +37,10 @@ function fmtDate(dt) {
 }
 
 function AlertChip({ severidad }) {
-  const data = SEVERIDAD_ALERTA[Number(severidad)] ?? {
-    label: "SIN SEVERIDAD",
-    color: "default",
-  };
+  const valor = Number(severidad);
+  const data = Object.values(SeveridadAlerta).includes(valor)
+    ? { label: labelOf(SeveridadAlerta, valor), color: colorOf(SeveridadAlerta, valor) }
+    : { label: "SIN SEVERIDAD", color: "default" };
 
   return (
     <Chip
@@ -209,8 +212,8 @@ export default function OperationalAlerts() {
                 sx={{ minWidth: 260 }}
               >
                 <MenuItem value="">Todos</MenuItem>
-                {Object.entries(TIPO_ALERTA).map(([id, label]) => (
-                  <MenuItem key={id} value={id}>
+                {optionsOf(TipoAlertaOperativa).map(({ value, label }) => (
+                  <MenuItem key={value} value={value}>
                     {label}
                   </MenuItem>
                 ))}
@@ -277,7 +280,7 @@ export default function OperationalAlerts() {
 
                     <Box>
                       <Typography variant="h6" sx={{ fontWeight: 900 }}>
-                        {TIPO_ALERTA[Number(a.tipo)] ?? "Tipo desconocido"}
+                        {labelOf(TipoAlertaOperativa, Number(a.tipo))}
                       </Typography>
 
                       <Typography sx={{ color: "text.secondary", mt: 0.5 }}>
@@ -325,7 +328,7 @@ export default function OperationalAlerts() {
           <Stack spacing={2} sx={{ mt: 1 }}>
             <Typography sx={{ fontWeight: 700 }}>
               {selected
-                ? TIPO_ALERTA[Number(selected.tipo)] ?? "Tipo desconocido"
+                ? labelOf(TipoAlertaOperativa, Number(selected.tipo))
                 : ""}
             </Typography>
 
