@@ -302,6 +302,7 @@ export async function deactivateCliente(id) {
 |---|---|---|---|---|---|
 | DV-FB1 | `brechas-front.md`, sección 1 | El 400 por fechas sin zona está "roto hoy" en `Ocupaciones.jsx` | La spec lo describe como causado por los cambios sin commitear, no por `develop`; el arreglo mínimo (D-FB10) igual se hace, porque `develop` interpreta la hora en la zona del navegador | El código de `develop` manda `Z` (zona del navegador), y el 400 lo causaba el árbol de trabajo sin commitear, hoy en `wip/ocupaciones-reservas` | — |
 | DV-FB2 | D-FB2 (una sola zona) | Lo que se envía y lo que se muestra usan la zona del tenant | Entre la 02 y la 07, `Ocupaciones.jsx` **envía** en la zona del tenant (D-FB10) pero **muestra** con su `fmtDate` local, en la zona del navegador | El arreglo mínimo no toca la UI (D-FB8). Con el navegador en la misma zona que el tenant, que es el caso normal, no se nota | La 07 reemplaza `fmtDate` por `formatInstant` |
+| DV-FB3 | D-FB5 (no define estos casos) | Una zona inválida, un `DateOnly` inválido en `addDays`/`dayToInstantRange` y un instante sin zona no tienen comportamiento definido | `fechas.js` lanza `RangeError` con zona inválida (nunca cae a la del sistema) y con `DateOnly` inválido en `addDays`, `dayToInstantRange` y `dateRangeToInstants`. Un instante sin `Z` ni desplazamiento se trata como inválido (`""` en `instantToInput`, texto tal cual en `formatInstant`), porque `Date` lo leería en la zona del sistema | Aclaración de implementación, coherente con D-FB2 y D-FB7 (`MeProvider` valida la zona antes de que una pantalla use el módulo) | — |
 
 ### 4.2 Pendientes
 
@@ -389,9 +390,9 @@ La 02 no modifica estas páginas (salvo Ocupaciones, D-FB10, y las dos de alerta
 
 ### Paso 1 — Módulo de fechas y su dependencia
 
-- [ ] **1.1** Con esta spec ya mergeada en `develop`, crear el worktree de ejecución: `git worktree add ../parkingcontrol-front-base -b feature/front-base develop` (desde `parkingcontrol-front`). En el worktree, copiar el `.env` (no está versionado) y correr `npm install`. Instalar `@date-fns/tz`. Resolver P-FB-L1.
-- [ ] **1.2** Crear `src/utils/fechas.js` con las funciones de D-FB5.
-- [ ] **1.3** Crear `test/unit/utils/fechas.test.js`.
+- [x] **1.1** Con esta spec ya mergeada en `develop`, crear el worktree de ejecución: `git worktree add ../parkingcontrol-front-base -b feature/front-base develop` (desde `parkingcontrol-front`). En el worktree, copiar el `.env` (no está versionado) y correr `npm install`. Instalar `@date-fns/tz`. Resolver P-FB-L1.
+- [x] **1.2** Crear `src/utils/fechas.js` con las funciones de D-FB5.
+- [x] **1.3** Crear `test/unit/utils/fechas.test.js`.
 
   *Aceptación:* `npm test` pasa con estos casos (las fechas de los cambios de horario se confirman con P-FB-L3):
 
