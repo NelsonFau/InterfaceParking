@@ -56,6 +56,40 @@ Una spec por bloque, cada una en `docs/specs/frontend/NN-tema.md` y con rama pro
 
 Las specs 03 a 06, 11 y 12 son independientes entre sí después de la 02 y se pueden ejecutar en paralelo.
 
+### Pedidos al backend
+
+Hallados durante la redacción de las specs del front. Ninguno bloquea al front.
+
+| Id | Pedido | Origen | Prioridad |
+|---|---|---|---|
+| PB-1 | `/Trazabilidad`: filtrar por `entidad` + `entidadId`, para recuperar la historia de un Cliente, una Cochera o una Tarifa que daba `/Auditoria`. El usuario lo aprobó el 18/11/2026: el front sale sin ese filtro y lo suma en una spec futura | Spec 04, P-FD5 | Media |
+| PB-2 | `/Trazabilidad`: que la acción `Finalizar` salga como `FINALIZAR`, como las demás. El front ya la normaliza | Spec 04, P-FD4 | Baja |
+| PB-3 | `/operational-alerts`: un endpoint de resumen que devuelva los conteos de alertas abiertas por severidad y por tipo. Hoy el Monitor hace 8 pedidos de conteo cada 5 minutos | Spec 05, P-FE2 | Baja |
+
+### Contratos entre specs
+
+**Enlace profundo a Trazabilidad** (lo define la 04, D-FD, en Propuesta). Lo usan la 05, la 07, la 08 y la 09.
+- Se linkea siempre con `buildTrazabilidadPath(filtros)` de `src/utils/trazabilidadLink.js`, que crea la 04. Nunca se arma el string a mano.
+- Ruta `/trazabilidad`, a confirmar por el usuario.
+- Query params con los mismos nombres de la API: `ocupacionId`, `pagoId`, `cajaSesionId`, `usuarioId`, `fuente` (repetible por nombre) y `desde`/`hasta` como **`DateOnly`** en la zona del tenant. `page` y `pageSize` no van en la URL.
+- Con `ocupacionId`, `pagoId` o `cajaSesionId`, la pantalla abre sin rango y busca sola. No hay filtro por `alertaId`: para una alerta se linkea por su `ocupacionId` o su `cajaSesionId`.
+- El enlace se muestra **solo si `can("auditoria.ver")`** (DUENO y AUDITOR).
+- Por ese helper, la 05, la 07, la 08 y la 09 se mergean después de la 04.
+
+**`src/api/usuariosApi.js`** (confirmado por el orquestador, P-FD1 de la 04): la 04 lo crea **solo** con `listUsuarios()` (`GET /Usuarios`, devuelve `Usuario[]`, sin paginar). La 12 **agrega** sus funciones al mismo archivo y no lo recrea. La que se ejecute segunda usa lo que encuentre.
+
+**Widget de caja del Monitor operativo** (decidido por el usuario el 18/11/2026: opción (a)). El Monitor (`/operaciones`) y Alertas (`/alertas-operativas`) siguen como dos pantallas separadas.
+- Hoy `OperationalDashboard.jsx` (l. 114) llama a `GET /Pagos/caja-diaria`, que ya no existe. Esa llamada está dentro de un `Promise.all` con las alertas, así que el 404 tira abajo **todo** el Monitor.
+- Opción elegida (a): la 05 saca el widget y el botón "Ver detalle de caja", y pasa el Monitor a `Promise.allSettled`, así una llamada que falla no tira abajo toda la pantalla.
+- La 09 entonces:
+  1. vuelve a poner el widget en el Monitor sobre `/Caja` (`/Caja/actual` y `/Caja/sesiones/{id}/esperado`, que exige `caja.ver_esperado`);
+  2. retira `pagosApi.getCajaDiaria`, que también usa `CajaDiaria.jsx`;
+  3. revisa si `/operaciones` tiene que exigir `caja.ver` (P-FA4).
+
+**Mantenimiento de archivos compartidos.**
+- La línea "Backend endpoints used" de `CLAUDE.md` la reemplaza la 02 (paso 8) por una referencia a `docs/inventario/backend.md`. Las specs siguientes no la tocan.
+- Las excepciones de lint de `eslint.config.js` las saca cada spec. Para evitar conflictos, se mergea en orden de número, con rebase sobre `develop` antes de cada PR.
+
 ### Reparto acordado durante la redacción de la 02 (18/11/2026)
 
 - La **02** crea `src/utils/fechas.js` y `src/utils/formato.js` (`formatMoney`, es-UY/UYU) y hace un **arreglo mínimo** de fechas en `Ocupaciones.jsx` (alta y filtros a instante UTC), sin tocar UI, errores ni permisos. La 07 ya no tiene que arreglar ese 400.

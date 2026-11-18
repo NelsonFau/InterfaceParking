@@ -8,9 +8,9 @@ Rama de integración: `develop` (desde el 18/11/2026; reemplaza a `master` de D-
 |---|---|---|---|---|
 | [01 — Autenticación con Auth0, consumo de `/api/v1` y errores por `code`](frontend/01-autenticacion-y-api.md) | Frontend | Terminada | — | `feature/spec-front-auth` (spec), `feature/front-auth` (ejecución) |
 | [02 — Base común: fechas con zona del tenant, enums, paginación, módulos de API](frontend/02-base-comun.md) | Frontend | Aprobada | — | `feature/spec-front-base` (spec), `feature/front-base` (ejecución, worktree `../parkingcontrol-front-base`) |
-| 03 — Tarifas con vigencia | Frontend | Sin crear | 02 | |
-| 04 — Trazabilidad (reemplaza Auditoría) | Frontend | Sin crear | 02 | |
-| 05 — Alertas operativas paginadas y alertas de dinero | Frontend | Sin crear | 02 | |
+| [03 — Tarifas con vigencia](frontend/03-tarifas.md) | Frontend | Aprobada | 02 | `feature/specs-etapa2` (spec), `feature/front-tarifas` (ejecución, worktree `../parkingcontrol-front-tarifas`) |
+| [04 — Trazabilidad (reemplaza Auditoría)](frontend/04-trazabilidad.md) | Frontend | Aprobada | 02 | `feature/specs-etapa2` (spec), `feature/front-trazabilidad` (ejecución, worktree `../parkingcontrol-front-trazabilidad`) |
+| [05 — Alertas operativas paginadas y alertas de dinero](frontend/05-alertas.md) | Frontend | Aprobada | 02, 04 | `feature/specs-etapa2` (spec), `feature/front-alertas` (ejecución, worktree `../parkingcontrol-front-alertas`) |
 | 06 — Cocheras: alta por rango, edición, estados calculados | Frontend | Sin crear | 02 | |
 | 07 — Ocupaciones: alta abierta/retroactiva, saldo, finalizar con excedente, errores y permisos | Frontend | Sin crear | 02 | |
 | 08 — Pagos: detalle, devoluciones, anulación entre sesiones | Frontend | Sin crear | 07 | |

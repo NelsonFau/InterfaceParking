@@ -91,6 +91,20 @@ Specs del backend: 01–18 todas **Terminadas**. El pendiente que agrupa la adap
 
 `Tarifa`: `id, tipo, precio, vigenteDesde: DateOnly, vigenteHasta?: DateOnly, vigente: bool`.
 
+Comportamiento (relevado de `Service\TarifaService.cs` y `TarifaResolver.cs` el 18/11/2026; sin confirmar por tests):
+- **Unicidad** por `(tipo, vigenteDesde)`. Puede haber **varias tarifas futuras** por tipo con fechas distintas.
+- **`vigenteHasta`** no se guarda: se calcula al leer como el `vigenteDesde` de la siguiente menos 1 día.
+- **PUT `/Tarifa`**:
+  - `vigenteDesde` anterior a hoy → 400 `datos_invalidos` (campo `VigenteDesde`).
+  - Con fecha futura: si ya hay una tarifa en esa misma fecha la **reemplaza** (auditoría EDITAR); si no, inserta (CREAR).
+  - Con hoy (o sin `vigenteDesde`): si ya hay una tarifa que empieza hoy → 409 `tarifa_ya_vigente`; si no, inserta y rige desde hoy.
+  - Carrera con otro pedido → 409 `tarifa_modificada`. No es `rowversion`: `CodigosModificado` solo registra la configuración.
+- **DELETE `/Tarifa/{id}`**: inexistente → 404 `tarifa_no_encontrada`; si ya rige o rigió (`vigenteDesde <= hoy`) → 409 `tarifa_ya_vigente`; si es futura la borra (204, auditoría BORRAR); carrera → 409 `tarifa_modificada`.
+- **GET `/vigentes`**: siempre 3 elementos (HORA, DIA, MES, en ese orden). Un tipo sin tarifa trae `vigente` y `proxima` en `null`. `vigente` es la de mayor `vigenteDesde <= hoy`; `proxima`, la de **menor** `vigenteDesde > hoy`. Las futuras siguientes solo se ven en el historial.
+- **GET `/historial?tipo=`**: todas las tarifas del tipo, **incluidas las programadas**, ordenadas por `vigenteDesde` descendente. Sin confirmar qué pasa con un `tipo` ausente.
+- **`nuevoPrecio`**: > 0 (**no admite 0**), 2 decimales como máximo, tope 10.000.000 (inclusivo). Si no cumple → 400 `datos_invalidos` (campo `NuevoPrecio`).
+- **`tarifa_no_configurada`** (409) lo lanza el **alta de ocupación** (no `/Tarifa`) cuando no hay tarifa del tipo con `vigenteDesde <=` el día local del **inicio** de la ocupación, salvo con tarifa excepcional. Una ocupación retroactiva toma la tarifa de ese día; una futura, la que regirá ese día (incluida una programada). Es un dato para la 07.
+
 ### `/Caja`
 | Verbo y ruta | Permiso | Query / body | Respuesta |
 |---|---|---|---|
@@ -139,6 +153,9 @@ Errores: 409 `configuracion_modificada` (cambió `version`), 409 `caja_abierta` 
 | PATCH `/operational-alerts/{id}/resolver` | `alertas.resolver` (+ `alertas.resolver_dinero` si `esDeDinero`) | `{ comentario? (≤500; obligatorio en alertas de dinero) }` | **200** `Alerta` |
 
 `Alerta`: `id, tipo, severidad, mensaje, ocupacionId?, cajaSesionId?, esDeDinero, resuelta, fechaCreacion, fechaResolucion?, resolucionAutomatica, resueltaPorUsuarioId?, resueltaPorNombre?, comentarioResolucion?`. Resolver una ya resuelta → 409 `alerta_resuelta`.
+
+- **Orden del listado**: `FechaCreacion` descendente, con `Id` descendente como desempate (`OperationalAlertService.cs:72-75`). Sin `desde`/`hasta` no hay ningún filtro de fecha implícito, y las resueltas viejas siguen apareciendo salvo que se filtre por `resuelta`.
+- **`ventanaAlertasDias`** (configuración, 7..90, 30 por defecto) **no limita el listado**: es la ventana hacia atrás que mira el job de control (cada hora) para elegir candidatas a alerta (`DetectorDeAlertas.cs:158-164`, `AlertasControlJob.cs:8`).
 
 Alertas de dinero: `DEVOLUCION_PENDIENTE`, `DIFERENCIA_DE_CAJA`, `FONDO_DISTINTO`, `MENSUAL_IMPAGO`, `OCUPACION_FINALIZADA_SIN_PAGO`, `PAGO_MENOR_AL_ESPERADO`, `PAGO_REGISTRADO_TARDE`.
 
