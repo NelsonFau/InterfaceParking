@@ -430,7 +430,7 @@ La 02 no modifica estas páginas (salvo Ocupaciones, D-FB10, y las dos de alerta
 
 ### Paso 3 — Formato de moneda
 
-- [ ] **3.1** Crear `src/utils/formato.js` (D-FB12) y `test/unit/utils/formato.test.js`.
+- [x] **3.1** Crear `src/utils/formato.js` (D-FB12) y `test/unit/utils/formato.test.js`.
 
   *Aceptación:* `npm test` pasa con: `formatMoney(1234.5)` contiene `1.234,50` (los espacios, incluidos los no cortables, se normalizan antes de comparar); `null`, `undefined`, `""` y `"abc"` dan `—`; `0` da un importe de cero, no `—`. `formatNumber(1234)` da `1.234`, `formatNumber(0)` da `0` y `formatNumber(null)` da `—`. `npm run lint` y `npm run build` pasan.
 

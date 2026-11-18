@@ -1,6 +1,6 @@
 # Manual 02 — Base común
 
-Cómo funciona y cómo se usa la base común del frontend (spec `docs/specs/frontend/02-base-comun.md`). Se completa paso a paso; hoy cubre el paso 1 (fechas).
+Cómo funciona y cómo se usa la base común del frontend (spec `docs/specs/frontend/02-base-comun.md`). Se completa paso a paso; hoy cubre los pasos 1 y 2 (fechas) y 3 (formato).
 
 ## 1. Fechas con la zona del tenant
 
@@ -85,3 +85,16 @@ El `ApiError` de ese estado lleva el código `respuesta_invalida` con el mensaje
 
 ### Cómo probarlo a mano
 Poné en `MeProvider.jsx`, sin commitear, `isValidTimeZone(...)` forzado a falso (por ejemplo `!isValidTimeZone("Mars/Olympus")` en la condición). Se ve la pantalla de error con "Reintentar". Revertí el cambio antes de commitear.
+
+## 3. Formato de moneda y números
+
+Módulo: `src/utils/formato.js`. Fija en un solo lugar el locale `es-UY` y la moneda `UYU` (la moneda por tenant es el pendiente P-FB3: `/me` no la trae).
+
+| Función | Qué hace |
+|---|---|
+| `formatMoney(value)` | Importe con `Intl.NumberFormat` (`$ 1.234,50`; los espacios son no cortables). Si `Intl` falla, `$ <número>` |
+| `formatNumber(value)` | Número sin moneda, con separador de miles (`1.234`), para conteos y porcentajes |
+
+Un valor `null`, `undefined`, `""`, solo espacios, no numérico o no finito devuelve `—`, no `$ 0,00` ni `0`: `precioTotal` es `null` hasta finalizar la ocupación y mostrar cero sería falso. El `0` sí es un valor y se formatea. Se aceptan números y textos numéricos (`"1234.5"`).
+
+`toLocaleString` queda prohibido fuera de `fechas.js` y `formato.js` (regla de ESLint del paso 8), también para números.
