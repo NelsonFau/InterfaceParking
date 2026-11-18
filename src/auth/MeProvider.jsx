@@ -4,12 +4,18 @@ import { useAuth0 } from "@auth0/auth0-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { registerAuthBridge } from "../api/authBridge.js";
-import { normalizeError } from "../api/errors.js";
+import { ApiError, normalizeError } from "../api/errors.js";
 import { getMe } from "../api/meApi.js";
 import { LOGIN_REASON, TREATMENT, treatmentFor } from "../constants/errorCodes.js";
+import { isValidTimeZone } from "../utils/fechas.js";
 import { ME_STATUS, MeContext } from "./usePermissions.js";
 
 const initialState = { status: ME_STATUS.LOADING, me: null, error: null };
+
+// Sin zona horaria válida no se puede mostrar ni enviar ninguna fecha (D-FB2, D-FB7):
+// se trata como un error de /me, con "Reintentar", y no se cae a la zona del navegador.
+const timeZoneError = () =>
+  new ApiError({ code: "respuesta_invalida", message: "No pudimos leer la zona horaria del local" });
 
 // Un bloqueo de cuenta no se pisa con un resultado posterior.
 const unlessBlocked = (next) => (current) => (current.status === ME_STATUS.BLOCKED ? current : next);
@@ -47,7 +53,12 @@ export default function MeProvider({ children }) {
 
     getMe()
       .then((me) => {
-        if (!cancelled) setState(unlessBlocked({ status: ME_STATUS.READY, me, error: null }));
+        if (cancelled) return;
+        if (!isValidTimeZone(me?.tenant?.zonaHoraria)) {
+          setState(unlessBlocked({ status: ME_STATUS.ERROR, me: null, error: timeZoneError() }));
+          return;
+        }
+        setState(unlessBlocked({ status: ME_STATUS.READY, me, error: null }));
       })
       .catch((err) => {
         if (cancelled) return;

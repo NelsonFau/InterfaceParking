@@ -303,6 +303,7 @@ export async function deactivateCliente(id) {
 | DV-FB1 | `brechas-front.md`, sección 1 | El 400 por fechas sin zona está "roto hoy" en `Ocupaciones.jsx` | La spec lo describe como causado por los cambios sin commitear, no por `develop`; el arreglo mínimo (D-FB10) igual se hace, porque `develop` interpreta la hora en la zona del navegador | El código de `develop` manda `Z` (zona del navegador), y el 400 lo causaba el árbol de trabajo sin commitear, hoy en `wip/ocupaciones-reservas` | — |
 | DV-FB2 | D-FB2 (una sola zona) | Lo que se envía y lo que se muestra usan la zona del tenant | Entre la 02 y la 07, `Ocupaciones.jsx` **envía** en la zona del tenant (D-FB10) pero **muestra** con su `fmtDate` local, en la zona del navegador | El arreglo mínimo no toca la UI (D-FB8). Con el navegador en la misma zona que el tenant, que es el caso normal, no se nota | La 07 reemplaza `fmtDate` por `formatInstant` |
 | DV-FB3 | D-FB5 (no define estos casos) | Una zona inválida, un `DateOnly` inválido en `addDays`/`dayToInstantRange` y un instante sin zona no tienen comportamiento definido | `fechas.js` lanza `RangeError` con zona inválida (nunca cae a la del sistema) y con `DateOnly` inválido en `addDays`, `dayToInstantRange` y `dateRangeToInstants`. Un instante sin `Z` ni desplazamiento se trata como inválido (`""` en `instantToInput`, texto tal cual en `formatInstant`), porque `Date` lo leería en la zona del sistema | Aclaración de implementación, coherente con D-FB2 y D-FB7 (`MeProvider` valida la zona antes de que una pantalla use el módulo) | — |
+| DV-FB4 | D-FB7 (estado `error` de `MeProvider`) | Pide el estado `error` con el mensaje "No pudimos leer la zona horaria del local", sin decir con qué `code` | El `ApiError` lleva `code: "respuesta_invalida"` (ya existente) y ese mensaje explícito. No se agrega un código nuevo a `errorCodes.js`. `useTenantDates()` lanza un `Error` si se usa sin `/me` cargado o sin zona válida | `/me` respondió con un contenido incompleto, que es lo que describe `respuesta_invalida`; un código nuevo sería una decisión que la spec no prevé | — |
 
 ### 4.2 Pendientes
 
@@ -420,10 +421,12 @@ La 02 no modifica estas páginas (salvo Ocupaciones, D-FB10, y las dos de alerta
 
 ### Paso 2 — Hook y validación de la zona
 
-- [ ] **2.1** Crear `src/utils/useTenantDates.js` (D-FB7).
-- [ ] **2.2** En `src/auth/MeProvider.jsx`, validar la zona de `/me` con `isValidTimeZone`; si es inválida o falta, estado `error` con el mensaje de D-FB7.
+- [x] **2.1** Crear `src/utils/useTenantDates.js` (D-FB7).
+- [x] **2.2** En `src/auth/MeProvider.jsx`, validar la zona de `/me` con `isValidTimeZone`; si es inválida o falta, estado `error` con el mensaje de D-FB7.
 
   *Aceptación (manual):* con el backend levantado, `useTenantDates()` devuelve la zona de `/me` (se ve al usarlo en el paso 7). Con una modificación temporal de `MeProvider` que ponga una zona inválida (sin commitear) se ve la pantalla de error de `/me` con "Reintentar". `npm run lint` y `npm run build` pasan.
+
+  *Verificación manual pendiente (decidido con el chat orquestador):* ambas pruebas de arriba (la zona que devuelve `useTenantDates()` y la pantalla de error con la zona inválida) se hacen junto con la prueba manual del paso 7, para levantar el backend una sola vez. Hasta entonces el paso 2 está verificado solo por `npm test`, `npm run lint` y `npm run build`.
 
 ### Paso 3 — Formato de moneda
 
