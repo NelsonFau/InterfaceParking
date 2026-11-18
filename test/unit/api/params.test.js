@@ -1,5 +1,7 @@
-import { beforeAll, describe, expect, it, vi } from "vitest";
-import { cleanParams } from "../../../src/api/params.js";
+import { readFileSync } from "node:fs";
+import axios from "axios";
+import { describe, expect, it } from "vitest";
+import { PARAMS_SERIALIZER, cleanParams } from "../../../src/api/params.js";
 
 describe("cleanParams", () => {
   it("quita undefined, null y vacío", () => {
@@ -26,29 +28,32 @@ describe("cleanParams", () => {
   });
 });
 
-describe("paramsSerializer de http (P-FB-L2)", () => {
-  let http;
-
-  beforeAll(async () => {
-    // http.js valida la configuración al crearse: se fijan variables de prueba, sin leer el .env.
-    vi.stubEnv("VITE_API_BASE_URL", "https://localhost:7076/api/v1");
-    vi.stubEnv("VITE_AUTH0_DOMAIN", "test.example.com");
-    vi.stubEnv("VITE_AUTH0_CLIENT_ID", "client");
-    vi.stubEnv("VITE_AUTH0_AUDIENCE", "audience");
-    ({ http } = await import("../../../src/api/http.js"));
-  });
+// P-FB-L2. Se prueba con axios y las opciones exportadas, sin importar `http.js` (que valida la
+// configuración y carga Auth0): así el test no depende de la velocidad de la máquina.
+describe("PARAMS_SERIALIZER (P-FB-L2)", () => {
+  const instancia = axios.create({ baseURL: "https://localhost:7076/api/v1", paramsSerializer: PARAMS_SERIALIZER });
 
   it("repite la clave de un arreglo, sin corchetes", () => {
-    const uri = http.getUri({ url: "/Trazabilidad", params: { fuente: ["PAGO", "CAJA"] } });
+    const uri = instancia.getUri({ url: "/Trazabilidad", params: { fuente: ["PAGO", "CAJA"] } });
     expect(uri).toContain("fuente=PAGO&fuente=CAJA");
     expect(uri).not.toContain("fuente[]");
     expect(uri).not.toContain("fuente%5B");
   });
 
   it("los valores simples no cambian", () => {
-    const uri = http.getUri({ url: "/Cliente", params: { q: "ana", page: 2, activos: false } });
+    const uri = instancia.getUri({ url: "/Cliente", params: { q: "ana", page: 2, activos: false } });
     expect(uri).toContain("q=ana");
     expect(uri).toContain("page=2");
     expect(uri).toContain("activos=false");
+  });
+
+  it("sin el serializador, axios usa corchetes (por eso existe)", () => {
+    const uri = axios.getUri({ url: "/Trazabilidad", params: { fuente: ["PAGO", "CAJA"] } });
+    expect(uri).toMatch(/fuente(\[\]|%5B%5D)=PAGO/);
+  });
+
+  it("http.js usa estas opciones", () => {
+    const fuente = readFileSync(new URL("../../../src/api/http.js", import.meta.url), "utf8");
+    expect(fuente).toContain("paramsSerializer: PARAMS_SERIALIZER");
   });
 });

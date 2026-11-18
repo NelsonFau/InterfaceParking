@@ -159,8 +159,8 @@ Se prueban el reductor y las funciones puras. El hook es una línea sobre el red
 ## 6. Parámetros de query
 
 - `src/api/params.js` exporta `cleanParams(obj)`: quita las claves con `undefined`, `null` o `""` (para no mandar `q=` ni `hasta=`) y conserva `false` y `0`. No modifica el objeto recibido. Se usa en cada módulo de API: `http.get("/Cliente", { params: cleanParams(filters) })`.
-- `src/api/http.js` configura `paramsSerializer: { indexes: null }`: un arreglo sale como `fuente=PAGO&fuente=CAJA`. El valor por defecto de axios lo manda como `fuente[]=PAGO&fuente[]=CAJA`, y el backend (Trazabilidad, `fuente` repetible) no lo enlaza.
-- P-FB-L2 resuelto: axios 1.13.2 acepta `indexes: null` en `paramsSerializer`. Lo verifica `test/unit/api/params.test.js` con `http.getUri`. El test fija las variables `VITE_` con `vi.stubEnv` (no lee el `.env`).
+- `src/api/http.js` configura `paramsSerializer: PARAMS_SERIALIZER` (`{ indexes: null }`, exportado desde `params.js`): un arreglo sale como `fuente=PAGO&fuente=CAJA`. El valor por defecto de axios lo manda como `fuente[]=PAGO&fuente[]=CAJA`, y el backend (Trazabilidad, `fuente` repetible) no lo enlaza.
+- P-FB-L2 resuelto: axios 1.13.2 acepta `indexes: null` en `paramsSerializer`. Lo verifica `test/unit/api/params.test.js` con `getUri` de una instancia de axios que usa `PARAMS_SERIALIZER`. No importa `http.js` (valida la configuración y carga Auth0, y en una máquina lenta superó el timeout del hook); un test de texto comprueba que `http.js` usa esas opciones.
 - Los parámetros no se arman en la URL a mano: van por `params`.
 
 ## 7. Arreglo mínimo de fechas en Ocupaciones (D-FB10)

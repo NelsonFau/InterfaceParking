@@ -217,7 +217,6 @@ export default function Ocupaciones() {
     return () => {
       if (filtroClienteTimerRef.current) clearTimeout(filtroClienteTimerRef.current);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filtroClienteInput]);
 
   useEffect(() => {
@@ -230,7 +229,6 @@ export default function Ocupaciones() {
     return () => {
       if (crearClienteTimerRef.current) clearTimeout(crearClienteTimerRef.current);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [crearClienteInput]);
 
   function abrirCrear() {
