@@ -7,7 +7,7 @@ Rama de integración: `develop` (desde el 18/11/2026; reemplaza a `master` de D-
 | Spec | Área | Estado | Depende de | Rama |
 |---|---|---|---|---|
 | [01 — Autenticación con Auth0, consumo de `/api/v1` y errores por `code`](frontend/01-autenticacion-y-api.md) | Frontend | Terminada | — | `feature/spec-front-auth` (spec), `feature/front-auth` (ejecución) |
-| [02 — Base común: fechas con zona del tenant, enums, paginación, módulos de API](frontend/02-base-comun.md) | Frontend | Borrador | — | `feature/spec-front-base` (spec), `feature/front-base` (ejecución) |
+| [02 — Base común: fechas con zona del tenant, enums, paginación, módulos de API](frontend/02-base-comun.md) | Frontend | Aprobada | — | `feature/spec-front-base` (spec), `feature/front-base` (ejecución, worktree `../parkingcontrol-front-base`) |
 | 03 — Tarifas con vigencia | Frontend | Sin crear | 02 | |
 | 04 — Trazabilidad (reemplaza Auditoría) | Frontend | Sin crear | 02 | |
 | 05 — Alertas operativas paginadas y alertas de dinero | Frontend | Sin crear | 02 | |

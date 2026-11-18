@@ -1,6 +1,6 @@
 # 02 — Base común: fechas con zona del tenant, enums, paginación y módulos de API
 
-> Frontend · **Borrador** (18/11/2026) · `feature/spec-front-base` (esta spec) y `feature/front-base` (ejecución, a crear desde `develop`) · Última actualización 18/11/2026
+> Frontend · **Aprobada** (18/11/2026) · `feature/spec-front-base` (esta spec) y `feature/front-base` (ejecución, en un worktree aparte, a crear desde `develop` una vez mergeada esta spec) · Última actualización 18/11/2026
 >
 > Segunda spec del frontend. Es la base que usan las specs 03 a 12: define cómo se manejan las fechas, dónde viven los enums, cómo se pagina y cómo se escribe un módulo de `src/api/`. Arregla además el 400 por fechas sin zona que hoy rompe el alta y los filtros de Ocupaciones.
 
@@ -44,6 +44,7 @@ Versiones de referencia: frontend, rama `develop`; backend, inventario del 18/11
 | `docs/inventario/backend.md`, sección 0 | Contrato de fechas: instante con zona al entrar y UTC con `Z` al salir; `DateOnly` sin zona, interpretado en la zona del tenant | 18/11/2026 |
 | `docs/inventario/backend.md`, sección 2 | Los 15 enums enteros, con sus valores retirados y calculados | 18/11/2026 |
 | `docs/inventario/backend.md`, sección 1 | Qué endpoint recibe y devuelve instantes o `DateOnly`; los límites de `pageSize` por recurso | 18/11/2026 |
+| `docs/inventario/backend.md`, sección 5 | Si `hasta` es inclusivo o exclusivo en cada filtro, el límite de 31 días de Trazabilidad y la lista cerrada de 12 zonas (cierra P-FB1 y P-FB2) | 18/11/2026 |
 | `docs/inventario/brechas-front.md`, secciones 1 y 5 | El 400 por fechas, los hallazgos de zona del navegador y de "hoy" en UTC, y el reparto de la 02 | 18/11/2026 |
 | Spec 01 (`01-autenticacion-y-api.md`) | Formato de spec, `ApiError`, `showApiError`, `useMe`, regla "lógica pura con Vitest" (D-FA4), ESLint como barrera (D-FA11) | 09/11/2026 |
 | Lectura de `src/` en `develop` | Las copias de fechas, `money` y enums por página; `meApi.js`, `operationalAlertsApi.js`, `pagosApi.js` | 18/11/2026 |
@@ -99,7 +100,7 @@ Campos de cada contrato (referencia para las specs 03 a 12; fuente: inventario, 
 
 ### 3.2 Librería de zonas horarias
 
-**D-FB4 (18/11/2026) — Propuesta. `@date-fns/tz`, usando solo `tzOffset`.** El módulo calcula el desplazamiento de la zona con `tzOffset` de `@date-fns/tz` y formatea con `Intl.DateTimeFormat` (`formatToParts`, `hourCycle: "h23"`), armando el texto `dd/MM/yyyy HH:mm` a mano para no depender de variaciones de ICU. No se agrega `date-fns`: la aritmética de `DateOnly` (`addDays`) se hace sobre el texto. La conversión de hora local a instante y la detección de hora inexistente o repetida **las hace el módulo** (D-FB5), no la librería.
+**D-FB4 (18/11/2026) — Confirmada. `@date-fns/tz`, usando solo `tzOffset`.** El módulo calcula el desplazamiento de la zona con `tzOffset` de `@date-fns/tz` y formatea con `Intl.DateTimeFormat` (`formatToParts`, `hourCycle: "h23"`), armando el texto `dd/MM/yyyy HH:mm` a mano para no depender de variaciones de ICU. No se agrega `date-fns`: la aritmética de `DateOnly` (`addDays`) se hace sobre el texto. La conversión de hora local a instante y la detección de hora inexistente o repetida **las hace el módulo** (D-FB5), no la librería.
 
 | | `date-fns-tz` 3.2.0 | `@date-fns/tz` 1.5.0 |
 |---|---|---|
@@ -113,7 +114,7 @@ Campos de cada contrato (referencia para las specs 03 a 12; fuente: inventario, 
 *Descartados:* (a) `date-fns-tz`: sin publicaciones desde 2024, README inconsistente y el modelo del `Date` corrido; (b) **Temporal**: ya está en Chrome 144 (enero de 2026) y Firefox 139, pero Safari no tiene versión estable con Temporal según las fuentes que encontré (algunas se contradicen), así que exigiría un polyfill hoy. Se revisa más adelante (P-FB5); (c) `Intl` solo, sin dependencia: es viable (el desplazamiento sale de `formatToParts`, unas 15 líneas más) y es la alternativa si se objeta sumar una dependencia por una sola función. Se descarta porque el desarrollador pidió una librería de zonas.
 *A verificar al ejecutar:* P-FB-L1.
 
-**D-FB5 (18/11/2026) — Propuesta. API de `src/utils/fechas.js`.** Módulo **puro** (sin React ni estado), con la zona como último parámetro explícito de cada función que la necesita. No lee la zona del sistema: no usa `getHours`, `getDate`, `getTimezoneOffset` ni `toLocale*`.
+**D-FB5 (18/11/2026) — Confirmada. API de `src/utils/fechas.js`.** Módulo **puro** (sin React ni estado), con la zona como último parámetro explícito de cada función que la necesita. No lee la zona del sistema: no usa `getHours`, `getDate`, `getTimezoneOffset` ni `toLocale*`.
 
 | Función | Entrada → salida |
 |---|---|
@@ -128,8 +129,19 @@ Campos de cada contrato (referencia para las specs 03 a 12; fuente: inventario, 
 | `isDateOnly(value)` | `boolean`: cumple `yyyy-MM-dd` y es una fecha real |
 | `formatDateOnly(d)` | `DateOnly` → `dd/MM/yyyy`, sin pasar por `Date` |
 | `addDays(d, n)` | `DateOnly` → `DateOnly`, con `n` positivo o negativo |
-| `dayToInstantRange(d, timeZone)` | `DateOnly` → `{ desde, hasta }`: el inicio de ese día y el inicio del siguiente, como `UtcInstant`, en la zona (intervalo `[desde, hasta)`; ver P-FB1). Si la medianoche no existe en la zona, `desde` es el primer instante válido del día |
+| `dayToInstantRange(d, timeZone)` | `DateOnly` → `{ desde, hasta }`: el inicio de ese día y el inicio del siguiente, como `UtcInstant`, en la zona (intervalo `[desde, hasta)`). Si la medianoche no existe en la zona, `desde` es el primer instante válido del día |
+| `dateRangeToInstants(desdeDay, hastaDay, timeZone, { inclusiveEnd = true })` | Rango de un filtro "del día A al día B" → `{ desde, hasta }` como `UtcInstant`. `desde` = inicio de A. `hasta` = inicio de B+1 **menos 1 ms** con `inclusiveEnd: true` (filtros con `hasta` inclusivo), o inicio de B+1 con `inclusiveEnd: false`. Un día vacío o `null` da `null` en su extremo, así que se puede filtrar solo desde o solo hasta |
 | `isValidTimeZone(timeZone)` | `boolean` |
+
+**Qué usa cada filtro** (inventario, sección 5):
+
+| Filtro | `hasta` en el backend | Qué manda el front |
+|---|---|---|
+| `/Ocupacion`, `/operational-alerts`, `/Trazabilidad` | inclusivo (`<=`) | `dateRangeToInstants(A, B, tz)` (con `inclusiveEnd: true`, el valor por defecto) si el filtro es por días; `localInputToInstant` si es por fecha y hora |
+| `/Caja/sesiones` | `DateOnly`; el día B entra entero | Los `DateOnly` tal cual, sin convertir |
+| `/Cochera/disponibles` | exclusivo (`[desde, hasta)`) | Instantes de `localInputToInstant` (es un rango de uso, no de días) |
+
+Con `inclusiveEnd: true`, un rango de 31 días de calendario (por ejemplo, del 1 al 31 de octubre) mide 31 días menos 1 ms y entra en el límite de Trazabilidad (31 días exactos pasan; inventario, sección 5). En `/Ocupacion`, `desde` filtra por `Inicio` y `hasta` por `Fin` (no por solapamiento), y con `hasta` se excluyen las ocupaciones abiertas. Es un dato para la 07, que decide cómo presentarlo; la 02 no lo cambia.
 
 Algoritmo de `localInputToInstant` (la parte delicada):
 1. Validar el patrón `^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?$` y que los componentes formen una fecha real.
@@ -148,8 +160,8 @@ Notas: en una zona sin horario de verano, los dos candidatos coinciden y hay un 
 *Motivo:* el usuario nunca registra una hora distinta de la que eligió (no hay corrimiento silencioso) y nunca queda bloqueado una hora entera.
 *Descartados:* (a) corrimiento "compatible" de Temporal (00:30 pasaría a 01:30 sin avisar); (b) rechazar también la hora repetida (no se podría cargar nada durante esa hora).
 
-**D-FB7 (18/11/2026) — Propuesta. Hook `useTenantDates()` y validación de la zona en `MeProvider`.**
-- `src/utils/useTenantDates.js` lee `useMe().me.tenant.zonaHoraria` y devuelve, memoizado, `{ timeZone, localInputToInstant, instantToInput, formatInstant, formatInstantDate, instantToDateOnly, today, dayToInstantRange }` con la zona ya aplicada. Las funciones que no usan zona (`DateOnly`, `addDays`) se importan directo de `fechas.js`. Las pantallas llaman al hook y no tocan la zona.
+**D-FB7 (18/11/2026) — Confirmada. Hook `useTenantDates()` y validación de la zona en `MeProvider`.**
+- `src/utils/useTenantDates.js` lee `useMe().me.tenant.zonaHoraria` y devuelve, memoizado, `{ timeZone, localInputToInstant, instantToInput, formatInstant, formatInstantDate, instantToDateOnly, today, dayToInstantRange, dateRangeToInstants }` con la zona ya aplicada. Las funciones que no usan zona (`DateOnly`, `addDays`) se importan directo de `fechas.js`. Las pantallas llaman al hook y no tocan la zona.
 - `MeProvider` valida con `isValidTimeZone` la zona que trae `/me`. Si falta o es inválida, pasa al estado `error` con el mensaje "No pudimos leer la zona horaria del local" y se muestra la pantalla de error de `/me` con "Reintentar" (P-FA13 de la 01). Sin esa validación, el hook fallaría con una pantalla en blanco.
 *Motivo:* una sola fuente de la zona, y el fallo es visible en vez de volver silenciosamente a la zona del navegador (D-FB2).
 *Descartados:* (a) cada pantalla lee `me.tenant.zonaHoraria` y la pasa a mano: 10 lugares donde olvidarla; (b) un valor por defecto `America/Montevideo`: oculta datos incompletos y es falso para otro país.
@@ -160,7 +172,7 @@ Notas: en una zona sin horario de verano, los dos candidatos coinciden y hay un 
 *Motivo:* esas 7 páginas se reescriben en las specs 03 a 09; tocarlas dos veces genera conflictos y revisiones dobles, y `CajaDiaria.jsx` quedó sin tocar a propósito en la 01 (DV-FA2).
 *Descartados:* reemplazar solo las de mostrar en las 7 páginas, o mostrar y enviar en todas: cada una se mete en la lógica de pantallas que se rehacen enseguida.
 
-**D-FB9 (18/11/2026) — Propuesta. Regla de ESLint con excepciones temporales.** En `src/`, `no-restricted-properties` prohíbe `toLocaleString`, `toLocaleDateString` y `toLocaleTimeString` (en cualquier objeto), con el mensaje "Las fechas se muestran con `formatInstant` de `src/utils/fechas.js` (zona del tenant)". Se excluyen `src/utils/fechas.js` y `src/utils/formato.js`. Las páginas que hoy los usan (Auditoría, CajaDiaria, Cocheras, Ocupaciones, OperationalAlerts, OperationalDashboard, Tarifas) quedan como **excepciones temporales** en `eslint.config.js`, cada una marcada con la spec que la retira (sección 5.4), igual que se hizo con `CajaDiaria.jsx` en P-FA12.
+**D-FB9 (18/11/2026) — Confirmada. Regla de ESLint con excepciones temporales.** En `src/`, `no-restricted-properties` prohíbe `toLocaleString`, `toLocaleDateString` y `toLocaleTimeString` (en cualquier objeto), con el mensaje "Las fechas se muestran con `formatInstant` de `src/utils/fechas.js` (zona del tenant); los números y la moneda, con `formatNumber` y `formatMoney` de `src/utils/formato.js`". Que alcance también a `Number#toLocaleString` es **intencional**: así el locale queda fijo en un solo lugar para números y fechas. Se excluyen `src/utils/fechas.js` y `src/utils/formato.js`. Las páginas que hoy los usan (Auditoría, CajaDiaria, Cocheras, Ocupaciones, OperationalAlerts, OperationalDashboard, Tarifas) quedan como **excepciones temporales** en `eslint.config.js`, cada una marcada con la spec que la retira (sección 5.4), igual que se hizo con `CajaDiaria.jsx` en P-FA12.
 *Motivo:* lo que no puede romperse se bloquea con una herramienta (principio 9 del playbook): sin la regla, la siguiente pantalla vuelve a copiar `toLocaleString()`.
 *Descartado:* solo documentarlo en `CLAUDE.md`, que se puede saltear.
 *Límite:* la regla no detecta `new Date().toISOString().slice(0, 10)` ni `new Date("yyyy-MM-dd")`. Eso queda en la revisión y en el manual.
@@ -179,7 +191,7 @@ Una hora inexistente se muestra con `toast.error(resultado.message)` y no se env
 
 ### 3.4 Formato, enums y paginación
 
-**D-FB11 (18/11/2026) — Propuesta. `src/constants/enums.js`: un módulo con los 15 enums del inventario.**
+**D-FB11 (18/11/2026) — Confirmada. `src/constants/enums.js`: un módulo con los 15 enums del inventario.**
 
 *Forma.* Cada enum se declara con `defineEnum(nombre, entradas)`. La constante expone sus claves como valores (`TipoOcupacion.HORA === 1`) y guarda por entrada: `value` (entero), `label` (español), `color` (color de MUI, si aplica) y marcas opcionales `calculado` (lo calcula el backend; no se envía) y `dinero` (alerta de dinero). Helpers puros exportados:
 
@@ -192,7 +204,7 @@ Una hora inexistente se muestra con `toast.error(resultado.message)` y no se env
 
 Los valores retirados del backend **no** se declaran: `RolUsuario` sin el 2, `TipoAlertaOperativa` sin el 4.
 
-*Enums, etiquetas y colores* (todo Propuesta; los colores de `EstadoCochera` y `SeveridadAlerta` son los que ya usa el código):
+*Enums, etiquetas y colores* (los colores de `EstadoCochera` y `SeveridadAlerta` son los que ya usa el código):
 
 | Enum | Entradas (valor · etiqueta · color) |
 |---|---|
@@ -217,13 +229,13 @@ Etiquetas de `TipoAlertaOperativa` 5 a 12: "Ocupación finalizada sin pago", "Pa
 *Migración incluida en la 02.* `src/constants/operationalAlerts.js` se **borra**, y `OperationalAlerts.jsx` y `OperationalDashboard.jsx` pasan a importar de `enums.js` (cambio mecánico de import y de uso: `TIPO_ALERTA[n]` pasa a `labelOf(TipoAlertaOperativa, n)` y `SEVERIDAD_ALERTA[n]` a `labelOf` y `colorOf` de `SeveridadAlerta`). Es la única migración de enums de la 02: el archivo está equivocado (muestra mal los tipos 1 a 4 y no conoce el 5 al 12), así que dejarlo hasta la 05 deja etiquetas incorrectas en producción. Las constantes locales del resto de las páginas las retira cada spec (sección 5.4).
 *Motivo:* el inventario es la única fuente de valores, y un test compara cada enum contra la tabla.
 *Descartados:* (a) constantes sueltas sin helpers: cada pantalla reescribe el `find` por valor, como hoy; (b) generar los enums desde el backend: no hay endpoint para eso; (c) migrar también los enums de las páginas en la 02: contradice D-FB8; (d) dejar `operationalAlerts.js` hasta la 05: mantiene un archivo con valores incorrectos.
-*Alternativa a decidir:* si se prefiere no tocar las dos páginas de alertas en la 02, el archivo viejo queda como reexport temporal de `enums.js` y se borra en la 05. Cuesta un archivo más a cambio de no tocar esas páginas.
+*Descartado también:* dejar el archivo viejo como reexport temporal de `enums.js` hasta la 05. El desarrollador eligió migrar las dos páginas en la 02.
 
-**D-FB12 (18/11/2026) — Confirmada (alcance); Propuesta (el caso nulo). `src/utils/formato.js` con `formatMoney`.** Fija en un solo lugar el locale `es-UY` y la moneda `UYU`. `formatMoney(value)` devuelve el texto con `Intl.NumberFormat`; si `Intl` falla, `$ <número>`. Un valor `null`, `undefined`, `""` o no numérico devuelve `"—"` y no `$ 0,00`: `precioTotal` es `null` hasta finalizar la ocupación (inventario) y mostrar cero sería falso. La moneda por tenant queda pendiente (P-FB3): `/me` no la trae.
+**D-FB12 (18/11/2026) — Confirmada. `src/utils/formato.js` con `formatMoney` y `formatNumber`.** Fija en un solo lugar el locale `es-UY` y la moneda `UYU`. `formatMoney(value)` devuelve el texto con `Intl.NumberFormat`; si `Intl` falla, `$ <número>`. `formatNumber(value)` formatea un número sin moneda con el mismo locale (separador de miles), para conteos y porcentajes: lo exige D-FB9, que bloquea `toLocaleString` también en números. En los dos, un valor `null`, `undefined`, `""` o no numérico devuelve `"—"` y no `$ 0,00` ni `0`: `precioTotal` es `null` hasta finalizar la ocupación (inventario) y mostrar cero sería falso. La moneda por tenant queda pendiente (P-FB3): `/me` no la trae.
 *Motivo:* `money` está copiada en 4 páginas con variantes (una con `maximumFractionDigits`, otra con `Number(n ?? 0)`).
 *Descartado:* mantener `money` en cada página hasta que se rehaga. Hay que cambiar el caso `null` (la brecha de `precioTotal`) y conviene hacerlo una sola vez.
 
-**D-FB13 (18/11/2026) — Propuesta. Paginación: funciones puras, un reductor y un hook delgado.** En `src/utils/paginacion.js` (puro) y `src/utils/usePagination.js` (hook):
+**D-FB13 (18/11/2026) — Confirmada. Paginación: funciones puras, un reductor y un hook delgado.** En `src/utils/paginacion.js` (puro) y `src/utils/usePagination.js` (hook):
 
 | Pieza | Qué hace |
 |---|---|
@@ -240,7 +252,7 @@ El hook **no pide datos**: la pantalla sigue llamando a su módulo de API y pasa
 
 ### 3.5 Módulos de API
 
-**D-FB14 (18/11/2026) — Propuesta. Un módulo por recurso, con funciones nombradas.** Reglas del patrón:
+**D-FB14 (18/11/2026) — Confirmada. Un módulo por recurso, con funciones nombradas.** Reglas del patrón:
 1. Archivo `src/api/<recurso>Api.js`, con el nombre del controller del backend en camelCase: `clienteApi`, `cocheraApi`, `ocupacionApi`, `pagosApi` (ya existe), `tarifaApi`, `cajaApi`, `configuracionApi`, `usuariosApi`, `panelApi`, `trazabilidadApi`, `operationalAlertsApi` (ya existe) y `meApi` (ya existe). Los nombres existentes no se cambian.
 2. **Funciones nombradas**, una por endpoint, `async`, que devuelven `data` y no la respuesta de axios: `listClientes`, `getCliente`, `createCliente`, `deactivateCliente`. Es el estilo de `meApi.js`. Los verbos son `list`, `get`, `create`, `update`, `remove` y el nombre de la acción para el resto (`finalizeOcupacion`, `cancelOcupacion`).
 3. Los listados paginados pasan por `normalizePaged`. Los `204` devuelven `undefined`.
@@ -276,7 +288,7 @@ export async function deactivateCliente(id) {
 *Motivo:* un patrón uniforme que se puede revisar de un vistazo y que mantiene la lógica de red fuera de las pantallas, sin reescribir hoy las pantallas que funcionan.
 *Descartados:* (a) que la 02 cree todos los módulos de una vez: son ~10 archivos sin pantalla que los use ni pruebas reales, y cada spec conoce mejor sus necesidades; (b) objeto con métodos, como `operationalAlertsApi`: se tiene que importar entero y devuelve la respuesta de axios, así que cada pantalla repite `res.data`; (c) una regla de ESLint que prohíba importar `http` desde `src/pages`: rompería las páginas que todavía no migran. Queda pendiente (P-FB4).
 
-**D-FB15 (18/11/2026) — Propuesta. Serialización de parámetros.**
+**D-FB15 (18/11/2026) — Confirmada. Serialización de parámetros.**
 - `src/api/params.js` exporta `cleanParams(obj)`: quita las claves con `undefined`, `null` o `""`, para no mandar `q=` ni `hasta=`. Los booleanos y el `0` se conservan.
 - `src/api/http.js` configura `paramsSerializer: { indexes: null }` en la instancia, para que un arreglo salga como `fuente=PAGO&fuente=CAJA`. El valor por defecto de axios lo manda como `fuente[]=PAGO&fuente[]=CAJA`, y el backend (Trazabilidad, `fuente` repetible) no lo enlaza.
 *Motivo:* es un error que aparecería recién en la spec 04 y es más barato dejarlo resuelto y probado acá.
@@ -289,6 +301,7 @@ export async function deactivateCliente(id) {
 | Id | Fuente | Qué dice la fuente | Qué se construye | Motivo | Condición de vuelta |
 |---|---|---|---|---|---|
 | DV-FB1 | `brechas-front.md`, sección 1 | El 400 por fechas sin zona está "roto hoy" en `Ocupaciones.jsx` | La spec lo describe como causado por los cambios sin commitear, no por `develop`; el arreglo mínimo (D-FB10) igual se hace, porque `develop` interpreta la hora en la zona del navegador | El código de `develop` manda `Z` (zona del navegador), y el 400 lo causaba el árbol de trabajo sin commitear, hoy en `wip/ocupaciones-reservas` | — |
+| DV-FB2 | D-FB2 (una sola zona) | Lo que se envía y lo que se muestra usan la zona del tenant | Entre la 02 y la 07, `Ocupaciones.jsx` **envía** en la zona del tenant (D-FB10) pero **muestra** con su `fmtDate` local, en la zona del navegador | El arreglo mínimo no toca la UI (D-FB8). Con el navegador en la misma zona que el tenant, que es el caso normal, no se nota | La 07 reemplaza `fmtDate` por `formatInstant` |
 
 ### 4.2 Pendientes
 
@@ -296,8 +309,8 @@ export async function deactivateCliente(id) {
 
 | Id | Pendiente | Paso |
 |---|---|---|
-| P-FB1 | **Semántica de `hasta`.** El inventario no dice si el `hasta` de los filtros por instante (`/Ocupacion`, `/operational-alerts`, `/Trazabilidad`) es inclusivo o exclusivo, ni si el `hasta` de `DateOnly` en `/Caja/sesiones` incluye ese día. `dayToInstantRange` usa `[desde, hasta)`, con `hasta` = inicio del día siguiente. Confirmarlo con el backend antes de las specs 05 y 09 | 1 |
-| P-FB2 | **Lista cerrada de zonas del backend.** No la vi. Uruguay (UTC−3) no tiene horario de verano desde 2015, así que los tenants uruguayos nunca ejercitan D-FB6. Los tests usan zonas con horario de verano igual, porque la lista puede incluirlas | — |
+| P-FB1 | **Cerrado (18/11/2026).** Semántica de `hasta` relevada del código del backend (inventario, sección 5): inclusivo en `/Ocupacion`, `/operational-alerts` y `/Trazabilidad`; día entero en `/Caja/sesiones`; exclusivo en `/Cochera/disponibles`. Resuelto con `dateRangeToInstants` (D-FB5) | 1 |
+| P-FB2 | **Cerrado (18/11/2026).** La lista cerrada tiene 12 zonas: Montevideo, 3 de Argentina y 8 de Brasil (inventario, sección 5). Hoy ninguna aplica horario de verano. Los tests de D-FB6 se mantienen con Nueva York, Madrid y Santiago, porque la tzdata puede cambiar | — |
 | P-FB3 | **Moneda por tenant.** `/me` no trae moneda; `formatMoney` fija `UYU`. Si el producto sale de Uruguay, hay que pedirla al backend | — |
 | P-FB4 | Regla de ESLint que prohíba importar `http` directo desde `src/pages` cuando ya no queden páginas que lo hagan | — |
 | P-FB5 | Revisar Temporal cuando Safari tenga una versión estable con soporte: reemplazaría a `@date-fns/tz` sin polyfill | — |
@@ -325,7 +338,7 @@ Rutas relativas a la raíz del repo del frontend. Los nombres de archivo son los
 |---|---|---|
 | Módulo de fechas (puro) | `src/utils/fechas.js` | D-FB2 a D-FB6 |
 | Hook de fechas del tenant | `src/utils/useTenantDates.js` | D-FB7 |
-| Formato de moneda | `src/utils/formato.js` | D-FB12 |
+| Formato de moneda y números | `src/utils/formato.js` | D-FB12 |
 | Enums | `src/constants/enums.js` | D-FB11 |
 | Paginación pura y hook | `src/utils/paginacion.js`, `src/utils/usePagination.js` | D-FB13 |
 | `cleanParams` | `src/api/params.js` | D-FB15 |
@@ -376,7 +389,7 @@ La 02 no modifica estas páginas (salvo Ocupaciones, D-FB10, y las dos de alerta
 
 ### Paso 1 — Módulo de fechas y su dependencia
 
-- [ ] **1.1** Crear `feature/front-base` desde `develop`. Instalar `@date-fns/tz`. Resolver P-FB-L1.
+- [ ] **1.1** Con esta spec ya mergeada en `develop`, crear el worktree de ejecución: `git worktree add ../parkingcontrol-front-base -b feature/front-base develop` (desde `parkingcontrol-front`). En el worktree, copiar el `.env` (no está versionado) y correr `npm install`. Instalar `@date-fns/tz`. Resolver P-FB-L1.
 - [ ] **1.2** Crear `src/utils/fechas.js` con las funciones de D-FB5.
 - [ ] **1.3** Crear `test/unit/utils/fechas.test.js`.
 
@@ -399,6 +412,8 @@ La 02 no modifica estas páginas (salvo Ocupaciones, D-FB10, y las dos de alerta
   | 13 | Medianoche inexistente: `America/Santiago`, `dayToInstantRange("2026-09-06", …)` (a confirmar con P-FB-L3) | `desde` es el primer instante válido del día (01:00 locales), no un error |
   | 14 | `isValidTimeZone("America/Montevideo")` es verdadero; `("Mars/Olympus")` y `("")` son falsos | |
   | 15 | Una búsqueda de `getHours`, `getDate`, `getTimezoneOffset`, `toLocale` en `src/utils/fechas.js` | Sin coincidencias (el módulo no lee la zona del sistema) |
+  | 16 | `dateRangeToInstants("2026-11-01", "2026-11-01", Montevideo)` | `{ desde: 2026-11-01T03:00:00.000Z, hasta: 2026-11-02T02:59:59.999Z }`. Con `{ inclusiveEnd: false }`, `hasta` es `2026-11-02T03:00:00.000Z` |
+  | 17 | `dateRangeToInstants("2026-10-01", "2026-10-31", Montevideo)` | `hasta − desde` = 31 días − 1 ms (entra en el límite de Trazabilidad). `dateRangeToInstants(null, "2026-10-31", …)` da `desde: null` y `dateRangeToInstants("2026-10-01", "", …)` da `hasta: null` |
 
   `npm run lint` y `npm run build` pasan.
 
@@ -413,7 +428,7 @@ La 02 no modifica estas páginas (salvo Ocupaciones, D-FB10, y las dos de alerta
 
 - [ ] **3.1** Crear `src/utils/formato.js` (D-FB12) y `test/unit/utils/formato.test.js`.
 
-  *Aceptación:* `npm test` pasa con: `formatMoney(1234.5)` contiene `1.234,50` (los espacios, incluidos los no cortables, se normalizan antes de comparar); `null`, `undefined`, `""` y `"abc"` dan `—`; `0` da un importe de cero, no `—`. `npm run lint` y `npm run build` pasan.
+  *Aceptación:* `npm test` pasa con: `formatMoney(1234.5)` contiene `1.234,50` (los espacios, incluidos los no cortables, se normalizan antes de comparar); `null`, `undefined`, `""` y `"abc"` dan `—`; `0` da un importe de cero, no `—`. `formatNumber(1234)` da `1.234`, `formatNumber(0)` da `0` y `formatNumber(null)` da `—`. `npm run lint` y `npm run build` pasan.
 
 ### Paso 4 — Enums
 
@@ -470,26 +485,15 @@ Con el backend en `develop` corriendo y `npm run dev` en `http://localhost:5173`
 
 ## 8. Cómo retomar
 
-**Estado:** Borrador (18/11/2026). Falta la aprobación del desarrollador, en particular de las decisiones **Propuesta**: D-FB4 (librería), D-FB5 (API de `fechas.js`), D-FB7 (hook y validación de la zona), D-FB9 (lint), D-FB11 (enums y la migración de alertas), el caso nulo de D-FB12, D-FB13, D-FB14 y D-FB15. Las Confirmadas son D-FB1, D-FB2, D-FB3, D-FB6, D-FB8, D-FB10 y el alcance de D-FB12.
+**Estado:** Aprobada (18/11/2026). El desarrollador aprobó todas las decisiones. La revisión del chat orquestador agregó `dateRangeToInstants` (D-FB5), cerró P-FB1 y P-FB2, sumó `formatNumber` (D-FB9 y D-FB12) y el desvío DV-FB2.
 
-**Decisiones que conviene mirar primero:**
-1. **D-FB4**: una librería para una sola función (`tzOffset`). Si te parece mucho, la alternativa es `Intl` solo, sin dependencia.
-2. **D-FB11**: la 02 toca las dos páginas de alertas para borrar `operationalAlerts.js` (hay una alternativa con un reexport temporal).
-3. **D-FB9**: la regla de lint con 7 excepciones temporales.
+**Ejecución en dos chats**, los dos en el worktree `C:\Users\Equipo\source\repos\FrontParking\parkingcontrol-front-base` (rama `feature/front-base`), uno después del otro:
 
-**Modelo y esfuerzo por paso.** Las decisiones difíciles están tomadas; la ejecución es liviana. Cada paso se ejecuta en un chat nuevo.
+| Chat | Pasos | Modelo | Esfuerzo | Nota |
+|---|---|---|---|---|
+| A | 1 y 2 | Sonnet | medio | El algoritmo de hora inexistente y repetida es lo más delicado de la spec. Si un caso de la tabla del paso 1 no da el resultado esperado, **frena** y vuelve al chat orquestador: no ajusta el criterio |
+| B | 3 a 8 | Sonnet | bajo | Frena al terminar cada paso y espera la confirmación del desarrollador. Si P-FB-L2 no tiene salida, o si el paso 7 obliga a tocar algo más que los 5 valores, frena |
 
-| Paso | Modelo | Esfuerzo | Nota |
-|---|---|---|---|
-| 1 | Sonnet | medio | El algoritmo de hora inexistente y repetida es lo más delicado de la spec. Si un caso de la tabla no da el resultado esperado, **frena** y vuelve al modelo fuerte: no ajusta el criterio |
-| 2 | Sonnet | bajo | |
-| 3 | Haiku | bajo | Mecánico |
-| 4 | Sonnet | bajo | Tabla de valores ya escrita |
-| 5 | Sonnet | bajo | |
-| 6 | Sonnet | bajo | Si P-FB-L2 no tiene salida, frena |
-| 7 | Sonnet | bajo | Solo 5 valores; si hace falta tocar otra cosa, frena |
-| 8 | Haiku | bajo | Documentación y limpieza |
+**Prompt para cada chat de ejecución** (cambiar `PASOS` por "1 y 2" o "3 a 8"):
 
-**Prompt para el chat de ejecución** (cambiar `N` por el paso):
-
-> Trabajás en el frontend de ParkingControl (`C:\Users\Equipo\source\repos\FrontParking\parkingcontrol-front`). Leé `CLAUDE.md` y `docs/specs/frontend/02-base-comun.md`. Ejecutá **solo el paso N** de esa spec, en la rama `feature/front-base` (creada desde `develop`; nunca trabajes sobre `develop`). Seguí las reglas de la sección 6. Agregá archivos siempre por ruta explícita. No leas ni muestres el `.env`. Si algo obliga a decidir lo que la spec no prevé, frená y anotalo como pendiente. Al terminar: tildá el paso, actualizá el manual y proponé el commit sin `Co-Authored-By` ni atribución de IA. Respondé en español rioplatense.
+> Trabajás en el frontend de ParkingControl, en el worktree `C:\Users\Equipo\source\repos\FrontParking\parkingcontrol-front-base` (rama `feature/front-base`; nunca trabajes sobre `develop` ni en la carpeta `parkingcontrol-front`, que usan otros chats). Leé `CLAUDE.md` y `docs/specs/frontend/02-base-comun.md`. Ejecutá **los pasos PASOS** de esa spec, de a uno, siguiendo las reglas de la sección 6. Al terminar cada paso, frená y esperá mi confirmación antes de seguir. Agregá archivos siempre por ruta explícita. No leas ni muestres el `.env`. Si algo obliga a decidir lo que la spec no prevé, frená y avisá al chat orquestador (`frontparking-5f`) por SendMessage. Al terminar cada paso: tildalo, actualizá el manual y proponé el commit sin `Co-Authored-By` ni atribución de IA. Respondé en español rioplatense.
