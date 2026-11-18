@@ -64,6 +64,9 @@ Hallados durante la redacción de las specs del front. Ninguno bloquea al front.
 |---|---|---|---|
 | PB-1 | `/Trazabilidad`: filtrar por `entidad` + `entidadId`, para recuperar la historia de un Cliente, una Cochera o una Tarifa que daba `/Auditoria`. El usuario lo aprobó el 18/11/2026: el front sale sin ese filtro y lo suma en una spec futura | Spec 04, P-FD5 | Media |
 | PB-2 | `/Trazabilidad`: que la acción `Finalizar` salga como `FINALIZAR`, como las demás. El front ya la normaliza | Spec 04, P-FD4 | Baja |
+| PB-4 | **Posible bug**: `CocheraService` calcula el estado con `DateTime.Now` en el listado y el detalle (`GetAllAsync` y `GetByIdAsync`), pero con `DateTime.UtcNow` en el cambio de estado y en las disponibles. Si el servidor no corre en UTC, el estado del listado puede no coincidir con el del PUT | Spec 06 (relevamiento) | Alta |
+| PB-5 | `PUT /Cochera/{id}/estado`: validar la longitud de `nota` (≤300, como en `PUT /Cochera/{id}`), normalizar `""` a `null` y poner un tope a `historialTake` | Spec 06 (relevamiento) | Baja |
+| PB-6 | `/Usuarios`: exponer si la invitación está pendiente (no aceptada), para ofrecer "Reenviar invitación" solo donde sirve. Hoy reenviar a quien ya aceptó manda el mail igual | Spec 12 (relevamiento) | Baja |
 | PB-3 | `/operational-alerts`: un endpoint de resumen que devuelva los conteos de alertas abiertas por severidad y por tipo. Hoy el Monitor hace 8 pedidos de conteo cada 5 minutos | Spec 05, P-FE2 | Baja |
 
 ### Contratos entre specs
@@ -78,6 +81,14 @@ Hallados durante la redacción de las specs del front. Ninguno bloquea al front.
 
 **`src/api/usuariosApi.js`** (confirmado por el orquestador, P-FD1 de la 04): la 04 lo crea **solo** con `listUsuarios()` (`GET /Usuarios`, devuelve `Usuario[]`, sin paginar). La 12 **agrega** sus funciones al mismo archivo y no lo recrea. La que se ejecute segunda usa lo que encuentre.
 
+**`src/api/cocheraApi.js`** (lo propone la 06 y lo confirmó el orquestador): la 06 lo crea completo, con `listCocheras`, `getCochera`, `createCocheras`, `updateCochera`, `setEstadoCochera` y `listCocherasDisponibles({ desde, hasta })`. Esta última recibe los instantes ya convertidos y devuelve `{ id, numero }[]`, y es la que usa el alta de ocupación de la 07. La 07 **no** recrea el archivo. Si la 07 se ejecuta antes que la 06, usa lo que encuentre.
+
+**`refreshMe()` en `MeProvider`** (la propone la 11 y la aprobó el orquestador): la 11 agrega en su paso 1 una función **aditiva** `refreshMe()`. Vuelve a pedir `GET /me` **sin** pasar por LOADING, así que no desmonta la app ni pierde formularios, y aplica la validación de zona de D-FB7. Si falla, conserva el `me` anterior. La usa la 11 después de cambiar la zona; cualquier spec que cambie datos de `/me` la puede usar.
+
+**Configuración del tenant en otras pantallas** (dato de la 11): el OPERADOR **no** tiene `configuracion.ver`.
+- La 09 lee `modoCaja` de `GET /Caja/actual`, no de `/Configuracion`.
+- La 07 y la 10 **no** validan en el cliente los límites de la configuración (`toleranciaInicioHoras`, `topePasadoDias`, `techoFuturoMeses`, etc.): el backend es la autoridad y el front muestra su error por `code`.
+
 **Widget de caja del Monitor operativo** (decidido por el usuario el 18/11/2026: opción (a)). El Monitor (`/operaciones`) y Alertas (`/alertas-operativas`) siguen como dos pantallas separadas.
 - Hoy `OperationalDashboard.jsx` (l. 114) llama a `GET /Pagos/caja-diaria`, que ya no existe. Esa llamada está dentro de un `Promise.all` con las alertas, así que el 404 tira abajo **todo** el Monitor.
 - Opción elegida (a): la 05 saca el widget y el botón "Ver detalle de caja", y pasa el Monitor a `Promise.allSettled`, así una llamada que falla no tira abajo toda la pantalla.
@@ -85,6 +96,8 @@ Hallados durante la redacción de las specs del front. Ninguno bloquea al front.
   1. vuelve a poner el widget en el Monitor sobre `/Caja` (`/Caja/actual` y `/Caja/sesiones/{id}/esperado`, que exige `caja.ver_esperado`);
   2. retira `pagosApi.getCajaDiaria`, que también usa `CajaDiaria.jsx`;
   3. revisa si `/operaciones` tiene que exigir `caja.ver` (P-FA4).
+
+**Rutas** (`src/auth/routes.js`, `src/App.jsx`, `test/unit/auth/routes.test.js`): las tocan la 04 (`/trazabilidad`), la 09 (caja), la 11 (`/configuracion`) y la 12 (`/usuarios`). Al hacer rebase se conservan **todas** las entradas de las otras specs. Cada spec que suma una ruta actualiza el test para la suya, que compara el mapa completo y qué rol accede a qué. El orden del menú: `/configuracion` y `/usuarios` al final.
 
 **Mantenimiento de archivos compartidos.**
 - La línea "Backend endpoints used" de `CLAUDE.md` la reemplaza la 02 (paso 8) por una referencia a `docs/inventario/backend.md`. Las specs siguientes no la tocan.

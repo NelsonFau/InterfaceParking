@@ -11,10 +11,10 @@ Rama de integración: `develop` (desde el 18/11/2026; reemplaza a `master` de D-
 | [03 — Tarifas con vigencia](frontend/03-tarifas.md) | Frontend | Aprobada | 02 | `feature/specs-etapa2` (spec), `feature/front-tarifas` (ejecución, worktree `../parkingcontrol-front-tarifas`) |
 | [04 — Trazabilidad (reemplaza Auditoría)](frontend/04-trazabilidad.md) | Frontend | Aprobada | 02 | `feature/specs-etapa2` (spec), `feature/front-trazabilidad` (ejecución, worktree `../parkingcontrol-front-trazabilidad`) |
 | [05 — Alertas operativas paginadas y alertas de dinero](frontend/05-alertas.md) | Frontend | Aprobada | 02, 04 | `feature/specs-etapa2` (spec), `feature/front-alertas` (ejecución, worktree `../parkingcontrol-front-alertas`) |
-| 06 — Cocheras: alta por rango, edición, estados calculados | Frontend | Sin crear | 02 | |
+| [06 — Cocheras: alta por rango, edición, estados calculados](frontend/06-cocheras.md) | Frontend | Aprobada | 02, 04 | `feature/specs-etapa3` (spec), `feature/front-cocheras` (ejecución, worktree `../parkingcontrol-front-cocheras`) |
 | 07 — Ocupaciones: alta abierta/retroactiva, saldo, finalizar con excedente, errores y permisos | Frontend | Sin crear | 02 | |
 | 08 — Pagos: detalle, devoluciones, anulación entre sesiones | Frontend | Sin crear | 07 | |
 | 09 — Caja con sesiones (reemplaza Caja diaria) | Frontend | Sin crear | 02, 08 | |
 | 10 — Contratos mensuales: ajuste de precio y baja programada | Frontend | Sin crear | 07 | |
-| 11 — Configuración del tenant | Frontend | Sin crear | 02 | |
-| 12 — Usuarios | Frontend | Sin crear | 02 | |
+| [11 — Configuración del tenant](frontend/11-configuracion.md) | Frontend | Aprobada | 02 | `feature/specs-etapa3` (spec), `feature/front-configuracion` (ejecución, worktree `../parkingcontrol-front-configuracion`) |
+| [12 — Usuarios](frontend/12-usuarios.md) | Frontend | Aprobada | 02, 04 | `feature/specs-etapa3` (spec), `feature/front-usuarios` (ejecución, worktree `../parkingcontrol-front-usuarios`) |
