@@ -54,7 +54,7 @@ Comportamiento (relevado de `Service\CocheraService.cs`, `EstadoDeCocheras.cs` y
 - **POST `/Cochera`**: **todo o nada**. Si algún número del rango existe → 409 `cochera_numero_repetido`, y el mensaje lista hasta 10. `hasta < desde` → 400 `datos_invalidos` (campo `Hasta`). **Tope de 100 cocheras por pedido** → 400 `operacion_invalida`. El 201 **no** trae `Location` y el cuerpo viene ordenado por número.
 - **PUT `/Cochera/{id}`**: se puede editar aunque esté ocupada o reservada. El mismo número propio da 204; el número de otra cochera, 409 `cochera_numero_repetido`. `nota: null` **borra** la nota; `""` se guarda como cadena vacía.
 - **PUT `/Cochera/{id}/estado`**: OCUPADA o RESERVADA → 400 `datos_invalidos` ("Solo se permite DISPONIBLE o BLOQUEADA."). Bloquear con una ocupación **en curso** → 409 `cochera_con_ocupacion_activa`. Bloquear con una reserva **futura** se permite sin error. Pasar a DISPONIBLE solo quita el bloqueo, porque el estado se recalcula. `nota: null` **borra** la nota, y este PUT no valida la longitud.
-- **GET `/Cochera/disponibles`**: `hasta <= desde` → 400 `datos_invalidos` (campo `Hasta`). Excluye las bloqueadas y las que se solapan con ocupaciones ACTIVA. Viene ordenado por número.
+- **GET `/Cochera/disponibles`**: `hasta` es **obligatorio** (`DateTime` no nulo) y `hasta <= desde` → 400 `datos_invalidos` (campo `Hasta`). Excluye las bloqueadas y las que se solapan con ocupaciones ACTIVA; una ocupación con `Fin <= ahora` (vencida, sin finalizar) cuenta como ocupada para siempre. Para una ocupación abierta, el front pasa `inicio` más un horizonte largo (el techo futuro es de 24 meses como mucho). Viene ordenado por número.
 
 ### `/Ocupacion`
 | Verbo y ruta | Permiso | Query / body | Respuesta |
@@ -62,19 +62,30 @@ Comportamiento (relevado de `Service\CocheraService.cs`, `EstadoDeCocheras.cs` y
 | POST `/Ocupacion` | `ocupaciones.crear` (+ ver abajo) | `OcupacionRequest` | 200 `OcupacionResponse` |
 | GET `/Ocupacion` | `ocupaciones.ver` | `estado?, cocheraId?, clienteId?, desde?, hasta?` (instantes con zona), `venceEnDias?`, `take=200` (máx 500) | `OcupacionListItem[]` (sin paginar) |
 | GET `/Ocupacion/{id}` | `ocupaciones.ver` | | `OcupacionDetalle` |
-| POST `/Ocupacion/{id}/cancelar` | `ocupaciones.cancelar` | `{ finReal?, motivo* }` | 204 |
+| POST `/Ocupacion/{id}/cancelar` | `ocupaciones.cancelar` | `{ motivo* }` (`finReal` se acepta pero **se ignora**) | 204 |
 | POST `/Ocupacion/{id}/finalizar` | `ocupaciones.finalizar` | body opcional `{ resolucionExcedente?, motivo? (≤250) }` | 204 |
 | PUT `/Ocupacion/{id}/fin` | `ocupaciones.finalizar` | `{ fin? }` (`null` quita la baja programada) | `{ ocupacionId, fin? }` |
 | POST `/Ocupacion/{id}/precio` | `tarifas.editar` | `{ vigenteDesde: DateOnly (> hoy), precioUnitario, motivo* (≤250) }` | `{ id, ocupacionId, vigenteDesde, precioAnterior, precioNuevo }` |
 | POST `/Ocupacion/ajuste-precio` | `tarifas.editar` | `{ vigenteDesde, porcentaje: -50..100, motivo*, excluir?: int[] }` | `{ cantidad, contratos: AjustePrecio[] }` |
 
 - **Alta** `OcupacionRequest`: `cocheraId, clienteId, tipo, inicio` (con zona), `fin?` (sin fin = ocupación abierta), `usarTarifaExcepcional, precioUnitarioExcepcional?` (2 dec, ≤10.000.000), `motivoTarifaExcepcional?`, `motivoRetroactivo?` (≤250, obligatorio si el inicio es retroactivo).
-  - Inicio antes de la tolerancia del tenant → requiere `ocupaciones.crear_retroactiva`; si no, 403 `sin_permiso`.
+  - Inicio antes de la tolerancia del tenant → requiere `ocupaciones.crear_retroactiva`; si no, 403 `sin_permiso` (lo da el controller). El 409 `inicio_retroactivo_sin_permiso` solo sale por una carrera de configuración y es casi inalcanzable.
   - `usarTarifaExcepcional=true` → requiere `ocupaciones.tarifa_excepcional`; si no, 403 `sin_permiso`.
-- **Finalizar**: `resolucionExcedente` obligatorio solo si lo pagado de un mensual supera lo que corresponde; `motivo` obligatorio con `COBRAR_COMPLETO`.
+- **Finalizar**: `resolucionExcedente` obligatorio solo si lo pagado de un mensual supera lo que corresponde **hasta la salida real**; `motivo` obligatorio con `COBRAR_COMPLETO`. Detalle en "Comportamiento".
 - `OcupacionResponse`: `id, cocheraId, clienteId, tipo, inicio, fin?, precioUnitarioAplicado, precioTotal?, topeDeCobro, estado`.
 - `OcupacionListItem`: `id, cocheraId, cocheraNumero, clienteId, clienteNombre, tipo, inicio, fin?, finReal?, estado, estadoCalculado, precioTotal?, topeDeCobro, pagado, saldo`.
-- `OcupacionDetalle`: lo anterior + `clienteDocumento, clienteTelefono, precioUnitarioAplicado, esTarifaExcepcional, motivoTarifaExcepcional?, modoMes?, fraccionMes?, saldoAFavor`. `pagado` es neto de devoluciones. `precioTotal` es `null` hasta finalizar. `VENCIDA` solo aparece en `estadoCalculado`.
+- `OcupacionDetalle`: lo anterior + `clienteDocumento, clienteTelefono, precioUnitarioAplicado, esTarifaExcepcional, motivoTarifaExcepcional?, modoMes?, fraccionMes?, saldoAFavor`. `pagado` es neto de devoluciones. `precioTotal` es `null` hasta finalizar. `VENCIDA` solo aparece en `estadoCalculado`. `saldoAFavor` no está en `OcupacionListItem`.
+
+Comportamiento (relevado del código del backend el 18/11/2026: `OcupacionController.cs`, `OcupacionRequest.cs`, `CuentaDeOcupacion.cs`, `CalculadoraDeCobro.cs` y el servicio de ocupaciones; sin confirmar por tests). No hay FluentValidation: las validaciones son DataAnnotations (400 `datos_invalidos`, que salen **antes** que el 403), `OcupacionValidator` y excepciones de dominio; `ReglaInvalidaException` da 400 `datos_invalidos` con `errors.<Campo>` en PascalCase.
+- **Alta (200)**: el cuerpo es `OcupacionResponse` con `precioTotal` siempre `null` y `topeDeCobro` ya calculado; no trae `esTarifaExcepcional`, `modoMes`, `fraccionMes` ni `saldo`. Orden de validación: `Fin > Inicio` → duración máxima → techo futuro → tope de pasado → retroactiva (403) → cochera 404/409 → cliente 404/409 → disponibilidad 409 → tarifa (`tarifa_no_configurada`).
+  - **Errores por campo**: `errors.Inicio` (tope de pasado: "El inicio no puede ser anterior a N días."; techo futuro: "La reserva supera el máximo de N meses hacia adelante."), `errors.Fin` (`Fin <= Inicio` o duración máxima), `errors.MotivoRetroactivo` (falta, siendo retroactiva y con permiso), `errors.MotivoTarifaExcepcional` (falta con la excepcional), `errors.PrecioUnitarioExcepcional` (falta o `<= 0`).
+  - **Duración máxima** (constantes del código, solo con `fin`): HORA 7 días, DÍA 90, MES 3 años. Las abiertas no tienen tope. `toleranciaInicioHoras`, `topePasadoDias` y `techoFuturoMeses` son configurables.
+  - `motivoRetroactivo` dentro de la tolerancia se ignora (se guarda `null`). `motivoTarifaExcepcional` no tiene `MaxLength` en el DTO pero la columna es de 250: de más probablemente da 500 (PB-8 de `brechas-front.md`).
+  - **Solape de una abierta**: `Fin` nulo es `[Inicio, ∞)` y choca con cualquier ocupación ACTIVA de la cochera que sea abierta, vencida (`Fin <= ahora`: bloquea hasta que se finalice) o con `Fin > desde`, incluidas las reservas futuras (409 `cochera_no_disponible` o `cochera_bloqueada`).
+- **Listado**: orden `Inicio` descendente, sin desempate por `Id`. `estado=ACTIVA` **no incluye las vencidas** (es ACTIVA con `Fin` nulo o `Fin > ahora`: en curso y reservas); `estado=VENCIDA` filtra ACTIVA con `Fin <= ahora` (no se persiste). `venceEnDias`: ACTIVA con `Fin` no nulo y `ahora < Fin <= ahora + N`; excluye las vencidas y las abiertas, se combina en AND y no valida `N`. `take`: 200 por defecto; el controller **recorta en silencio a 500** (sin 400) y `take <= 0` pasa a 200. No hay total ni paginación.
+- **Cifras** (`CuentaDeOcupacion.cs`): `topeDeCobro` es 0 en una CANCELADA, `PrecioTotal ?? 0` en una FINALIZADA, el total esperado hasta `Fin` en una ACTIVA con fin (incluidas vencida y reserva; HORA: horas iniciadas con gracia y mínimo 1; DÍA: bloques de 24 h, mínimo 1; MES: períodos con `modoMes` y `fraccionMes` congelados, el proporcional redondeado al peso) y, en una ACTIVA sin fin, hasta el fin de la unidad en curso (`(floor(transcurrido) + 1) × precio`, sin gracia; en MES, el período en curso entero). `saldo = max(tope − pagado, 0)` y no depende de `precioTotal`. `saldoAFavor = max(pagado − topeDeCobro, 0)`; en una ACTIVA con fin el tope es el contrato hasta `Fin`, no lo devengado hoy. Una vencida no incluye la demora hasta que se finaliza.
+- **Cancelar**: solo para ACTIVA con `Inicio > ahora` (reservas). 404 `ocupacion_no_encontrada`; 409 `ocupacion_no_activa` (cancelada o finalizada); 409 `ocupacion_ya_iniciada` (en curso o vencida: "Solo se pueden cancelar reservas futuras. Las ocupaciones vigentes deben finalizarse."); 400 sin `motivo`. `finReal` se ignora (`OcupacionRequest.cs:36-37`). `motivo` es `[Required]` sin `MaxLength` (solo espacios pasa) y va a la auditoría. Con pagos se puede cancelar: queda `saldoAFavor` igual a lo pagado y se crea la alerta `DEVOLUCION_PENDIENTE` (PB-9).
+- **Finalizar**: responde 204 sin cuerpo; `FinReal = ahora` y `Fin` no cambia. Un mensual tiene excedente si `pagadoNeto > total`, con `total` = lo devengado hasta la salida real. Sin `resolucionExcedente`, 400 `datos_invalidos` con `errors.ResolucionExcedente`; el monto **solo** aparece en el `title` ("Lo pagado (X.XX) supera lo que corresponde hasta la salida (Y.YY). Elegí COBRAR_COMPLETO (con motivo) o DEVOLVER.") (PB-7). El excedente no se conoce antes de finalizar. `COBRAR_COMPLETO` exige `motivo` (400 `errors.Motivo`, máximo 250) y deja `PrecioTotal = pagadoNeto`. **`DEVOLVER` no crea la devolución**: deja `PrecioTotal` en lo calculado, pasa a FINALIZADA y crea la alerta `DEVOLUCION_PENDIENTE`; la devolución se hace después con `POST /Pagos/{id}/devoluciones`. `resolucionExcedente` sin excedente se ignora. **HORA y DÍA con excedente**: se fuerza `DEVOLVER` y la alerta, ignorando lo enviado. Otros 409: `ocupacion_cancelada`, `ocupacion_finalizada`, `ocupacion_no_iniciada`.
 
 ### `/Pagos`
 | Verbo y ruta | Permiso | Body | Respuesta |
@@ -89,6 +100,14 @@ Comportamiento (relevado de `Service\CocheraService.cs`, `EstadoDeCocheras.cs` y
 - `PagoDetalle`: lo anterior + `registradoPorUsuarioId, historial: { estado, fecha, usuarioId, motivo? }[], devoluciones: Devolucion[]`.
 - `Devolucion`: `id, pagoId, monto, metodo, motivo, usuarioId, fecha`.
 - Anular un pago de otra sesión sin `pagos.devolver` → 403 `sin_permiso` (o 409 `anulacion_requiere_dueno` si se detecta bajo candado).
+
+Comportamiento de `POST /Pagos` (relevado del código del backend el 18/11/2026; sin confirmar por tests). Responde **201** con `pagos.registrar`. Orden de errores:
+- 404 `ocupacion_no_encontrada`.
+- 409 `ocupacion_cancelada`.
+- 409 `pago_supera_saldo` si `pagadoNeto + monto > topeDeCobro` (una finalizada con saldo 0 siempre da 409).
+- Errores de caja: 409 `caja_cerrada` (modo TURNO sin sesión abierta) y 409 `caja_dia_anterior_abierta` (modo DIARIA con una caja abierta de un día anterior). En modo DIARIA, sin sesión abierta del día, la sesión **se abre sola**.
+- Una reserva futura y una vencida **se aceptan** hasta el tope; la demora de una vencida no se cobra hasta finalizar.
+- `monto` con `[Dinero]`: mayor que 0, 2 decimales como máximo y tope de 10.000.000 (400 `datos_invalidos` con `errors.Monto`).
 
 ### `/Tarifa`
 | Verbo y ruta | Permiso | Query / body | Respuesta |

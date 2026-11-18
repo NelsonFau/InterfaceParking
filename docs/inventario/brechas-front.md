@@ -47,7 +47,7 @@ Una spec por bloque, cada una en `docs/specs/frontend/NN-tema.md` y con rama pro
 | 04 | Trazabilidad (reemplaza Auditoría) | 02 | `/Auditoria` retirado |
 | 05 | Alertas operativas paginadas y alertas de dinero | 02 | Listado paginado, resolución |
 | 06 | Cocheras: alta por rango, edición, estados calculados | 02 | — |
-| 07 | Ocupaciones: alta abierta o retroactiva, detalle con saldo, finalizar con excedente, errores por `code` y permisos | 02 | Etapa 2 pendiente |
+| 07 | Ocupaciones: alta abierta o retroactiva, detalle con saldo, finalizar con excedente, errores por `code` y permisos | 02, 04, 05, 06 | Etapa 2 pendiente |
 | 08 | Pagos: detalle, devoluciones, anulación entre sesiones | 07 | Etapa 2 pendiente |
 | 09 | Caja con sesiones (reemplaza Caja diaria) | 02, 08 | `/caja-diaria` retirado |
 | 10 | Contratos mensuales: ajuste de precio y baja programada | 07 | — |
@@ -68,6 +68,10 @@ Hallados durante la redacción de las specs del front. Ninguno bloquea al front.
 | PB-5 | `PUT /Cochera/{id}/estado`: validar la longitud de `nota` (≤300, como en `PUT /Cochera/{id}`), normalizar `""` a `null` y poner un tope a `historialTake` | Spec 06 (relevamiento) | Baja |
 | PB-6 | `/Usuarios`: exponer si la invitación está pendiente (no aceptada), para ofrecer "Reenviar invitación" solo donde sirve. Hoy reenviar a quien ya aceptó manda el mail igual | Spec 12 (relevamiento) | Baja |
 | PB-3 | `/operational-alerts`: un endpoint de resumen que devuelva los conteos de alertas abiertas por severidad y por tipo. Hoy el Monitor hace 8 pedidos de conteo cada 5 minutos | Spec 05, P-FE2 | Baja |
+| PB-7 | `POST /Ocupacion/{id}/finalizar`: **problema:** el 400 `datos_invalidos` con `errors.ResolucionExcedente` trae los montos (lo pagado y lo que corresponde hasta la salida) solo dentro del texto del `title`. **Efecto en el front:** no se puede mostrar el excedente con formato ni usarlo; el front muestra el `title` tal cual y no lo parsea. **Propuesta:** que el 400 traiga el monto en un campo propio (extensions de `ProblemDetails`: `pagado`, `totalALaSalida`, `excedente`) | Spec 07, D-FG18 | Media |
+| PB-8 | `OcupacionRequest.MotivoTarifaExcepcional`: **problema:** el DTO no tiene límite de largo pero la columna es de 250, así que un texto más largo probablemente da 500. **Efecto en el front:** limita a 250 en el cliente. **Propuesta:** agregar `[MaxLength(250)]` | Spec 07, D-FG16 | Media |
+| PB-9 | `POST /Ocupacion/{id}/cancelar`: **problema:** `finReal` se acepta, se ignora y tiene un comentario engañoso en el código; el `motivo` es `[Required]` sin tope y pasa con solo espacios. **Efecto en el front:** no manda `finReal` y limita el motivo a 250. **Propuesta:** sacar `finReal` del contrato (o usarlo) y poner un tope y un `trim` al motivo | Spec 07, D-FG17 | Baja |
+| PB-10 | `GET /Ocupacion`: **problema:** `take` se recorta a 500 sin avisar, no hay total ni paginación, y `saldoAFavor` no está en `OcupacionListItem`. **Efecto en el front:** no sabe si faltan resultados (avisa "Puede haber más" cuando llega al `take`) y solo ve el saldo a favor en el detalle. **Propuesta:** devolver el total (o paginar) y sumar `saldoAFavor` al ítem del listado | Spec 07, D-FG11, D-FG13 | Baja |
 
 ### Contratos entre specs
 
@@ -82,6 +86,15 @@ Hallados durante la redacción de las specs del front. Ninguno bloquea al front.
 **`src/api/usuariosApi.js`** (confirmado por el orquestador, P-FD1 de la 04): la 04 lo crea **solo** con `listUsuarios()` (`GET /Usuarios`, devuelve `Usuario[]`, sin paginar). La 12 **agrega** sus funciones al mismo archivo y no lo recrea. La que se ejecute segunda usa lo que encuentre.
 
 **`src/api/cocheraApi.js`** (lo propone la 06 y lo confirmó el orquestador): la 06 lo crea completo, con `listCocheras`, `getCochera`, `createCocheras`, `updateCochera`, `setEstadoCochera` y `listCocherasDisponibles({ desde, hasta })`. Esta última recibe los instantes ya convertidos y devuelve `{ id, numero }[]`, y es la que usa el alta de ocupación de la 07. La 07 **no** recrea el archivo. Si la 07 se ejecuta antes que la 06, usa lo que encuentre.
+
+**Contratos de la 07** (aprobados el 18/11/2026; detalle en `docs/specs/frontend/07-ocupaciones.md`).
+- **05 ↔ 07 (`getAlertLinks`)**: la 07 cambia la firma a `getAlertLinks(alerta, { canTrazabilidad, canOcupaciones })` y suma un enlace "Ver ocupación" a `buildOcupacionPath(alerta.ocupacionId)` (con `can("ocupaciones.ver")`). `OperationalAlerts.jsx` pasa el flag nuevo. Cierra P-FE1 en lo que toca a Ocupaciones; lo de Caja sigue siendo de la 09.
+- **URL de una ocupación**: `/ocupaciones?id=N` abre el detalle sobre el listado. Se enlaza siempre con `buildOcupacionPath(id)` de `src/utils/ocupacionLink.js`, nunca con un string armado a mano. `OCUPACIONES_PATH` se exporta desde `src/auth/routes.js`.
+- **07 ↔ 08 (`pagosApi.js`)**: "Registrar pago" se queda en la 07 (`RegistrarPagoDialog`). La 07 solo **suma** `createPago(body)` a `pagosApi.js` y deja intacto el objeto `pagosApi` (lo usan `CajaDiaria.jsx` y la anulación). La 08 migra el archivo al estilo D-FB14, adopta `createPago` y es dueña de la lista de pagos de la ocupación, el detalle de pago, las devoluciones y la anulación; el detalle de la ocupación deja una sección "Pagos" vacía para que la monte. Al finalizar con `DEVOLVER` o cancelar una reserva con pagos, el backend crea la alerta `DEVOLUCION_PENDIENTE` y la devolución se registra en la 08.
+- **`src/api/clienteApi.js`**: lo crea la 07 con solo `listClientes`. `Clientes.jsx` no se toca (P-FB6). Una spec de Clientes futura agrega sus funciones al mismo archivo.
+- **`src/api/ocupacionApi.js`**: lo crea la 07 (`listOcupaciones`, `getOcupacion`, `createOcupacion`, `cancelOcupacion`, `finalizeOcupacion`). La 10 **agrega** sus funciones (`PUT /fin`, `/precio`, `/ajuste-precio`) sin recrearlo.
+- **07 ↔ 10**: el detalle de la ocupación tiene una sección "Contrato mensual" (solo MES) con `modoMes` y `fraccionMes` de solo lectura; la 10 agrega ahí el ajuste de precio y la baja programada.
+- **06**: el historial de una cochera podría enlazar a `/ocupaciones?id=N` (el `id` de cada ítem es el de la ocupación). La 06 ya está aprobada y no lo trae: queda pendiente.
 
 **`refreshMe()` en `MeProvider`** (la propone la 11 y la aprobó el orquestador): la 11 agrega en su paso 1 una función **aditiva** `refreshMe()`. Vuelve a pedir `GET /me` **sin** pasar por LOADING, así que no desmonta la app ni pierde formularios, y aplica la validación de zona de D-FB7. Si falla, conserva el `me` anterior. La usa la 11 después de cambiar la zona; cualquier spec que cambie datos de `/me` la puede usar.
 
