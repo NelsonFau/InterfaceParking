@@ -455,7 +455,7 @@ La 02 no modifica estas páginas (salvo Ocupaciones, D-FB10, y las dos de alerta
 
 ### Paso 7 — Arreglo mínimo de Ocupaciones
 
-- [ ] **7.1** Confirmar que `src/pages/Ocupaciones.jsx` no tiene cambios locales (`git status`). En `Ocupaciones.jsx`, reemplazar los 5 valores de D-FB10 por `localInputToInstant` de `useTenantDates()`. Una hora inexistente muestra el mensaje con `toast.error` y no envía.
+- [x] **7.1** Confirmar que `src/pages/Ocupaciones.jsx` no tiene cambios locales (`git status`). En `Ocupaciones.jsx`, reemplazar los 5 valores de D-FB10 por `localInputToInstant` de `useTenantDates()`. Una hora inexistente muestra el mensaje con `toast.error` y no envía.
 
   *Aceptación (manual, con un usuario cuyo tenant tenga `America/Montevideo`):* (1) en Network, el alta con inicio `22:30` del 10/11 manda `inicio: "2026-11-11T01:30:00.000Z"`; (2) filtrar por `desde` y `hasta` manda instantes con `Z` y la API responde 200; (3) cancelar con `finReal` manda un instante con `Z`; (4) con la zona del navegador cambiada, el valor enviado es el mismo; (5) un `git diff develop -- src/pages/Ocupaciones.jsx` muestra cambios solo en esos 5 valores, en la validación `Fin > Inicio` que usa los instantes convertidos, y en el hook y los imports que hagan falta. `npm run lint` y `npm run build` pasan.
 

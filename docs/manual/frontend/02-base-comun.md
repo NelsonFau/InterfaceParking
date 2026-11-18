@@ -1,6 +1,6 @@
 # Manual 02 — Base común
 
-Cómo funciona y cómo se usa la base común del frontend (spec `docs/specs/frontend/02-base-comun.md`). Se completa paso a paso; hoy cubre los pasos 1 y 2 (fechas) 3 (formato), 4 (enums), 5 (paginación) y 6 (parámetros de API).
+Cómo funciona y cómo se usa la base común del frontend (spec `docs/specs/frontend/02-base-comun.md`). Se completa paso a paso; hoy cubre los pasos 1 y 2 (fechas) 3 (formato), 4 (enums), 5 (paginación), 6 (parámetros de API) y 7 (Ocupaciones).
 
 ## 1. Fechas con la zona del tenant
 
@@ -162,3 +162,18 @@ Se prueban el reductor y las funciones puras. El hook es una línea sobre el red
 - `src/api/http.js` configura `paramsSerializer: { indexes: null }`: un arreglo sale como `fuente=PAGO&fuente=CAJA`. El valor por defecto de axios lo manda como `fuente[]=PAGO&fuente[]=CAJA`, y el backend (Trazabilidad, `fuente` repetible) no lo enlaza.
 - P-FB-L2 resuelto: axios 1.13.2 acepta `indexes: null` en `paramsSerializer`. Lo verifica `test/unit/api/params.test.js` con `http.getUri`. El test fija las variables `VITE_` con `vi.stubEnv` (no lee el `.env`).
 - Los parámetros no se arman en la URL a mano: van por `params`.
+
+## 7. Arreglo mínimo de fechas en Ocupaciones (D-FB10)
+
+`src/pages/Ocupaciones.jsx` usa `localInputToInstant` de `useTenantDates()` en los 5 valores que antes salían de `new Date(valor).toISOString()` (zona del navegador):
+
+| Valor | Dónde |
+|---|---|
+| `desde`, `hasta` | Filtros del listado (`GET /Ocupacion`, función `cargar`) |
+| `inicio`, `fin` | Alta (`POST /Ocupacion`, función `crear`) |
+| `finReal` | Cancelar (`POST /Ocupacion/{id}/cancelar`, función `cancelar`) |
+
+- Una hora inexistente (solo en zonas con horario de verano) muestra `toast.error(resultado.message)` y no envía ni consulta.
+- "Fin debe ser mayor que Inicio" compara los dos instantes ya convertidos.
+- Un valor vacío da `instant: null`: en los filtros no se agrega el parámetro, y `finReal` vacío se envía como `null`, como antes.
+- **No cambió** la UI, los textos, los errores, los permisos ni el resto del archivo. Se sigue mostrando con el `fmtDate` local (zona del navegador): es el desvío DV-FB2, que retira la spec 07 con `formatInstant`.

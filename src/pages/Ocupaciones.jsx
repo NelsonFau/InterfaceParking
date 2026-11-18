@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { http } from "../api/http";
+import { useTenantDates } from "../utils/useTenantDates";
 import toast from "react-hot-toast";
 import Autocomplete from "@mui/material/Autocomplete";
 import {
@@ -85,6 +86,7 @@ function LoadingList() {
 }
 
 export default function Ocupaciones() {
+  const { localInputToInstant } = useTenantDates();
   const [loading, setLoading] = useState(true);
   const reqIdRef = useRef(0);
 
@@ -149,8 +151,12 @@ export default function Ocupaciones() {
       if (estado !== "") params.set("estado", String(estado));
       if (cocheraId.trim()) params.set("cocheraId", cocheraId.trim());
       if (clienteId.trim()) params.set("clienteId", clienteId.trim());
-      if (desde) params.set("desde", new Date(desde).toISOString());
-      if (hasta) params.set("hasta", new Date(hasta).toISOString());
+      const rDesde = localInputToInstant(desde);
+      if (!rDesde.ok) return toast.error(rDesde.message);
+      const rHasta = localInputToInstant(hasta);
+      if (!rHasta.ok) return toast.error(rHasta.message);
+      if (rDesde.instant) params.set("desde", rDesde.instant);
+      if (rHasta.instant) params.set("hasta", rHasta.instant);
       if (venceEnDias.trim()) params.set("venceEnDias", venceEnDias.trim());
       params.set("take", String(take || 200));
 
@@ -249,8 +255,12 @@ export default function Ocupaciones() {
     if (!cInicio) return toast.error("Falta Inicio");
     if (!cFin) return toast.error("Falta Fin");
 
-    const inicioIso = new Date(cInicio).toISOString();
-    const finIso = new Date(cFin).toISOString();
+    const rInicio = localInputToInstant(cInicio);
+    if (!rInicio.ok) return toast.error(rInicio.message);
+    const rFin = localInputToInstant(cFin);
+    if (!rFin.ok) return toast.error(rFin.message);
+    const inicioIso = rInicio.instant;
+    const finIso = rFin.instant;
 
     if (new Date(finIso) <= new Date(inicioIso)) {
       return toast.error("Fin debe ser mayor que Inicio");
@@ -305,10 +315,9 @@ export default function Ocupaciones() {
     if (!cancelId) return;
     if (!motivoCancel.trim()) return toast.error("Falta motivo");
 
-    const finReal =
-      finRealCancel && finRealCancel.trim()
-        ? new Date(finRealCancel).toISOString()
-        : null;
+    const rFinReal = localInputToInstant(finRealCancel);
+    if (!rFinReal.ok) return toast.error(rFinReal.message);
+    const finReal = rFinReal.instant;
 
     try {
       setSaving(true);
