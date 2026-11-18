@@ -449,7 +449,7 @@ La 02 no modifica estas páginas (salvo Ocupaciones, D-FB10, y las dos de alerta
 
 ### Paso 6 — Parámetros de API
 
-- [ ] **6.1** Crear `src/api/params.js` (`cleanParams`) y configurar `paramsSerializer` en `src/api/http.js` (D-FB15). Resolver P-FB-L2. Crear `test/unit/api/params.test.js`.
+- [x] **6.1** Crear `src/api/params.js` (`cleanParams`) y configurar `paramsSerializer` en `src/api/http.js` (D-FB15). Resolver P-FB-L2. Crear `test/unit/api/params.test.js`.
 
   *Aceptación:* `npm test` pasa con: `cleanParams` quita `undefined`, `null` y `""`, y conserva `false` y `0`; `http.getUri({ url: "/Trazabilidad", params: { fuente: ["PAGO", "CAJA"] } })` contiene `fuente=PAGO&fuente=CAJA` y no `fuente[]`. `npm run lint` y `npm run build` pasan. A mano: la pantalla de Clientes sigue cargando, filtrando y paginando como antes.
 

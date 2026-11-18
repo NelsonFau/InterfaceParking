@@ -8,6 +8,9 @@ import { ApiError, normalizeError } from "./errors.js";
 export const http = axios.create({
   baseURL: getConfig().apiBaseUrl,
   timeout: 20000,
+  // Un arreglo sale como `fuente=PAGO&fuente=CAJA` (el valor por defecto, `fuente[]=PAGO`, no lo enlaza
+  // el backend; D-FB15).
+  paramsSerializer: { indexes: null },
   headers: {
     // P-FA5: se mantiene hasta confirmar que el backend ya no se expone por ngrok.
     "ngrok-skip-browser-warning": "true",

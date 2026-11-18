@@ -1,6 +1,6 @@
 # Manual 02 — Base común
 
-Cómo funciona y cómo se usa la base común del frontend (spec `docs/specs/frontend/02-base-comun.md`). Se completa paso a paso; hoy cubre los pasos 1 y 2 (fechas) 3 (formato), 4 (enums) y 5 (paginación).
+Cómo funciona y cómo se usa la base común del frontend (spec `docs/specs/frontend/02-base-comun.md`). Se completa paso a paso; hoy cubre los pasos 1 y 2 (fechas) 3 (formato), 4 (enums), 5 (paginación) y 6 (parámetros de API).
 
 ## 1. Fechas con la zona del tenant
 
@@ -155,3 +155,10 @@ const pg = usePagination();
 ```
 
 Se prueban el reductor y las funciones puras. El hook es una línea sobre el reductor y no se prueba (sin Testing Library, D-FA4). `Clientes.jsx` conserva su paginación propia (P-FB6).
+
+## 6. Parámetros de query
+
+- `src/api/params.js` exporta `cleanParams(obj)`: quita las claves con `undefined`, `null` o `""` (para no mandar `q=` ni `hasta=`) y conserva `false` y `0`. No modifica el objeto recibido. Se usa en cada módulo de API: `http.get("/Cliente", { params: cleanParams(filters) })`.
+- `src/api/http.js` configura `paramsSerializer: { indexes: null }`: un arreglo sale como `fuente=PAGO&fuente=CAJA`. El valor por defecto de axios lo manda como `fuente[]=PAGO&fuente[]=CAJA`, y el backend (Trazabilidad, `fuente` repetible) no lo enlaza.
+- P-FB-L2 resuelto: axios 1.13.2 acepta `indexes: null` en `paramsSerializer`. Lo verifica `test/unit/api/params.test.js` con `http.getUri`. El test fija las variables `VITE_` con `vi.stubEnv` (no lee el `.env`).
+- Los parámetros no se arman en la URL a mano: van por `params`.
