@@ -317,7 +317,7 @@ export async function deactivateCliente(id) {
 | P-FB4 | Regla de ESLint que prohíba importar `http` directo desde `src/pages` cuando ya no queden páginas que lo hagan | — |
 | P-FB5 | Revisar Temporal cuando Safari tenga una versión estable con soporte: reemplazaría a `@date-fns/tz` sin polyfill | — |
 | P-FB6 | `Clientes.jsx` tiene su paginación propia y ninguna spec 03 a 12 la toca. Migrarla a los helpers cuando se la modifique | — |
-| P-FB7 | `CLAUDE.md` está sin trackear (P-FA10). El paso 8 lo actualiza; el desarrollador decide si ese archivo se commitea en este PR | 8 |
+| P-FB7 | **Cerrado (paso 8).** `CLAUDE.md` ya está versionado en `develop` (commit `cae486f`, con la sección "Git: which repo, which branch"); la nota de que estaba sin trackear (P-FA10) quedó desactualizada. El paso 8.2 lo actualiza en este PR | 8 |
 | P-FB8 | `OperationalDashboard.jsx` mezcla alertas y cajas (P-FA4). Su copia de fechas y `todayISO` se retira en la 05 si queda como panel de alertas, o en la 09 si la parte de caja se mueve allí | — |
 
 **Locales, el ejecutor los resuelve y los informa.**
@@ -462,7 +462,7 @@ La 02 no modifica estas páginas (salvo Ocupaciones, D-FB10, y las dos de alerta
 ### Paso 8 — Lint, documentación y cierre
 
 - [x] **8.1** Agregar la regla de D-FB9 a `eslint.config.js`, con las 7 excepciones temporales y su comentario "se retira con la spec NN".
-- [ ] **8.2** Crear `docs/manual/frontend/02-base-comun.md` (cómo usar fechas, enums, paginación y el patrón de API; el caso de la hora repetida; la tabla de contrato de D-FB3) y actualizar `CLAUDE.md` (P-FB7).
+- [x] **8.2** Crear `docs/manual/frontend/02-base-comun.md` (cómo usar fechas, enums, paginación y el patrón de API; el caso de la hora repetida; la tabla de contrato de D-FB3) y actualizar `CLAUDE.md` (P-FB7).
 - [ ] **8.3** Actualizar el estado de esta spec en `docs/specs/README.md` y en su cabecera: **Terminada** una vez mergeada a `develop`.
 
   *Aceptación:* `npm run lint`, `npm test` y `npm run build` pasan; el lint falla si se agrega un `toLocaleString()` a una página que no esté en la lista de excepciones; `CLAUDE.md` ya no menciona `operationalAlerts.js` como fuente de enums.

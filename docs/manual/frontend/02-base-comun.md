@@ -1,6 +1,6 @@
 # Manual 02 — Base común
 
-Cómo funciona y cómo se usa la base común del frontend (spec `docs/specs/frontend/02-base-comun.md`). Se completa paso a paso; hoy cubre los pasos 1 y 2 (fechas) 3 (formato), 4 (enums), 5 (paginación), 6 (parámetros de API) y 7 (Ocupaciones).
+Cómo funciona y cómo se usa la base común del frontend (spec `docs/specs/frontend/02-base-comun.md`). Se completa paso a paso; hoy cubre los pasos 1 y 2 (fechas) 3 (formato), 4 (enums), 5 (paginación), 6 (parámetros de API) y 7 (Ocupaciones). El patrón de un módulo de API está en la sección 6 y en `CLAUDE.md`.
 
 ## 1. Fechas con la zona del tenant
 
@@ -18,6 +18,15 @@ La zona del tenant (`/me.tenant.zonaHoraria`, IANA) es la única zona. Lo que el
 | `DateOnly` | `yyyy-MM-dd` | `2026-11-10` | Fechas de calendario, `<input type="date">` |
 
 Un `DateOnly` nunca se pasa por `Date`: `new Date("2026-11-10")` es medianoche UTC y en Uruguay se vería como el día anterior. El módulo lo trata como texto.
+
+### Contrato de fechas por campo (fuente: `docs/inventario/backend.md`, sección 1)
+
+| Dirección | Tipo | Campos |
+|---|---|---|
+| Se envía | `UtcInstant` | Ocupación: `inicio`, `fin?` (alta), `finReal?` (cancelar), `fin?` (`PUT /fin`). Query: `desde`/`hasta` en `/Cochera/disponibles`, `/Ocupacion`, `/operational-alerts`, `/Trazabilidad` |
+| Se envía | `DateOnly` | `vigenteDesde` en `PUT /Tarifa`, `POST /Ocupacion/{id}/precio` y `POST /Ocupacion/ajuste-precio`; `desde`/`hasta` en `/Caja/sesiones` |
+| Llega | `UtcInstant` | `fechaCreacion`, `fechaResolucion`, `fechaPago`, `fechaApertura`, `fecha`, `inicio`, `fin`, `finReal` |
+| Llega | `DateOnly` | `vigenteDesde` y `vigenteHasta` de `Tarifa`; `vigenteDesde` de las respuestas de precio de contrato |
 
 ### Funciones
 
@@ -177,3 +186,31 @@ Se prueban el reductor y las funciones puras. El hook es una línea sobre el red
 - "Fin debe ser mayor que Inicio" compara los dos instantes ya convertidos.
 - Un valor vacío da `instant: null`: en los filtros no se agrega el parámetro, y `finReal` vacío se envía como `null`, como antes.
 - **No cambió** la UI, los textos, los errores, los permisos ni el resto del archivo. Se sigue mostrando con el `fmtDate` local (zona del navegador): es el desvío DV-FB2, que retira la spec 07 con `formatInstant`.
+
+## 8. Patrón de un módulo de API (D-FB14)
+
+La 02 no crea módulos: cada spec crea el de su recurso. Reglas:
+1. Archivo `src/api/<recurso>Api.js`, con el nombre del controller en camelCase (`clienteApi`, `cocheraApi`, `ocupacionApi`, `tarifaApi`, `cajaApi`, `trazabilidadApi`, etc.). Los existentes (`pagosApi`, `operationalAlertsApi`, `meApi`) conservan su nombre.
+2. Funciones nombradas, `async`, una por endpoint, que devuelven `data` y no la respuesta de axios. Verbos: `list`, `get`, `create`, `update`, `remove`, y el nombre de la acción para el resto (`finalizeOcupacion`, `cancelOcupacion`).
+3. Los listados paginados pasan por `normalizePaged`. Un `204` devuelve `undefined`.
+4. Usan la instancia `http`. No capturan errores (la pantalla llama a `showApiError(e)`) y no convierten fechas ni enums: reciben `UtcInstant`, `DateOnly` y enteros ya listos. La conversión es de la pantalla, con `useTenantDates`.
+5. Los parámetros de query van por `params`, filtrados con `cleanParams`. No se arma la URL a mano.
+6. JSDoc con los tipos de entrada y salida, tomados del inventario. Sin TypeScript.
+7. Los módulos con estilo de objeto (`operationalAlertsApi`, `pagosApi`) se migran a este estilo en la spec que los toca (05 y 08).
+
+```js
+// src/api/clienteApi.js — /api/v1/Cliente
+import { http } from "./http.js";
+import { cleanParams } from "./params.js";
+import { normalizePaged } from "../utils/paginacion.js";
+
+/** @param {{ q?: string, activos?: boolean, page?: number, pageSize?: number }} filters */
+export async function listClientes(filters = {}) {
+  const { data } = await http.get("/Cliente", { params: cleanParams(filters) });
+  return normalizePaged(data);
+}
+
+export async function deactivateCliente(id) {
+  await http.patch(`/Cliente/${id}/desactivar`);
+}
+```
