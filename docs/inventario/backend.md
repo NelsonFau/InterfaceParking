@@ -47,6 +47,15 @@ Specs del backend: 01–18 todas **Terminadas**. El pendiente que agrupa la adap
 - `CocheraDetalle`: `id, numero, estado, nota?, ocupacionActiva?, historial: { id, clienteId, clienteNombre, tipo, inicio, fin?, estado, precioTotal? }[]`.
 - `estado` es calculado: puede venir `OCUPADA` o `RESERVADA`.
 
+Comportamiento (relevado de `Service\CocheraService.cs`, `EstadoDeCocheras.cs` y `DisponibilidadService.cs` el 18/11/2026; sin confirmar por tests):
+- **Estado calculado**, con prioridad BLOQUEADA > OCUPADA > RESERVADA > DISPONIBLE. Es RESERVADA si no hay ocupación en curso pero sí una ACTIVA con `inicio > ahora`. `ocupacionActiva` es la ocupación en curso o, si no hay, la próxima reserva, así que su presencia **no** implica OCUPADA. Una cochera BLOQUEADA puede traer `ocupacionActiva`. `precioTotal` suele ser `null`.
+- **GET `/Cochera`**: ordenado por `numero` ascendente. **No trae `nota`**: solo el detalle la trae.
+- **GET `/Cochera/{id}`**: el `id` de cada ítem del historial es el **id de la ocupación**. El historial viene por `inicio` descendente e incluye todas (activa, futuras, finalizadas y canceladas). `historialTake` no tiene tope ni validación.
+- **POST `/Cochera`**: **todo o nada**. Si algún número del rango existe → 409 `cochera_numero_repetido`, y el mensaje lista hasta 10. `hasta < desde` → 400 `datos_invalidos` (campo `Hasta`). **Tope de 100 cocheras por pedido** → 400 `operacion_invalida`. El 201 **no** trae `Location` y el cuerpo viene ordenado por número.
+- **PUT `/Cochera/{id}`**: se puede editar aunque esté ocupada o reservada. El mismo número propio da 204; el número de otra cochera, 409 `cochera_numero_repetido`. `nota: null` **borra** la nota; `""` se guarda como cadena vacía.
+- **PUT `/Cochera/{id}/estado`**: OCUPADA o RESERVADA → 400 `datos_invalidos` ("Solo se permite DISPONIBLE o BLOQUEADA."). Bloquear con una ocupación **en curso** → 409 `cochera_con_ocupacion_activa`. Bloquear con una reserva **futura** se permite sin error. Pasar a DISPONIBLE solo quita el bloqueo, porque el estado se recalcula. `nota: null` **borra** la nota, y este PUT no valida la longitud.
+- **GET `/Cochera/disponibles`**: `hasta <= desde` → 400 `datos_invalidos` (campo `Hasta`). Excluye las bloqueadas y las que se solapan con ocupaciones ACTIVA. Viene ordenado por número.
+
 ### `/Ocupacion`
 | Verbo y ruta | Permiso | Query / body | Respuesta |
 |---|---|---|---|
@@ -91,6 +100,20 @@ Specs del backend: 01–18 todas **Terminadas**. El pendiente que agrupa la adap
 
 `Tarifa`: `id, tipo, precio, vigenteDesde: DateOnly, vigenteHasta?: DateOnly, vigente: bool`.
 
+Comportamiento (relevado de `Service\TarifaService.cs` y `TarifaResolver.cs` el 18/11/2026; sin confirmar por tests):
+- **Unicidad** por `(tipo, vigenteDesde)`. Puede haber **varias tarifas futuras** por tipo con fechas distintas.
+- **`vigenteHasta`** no se guarda: se calcula al leer como el `vigenteDesde` de la siguiente menos 1 día.
+- **PUT `/Tarifa`**:
+  - `vigenteDesde` anterior a hoy → 400 `datos_invalidos` (campo `VigenteDesde`).
+  - Con fecha futura: si ya hay una tarifa en esa misma fecha la **reemplaza** (auditoría EDITAR); si no, inserta (CREAR).
+  - Con hoy (o sin `vigenteDesde`): si ya hay una tarifa que empieza hoy → 409 `tarifa_ya_vigente`; si no, inserta y rige desde hoy.
+  - Carrera con otro pedido → 409 `tarifa_modificada`. No es `rowversion`: `CodigosModificado` solo registra la configuración.
+- **DELETE `/Tarifa/{id}`**: inexistente → 404 `tarifa_no_encontrada`; si ya rige o rigió (`vigenteDesde <= hoy`) → 409 `tarifa_ya_vigente`; si es futura la borra (204, auditoría BORRAR); carrera → 409 `tarifa_modificada`.
+- **GET `/vigentes`**: siempre 3 elementos (HORA, DIA, MES, en ese orden). Un tipo sin tarifa trae `vigente` y `proxima` en `null`. `vigente` es la de mayor `vigenteDesde <= hoy`; `proxima`, la de **menor** `vigenteDesde > hoy`. Las futuras siguientes solo se ven en el historial.
+- **GET `/historial?tipo=`**: todas las tarifas del tipo, **incluidas las programadas**, ordenadas por `vigenteDesde` descendente. Sin confirmar qué pasa con un `tipo` ausente.
+- **`nuevoPrecio`**: > 0 (**no admite 0**), 2 decimales como máximo, tope 10.000.000 (inclusivo). Si no cumple → 400 `datos_invalidos` (campo `NuevoPrecio`).
+- **`tarifa_no_configurada`** (409) lo lanza el **alta de ocupación** (no `/Tarifa`) cuando no hay tarifa del tipo con `vigenteDesde <=` el día local del **inicio** de la ocupación, salvo con tarifa excepcional. Una ocupación retroactiva toma la tarifa de ese día; una futura, la que regirá ese día (incluida una programada). Es un dato para la 07.
+
 ### `/Caja`
 | Verbo y ruta | Permiso | Query / body | Respuesta |
 |---|---|---|---|
@@ -116,6 +139,28 @@ Specs del backend: 01–18 todas **Terminadas**. El pendiente que agrupa la adap
 
 Errores: 409 `configuracion_modificada` (cambió `version`), 409 `caja_abierta` (cambiar zona o modo de caja con una caja abierta). `zonaHoraria` sale de una lista cerrada del backend.
 
+Comportamiento (relevado de `ConfiguracionService.cs` el 18/11/2026):
+- **PUT → 200 con la configuración completa** y la `version` nueva. La `version` **cambia siempre**, aunque no cambie ningún valor. Si la `version` es vieja → 409 `configuracion_modificada`; si falta → 400.
+- Una zona fuera de la lista → 400 `datos_invalidos` con `errors.ZonaHoraria`. Un opcional fuera de rango → 400 de validación del DTO (clave en PascalCase, sin confirmar).
+- **GET devuelve la zona guardada tal cual**, aunque esté fuera de la lista. Sin fila, devuelve los valores por defecto.
+- **`caja_abierta`** salta solo si cambian `zonaHoraria` o `modoCaja` y hay **cualquier** sesión de caja ABIERTA del tenant. Cambiar topes o campos de mensuales no lo dispara.
+
+**Significado de cada campo** (para los textos de ayuda y para las specs 07, 09 y 10):
+
+| Campo | Qué hace | Defecto |
+|---|---|---|
+| `modoCaja` | **DIARIA**: una caja por día local; se abre sola con el primer movimiento (fondo = el que quedó, apertura automática). Si queda abierta de un día anterior, los movimientos dan 409 `caja_dia_anterior_abierta` y aparece la alerta CAJA_SIN_CERRAR. **TURNO**: se abre y se cierra a mano; sin sesión abierta, cobrar, anular o devolver da 409 `caja_cerrada`; puede cruzar la medianoche y nunca genera CAJA_SIN_CERRAR | — |
+| `modoMes` | Períodos de una ocupación MES, en la zona del tenant. **CALENDARIO**: períodos del 1 al fin de mes (el primero es el mes del inicio). **CORRIDO**: el mismo día y hora de cada mes (31/1 → 28/2 → 31/3). **BLOQUES_30**: cada 30 días desde el inicio. Cada período se cobra con el precio vigente en su inicio | CORRIDO |
+| `fraccionMes` | **COMPLETO**: cada período se cobra entero. **PROPORCIONAL**: días cubiertos sobre días del período, redondeado al peso entero (de ,50 para arriba). Aplica al primer período si se entra a mitad y al último si hay baja o finalización anticipada | — |
+| `graciaHoraMinutos` | Solo en ocupaciones por HORA: minutos de tolerancia sobre la **fracción final** antes de cobrar otra hora (con gracia 10, 1 h 05 paga 1 h y 1 h 15 paga 2). El mínimo es 1 hora | 0 |
+| `diasGraciaMora` | Días locales desde el inicio de un período de un MES activo impago antes de considerarlo en mora y generar MENSUAL_IMPAGO (una sola alerta por contrato). No afecta nada más | 10 |
+| `toleranciaInicioHoras` | Ventana **solo hacia atrás**: un inicio más viejo que `ahora − N horas` es **retroactivo**, exige `ocupaciones.crear_retroactiva` y `motivoRetroactivo`. Dentro de la ventana no hace falta permiso | 24 |
+| `topePasadoDias` | Máximo de días hacia atrás para el inicio, para **todos** los roles (400 en el campo `Inicio`). Se evalúa antes que la tolerancia | 30 |
+| `techoFuturoMeses` | Máximo hacia adelante del **inicio** de una ocupación (día local ≤ hoy + N meses; 400 en el campo `Inicio`), para todos los roles. **No** limita el fin (hay topes de duración por tipo: HORA 7 días, DÍA 90 días, MES 3 años) ni las tarifas ni los ajustes de precio | 3 |
+| `ventanaAlertasDias` | Solo lectura en la API: la fija la plataforma con el comando Admin `configurar-tenant --ventana-alertas-dias`. Es cuántos días hacia atrás mira el job horario de alertas | 30 |
+
+- Las ocupaciones MES **congelan** `modoMes` y `fraccionMes` al crearse: cambiar la configuración no afecta los contratos en curso.
+
 ### `/Usuarios`
 | Verbo y ruta | Permiso | Body | Respuesta |
 |---|---|---|---|
@@ -125,7 +170,17 @@ Errores: 409 `configuracion_modificada` (cambió `version`), 409 `caja_abierta` 
 | PUT `/Usuarios/{id}/rol` | `usuarios.gestionar` | `{ rol: int }` | `Usuario` |
 | POST `/Usuarios/{id}/desactivar` · `/reactivar` | `usuarios.gestionar` | | `Usuario` |
 
-`Usuario`: `id, nombre, email, rol: int, activo, fechaCreacion`. Roles invitables: DUENO, ENCARGADO, OPERADOR, AUDITOR (SUPERADMIN y 2 → 400). Errores propios: `usuario_ya_existe`, `usuario_ya_registrado`, `usuario_ya_desactivado`, `usuario_ya_activo`, `operacion_sobre_uno_mismo`, `ultimo_dueno`, `proveedor_identidad_no_disponible` (503).
+`Usuario`: `id, nombre, email, rol: int, activo, fechaCreacion`.
+
+Comportamiento (relevado de `Service\UsuarioService.cs`, `MeService.cs` y `Data\Candados.cs` el 18/11/2026):
+- **Email único GLOBAL**: una persona pertenece a un solo tenant. Al invitar con un email que ya existe en el mismo tenant → 409 `usuario_ya_existe`; en otro tenant → 409 `usuario_ya_registrado`. Los dos códigos **solo** salen al invitar.
+- **`identidad_sin_vinculo`** (409, solo al invitar): Auth0 ya tenía una identidad con ese email sin `Usuario` vinculado. El dueño no lo puede resolver: el mensaje manda a soporte.
+- **`ultimo_dueno`** (409): lo dan PUT `/rol` (al bajar al último DUENO activo) y `/desactivar`. Cuenta solo los DUENO **activos**.
+- **Orden de validación**: 404 → `operacion_sobre_uno_mismo` → estado (`usuario_ya_desactivado`/`usuario_ya_activo`) → `ultimo_dueno` → 403. Si el último dueño es uno mismo, sale `operacion_sobre_uno_mismo`.
+- **Status**: todos los `usuario_*` y `operacion_sobre_uno_mismo` son 409; `usuario_no_encontrado` es 404 (también para un id de otro tenant); `proveedor_identidad_no_disponible` es 503 con `Retry-After` (al invitar y al reenviar).
+- **Invitación**: si falla solo el envío del mail, la respuesta es 201 con `invitacionEnviada: false` (no es un error). **Reenviar** a un desactivado → 409 `usuario_ya_desactivado`; a uno que ya aceptó **no** da error: manda el mail igual (204). **No existe ningún dato de "invitación pendiente"**.
+- **Desactivar** es solo local: no toca Auth0, y el middleware corta el pedido siguiente con 403 `usuario_inactivo`. **Reactivar** solo pone `activo = true` y el usuario conserva su acceso, sin reenviar la invitación.
+- **`/me.usuarioId` == `Usuario.id`**. GET `/Usuarios` viene ordenado por `nombre` y después por `id`. Roles invitables: DUENO, ENCARGADO, OPERADOR, AUDITOR (SUPERADMIN y 2 → 400). Errores propios: `usuario_ya_existe`, `usuario_ya_registrado`, `usuario_ya_desactivado`, `usuario_ya_activo`, `operacion_sobre_uno_mismo`, `ultimo_dueno`, `proveedor_identidad_no_disponible` (503).
 
 ### `/Panel`
 | GET `/Panel/resumen` | `panel.ver` | `{ totalCocheras, bloqueadas, ocupadasAhora, disponiblesAhora, vencenHoy, vencenEn7Dias }` |
@@ -139,6 +194,9 @@ Errores: 409 `configuracion_modificada` (cambió `version`), 409 `caja_abierta` 
 | PATCH `/operational-alerts/{id}/resolver` | `alertas.resolver` (+ `alertas.resolver_dinero` si `esDeDinero`) | `{ comentario? (≤500; obligatorio en alertas de dinero) }` | **200** `Alerta` |
 
 `Alerta`: `id, tipo, severidad, mensaje, ocupacionId?, cajaSesionId?, esDeDinero, resuelta, fechaCreacion, fechaResolucion?, resolucionAutomatica, resueltaPorUsuarioId?, resueltaPorNombre?, comentarioResolucion?`. Resolver una ya resuelta → 409 `alerta_resuelta`.
+
+- **Orden del listado**: `FechaCreacion` descendente, con `Id` descendente como desempate (`OperationalAlertService.cs:72-75`). Sin `desde`/`hasta` no hay ningún filtro de fecha implícito, y las resueltas viejas siguen apareciendo salvo que se filtre por `resuelta`.
+- **`ventanaAlertasDias`** (configuración, 7..90, 30 por defecto) **no limita el listado**: es la ventana hacia atrás que mira el job de control (cada hora) para elegir candidatas a alerta (`DetectorDeAlertas.cs:158-164`, `AlertasControlJob.cs:8`).
 
 Alertas de dinero: `DEVOLUCION_PENDIENTE`, `DIFERENCIA_DE_CAJA`, `FONDO_DISTINTO`, `MENSUAL_IMPAGO`, `OCUPACION_FINALIZADA_SIN_PAGO`, `PAGO_MENOR_AL_ESPERADO`, `PAGO_REGISTRADO_TARDE`.
 
