@@ -461,7 +461,7 @@ La 02 no modifica estas páginas (salvo Ocupaciones, D-FB10, y las dos de alerta
 
 ### Paso 8 — Lint, documentación y cierre
 
-- [ ] **8.1** Agregar la regla de D-FB9 a `eslint.config.js`, con las 7 excepciones temporales y su comentario "se retira con la spec NN".
+- [x] **8.1** Agregar la regla de D-FB9 a `eslint.config.js`, con las 7 excepciones temporales y su comentario "se retira con la spec NN".
 - [ ] **8.2** Crear `docs/manual/frontend/02-base-comun.md` (cómo usar fechas, enums, paginación y el patrón de API; el caso de la hora repetida; la tabla de contrato de D-FB3) y actualizar `CLAUDE.md` (P-FB7).
 - [ ] **8.3** Actualizar el estado de esta spec en `docs/specs/README.md` y en su cabecera: **Terminada** una vez mergeada a `develop`.
 
