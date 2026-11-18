@@ -1,6 +1,6 @@
 # Manual 02 — Base común
 
-Cómo funciona y cómo se usa la base común del frontend (spec `docs/specs/frontend/02-base-comun.md`). Se completa paso a paso; hoy cubre los pasos 1 y 2 (fechas) 3 (formato) y 4 (enums).
+Cómo funciona y cómo se usa la base común del frontend (spec `docs/specs/frontend/02-base-comun.md`). Se completa paso a paso; hoy cubre los pasos 1 y 2 (fechas) 3 (formato), 4 (enums) y 5 (paginación).
 
 ## 1. Fechas con la zona del tenant
 
@@ -127,3 +127,31 @@ Marcas: `calculado` (VENCIDA, OCUPADA, RESERVADA: las calcula el backend y no se
 
 ### Migración de alertas
 `src/constants/operationalAlerts.js` se borró (tenía los tipos 1 a 4 mal y no conocía el 5 al 12). `OperationalAlerts.jsx` y `OperationalDashboard.jsx` usan `labelOf`/`colorOf` de `SeveridadAlerta` y `labelOf` de `TipoAlertaOperativa`. Un tipo desconocido muestra ahora el número en vez de "Tipo desconocido"; la severidad desconocida sigue mostrando "SIN SEVERIDAD". El filtro de tipo de alertas se arma con `optionsOf`. Las constantes locales del resto de las páginas las retira cada spec (spec 02, sección 5.4).
+
+## 5. Paginación
+
+Módulos: `src/utils/paginacion.js` (puro) y `src/utils/usePagination.js` (hook). El backend pagina con `page` de 1 en 1 y MUI `TablePagination` de 0 en 0; la conversión vive solo acá.
+
+| Pieza | Qué hace |
+|---|---|
+| `DEFAULT_PAGE_SIZE = 20`, `PAGE_SIZE_OPTIONS = [10, 20, 50, 100]` | 20 es el valor por defecto del backend; 100 es el tope de Cliente, alertas y Trazabilidad |
+| `normalizePaged(data)` | Valida `{ items: [], total, page, pageSize }` y la devuelve. Si no, lanza `ApiError` con `respuesta_invalida` |
+| `lastPage(total, pageSize)` | Última página, mínimo 1 |
+| `paginationReducer(state, action)` | Reductor de `{ page, pageSize }`: `setPage`, `setPageSize` (vuelve a la 1), `reset` (a la 1; al cambiar filtros) y `fit` (con `total`: si la página quedó más allá de la última, baja a la última; pasa al borrar el último elemento de la última página) |
+| `toTablePaginationProps(estado, { onPageChange, onPageSizeChange, pageSizeOptions })` | Props de `TablePagination`: pasa `page` a base 0, recorta al rango válido, trae "Filas por página" y "1–20 de 134". Los callbacks reciben la página de 1 en 1 y el tamaño como número. Si el tamaño actual no está en las opciones, lo suma (MUI avisa por consola si falta) |
+| `usePagination({ pageSize })` | `useReducer` sobre el reductor: `{ page, pageSize, setPage, setPageSize, reset, fit }` |
+
+El hook **no pide datos**: la pantalla llama a su módulo de API y pasa el resultado por `normalizePaged`.
+
+```jsx
+const pg = usePagination();
+// al cargar: const r = normalizePaged(await listAlertas({ page: pg.page, pageSize: pg.pageSize, ...filtros }));
+// al borrar el último elemento de la última página: pg.fit(r.total)
+// al cambiar un filtro: pg.reset()
+<TablePagination component="div" {...toTablePaginationProps(
+  { page: pg.page, pageSize: pg.pageSize, total },
+  { onPageChange: pg.setPage, onPageSizeChange: pg.setPageSize },
+)} />
+```
+
+Se prueban el reductor y las funciones puras. El hook es una línea sobre el reductor y no se prueba (sin Testing Library, D-FA4). `Clientes.jsx` conserva su paginación propia (P-FB6).

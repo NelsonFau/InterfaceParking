@@ -443,7 +443,7 @@ La 02 no modifica estas páginas (salvo Ocupaciones, D-FB10, y las dos de alerta
 
 ### Paso 5 — Paginación
 
-- [ ] **5.1** Crear `src/utils/paginacion.js` y `src/utils/usePagination.js` (D-FB13) y `test/unit/utils/paginacion.test.js`.
+- [x] **5.1** Crear `src/utils/paginacion.js` y `src/utils/usePagination.js` (D-FB13) y `test/unit/utils/paginacion.test.js`.
 
   *Aceptación:* `npm test` pasa con: `normalizePaged` acepta `{ items, total, page, pageSize }` y rechaza un arreglo, `null` y un objeto sin `items` con `respuesta_invalida`; `lastPage(0, 20)` es 1 y `lastPage(41, 20)` es 3; `toTablePaginationProps` convierte `page: 1` en `page: 0` y recorta una página fuera de rango; `paginationReducer`: `setPageSize` vuelve a la página 1, `reset` también, y `fit` con `total: 20`, `pageSize: 20` y `page: 2` baja a la 1. `npm run lint` y `npm run build` pasan.
 
