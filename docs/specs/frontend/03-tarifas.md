@@ -253,14 +253,14 @@ Nada. (`Tarifas.jsx` queda con el mismo nombre y ruta.)
 
 ### Paso 0 — Precondiciones y worktree
 
-- [ ] **0.1** Confirmar que la 02 está mergeada en `develop` y resolver **P-FC-L1** (existen los archivos y la entrada de lint). Si no, frenar.
-- [ ] **0.2** Desde `parkingcontrol-front`: `git worktree add ../parkingcontrol-front-tarifas -b feature/front-tarifas develop`. En el worktree, copiar el `.env` (no está versionado) y correr `npm install`. Resolver P-FC-L2.
+- [x] **0.1** Confirmar que la 02 está mergeada en `develop` y resolver **P-FC-L1** (existen los archivos y la entrada de lint). Si no, frenar.
+- [x] **0.2** (Se ejecutó sin worktree: rama `feature/front-tarifas` directamente en `parkingcontrol-front`, por decisión del Orquestador.) Desde `parkingcontrol-front`: `git worktree add ../parkingcontrol-front-tarifas -b feature/front-tarifas develop`. En el worktree, copiar el `.env` (no está versionado) y correr `npm install`. Resolver P-FC-L2.
 
   *Aceptación:* en el worktree, `npm test`, `npm run lint` y `npm run build` pasan antes de cambiar nada.
 
 ### Paso 1 — Lógica pura
 
-- [ ] **1.1** Crear `src/utils/tarifas.js` con las funciones de D-FC13 y `test/unit/utils/tarifas.test.js`.
+- [x] **1.1** Crear `src/utils/tarifas.js` con las funciones de D-FC13 y `test/unit/utils/tarifas.test.js`.
 
   *Aceptación:* `npm test` pasa con estos casos (`today = "2026-11-18"` salvo que se indique):
 
