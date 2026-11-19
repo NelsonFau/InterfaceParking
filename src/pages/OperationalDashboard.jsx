@@ -1,4 +1,5 @@
-// Monitor operativo: indicadores de alertas y críticas recientes (spec 05, D-FE3, D-FE11, D-FE12).
+// Monitor operativo: indicadores de alertas y críticas recientes (spec 05, D-FE3, D-FE11, D-FE12) y, debajo de
+// los indicadores, el widget de caja (spec 09, D-FI12), que es autónomo y se refresca con `reloadKey`.
 // Cada indicador sale del `total` de una consulta liviana y se carga por separado: si una falla,
 // esa tarjeta muestra "—" y las demás siguen.
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -6,6 +7,8 @@ import { useNavigate } from "react-router-dom";
 import { Alert, Box, Button, Card, CardContent, Chip, Divider, Grid, LinearProgress, Skeleton, Stack, Typography } from "@mui/material";
 
 import { showApiError } from "../api/errors";
+import { usePermissions } from "../auth/usePermissions";
+import CajaWidget from "../componentes/caja/CajaWidget";
 import { countAlertas, listAlertas } from "../api/operationalAlertsApi";
 import { SeveridadAlerta, TipoAlertaOperativa, colorOf, labelOf } from "../constants/enums";
 import {
@@ -81,6 +84,7 @@ function KpiCard({ title, value, subtitle, danger }) {
 
 export default function OperationalDashboard() {
   const navigate = useNavigate();
+  const { can } = usePermissions();
   const { formatInstant } = useTenantDates();
 
   const [reloadKey, setReloadKey] = useState(0);
@@ -258,6 +262,8 @@ export default function OperationalDashboard() {
             </Grid>
           ))}
         </Grid>
+
+        {can("caja.ver") ? <CajaWidget reloadKey={reloadKey} /> : null}
 
         <Card sx={{ borderRadius: 3 }}>
           <CardContent>

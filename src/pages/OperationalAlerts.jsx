@@ -63,6 +63,7 @@ function AlertRow({ alerta, formatInstant, can, onResolve }) {
   const links = getAlertLinks(alerta, {
     canTrazabilidad: can("auditoria.ver"),
     canOcupaciones: can("ocupaciones.ver"),
+    canCaja: can("caja.ver"),
   });
   // El texto "Ocupación N" pasa a ser el enlace de Ocupación cuando el usuario puede verla (D-FG14).
   const ocupacionLink = links.find((l) => l.key === "ocupacion");

@@ -10,7 +10,7 @@ No hay pantalla de Pagos (el backend no tiene un listado general: D-FH8). Los pa
 
 | Archivo | Qué es |
 |---|---|
-| `src/api/pagosApi.js` | `createPago`, `listPagosByOcupacion`, `getPago`, `anularPago`, `createDevolucion` (con JSDoc de los tipos) y el export `pagosApi` `@deprecated` (abajo) |
+| `src/api/pagosApi.js` | `createPago`, `listPagosByOcupacion`, `getPago`, `anularPago`, `createDevolucion` (con JSDoc de los tipos) (el export `pagosApi` `@deprecated` lo retiró la spec 09) |
 | `src/utils/pagos.js` | Toda la lógica pura (ver abajo) |
 | `src/componentes/pagos/PagosSeccion.jsx` | Tabla de pagos de la ocupación; abre el detalle con un clic |
 | `src/componentes/pagos/PagoDetalleDialog.jsx` | Detalle de un pago, con las acciones y el enlace a Trazabilidad. Se abre con solo un `pagoId` |
@@ -95,7 +95,7 @@ El aviso lo muestra siempre `showApiError` (el `title` del backend). Después:
 
 ## `pagosApi.js` y la compatibilidad temporal
 
-El archivo está en el estilo de funciones (D-FB14): devuelven `data`, no capturan errores y no convierten fechas ni enums. `listPagosByOcupacion` lanza `ApiError` con `respuesta_invalida` si la respuesta no es un arreglo. Se conserva un export `pagosApi` **`@deprecated`** con solo `getCajaDiaria` (respuesta de axios entera; el endpoint ya no existe) y `anular` (delega en `anularPago`), para que `CajaDiaria.jsx` siga compilando sin tocarla. `crear` se retiró (nadie lo usa). Esa pantalla sigue sin mandar el motivo al anular (DV-FH1). **La spec 09 reemplaza `CajaDiaria.jsx` y retira el export.** Hoy lo usa solo `CajaDiaria.jsx` (`OperationalDashboard.jsx` ya no).
+El archivo está en el estilo de funciones (D-FB14): devuelven `data`, no capturan errores y no convierten fechas ni enums. `listPagosByOcupacion` lanza `ApiError` con `respuesta_invalida` si la respuesta no es un arreglo. El export `pagosApi` `@deprecated` (`getCajaDiaria`, `anular`) que la 08 dejó para `CajaDiaria.jsx` **se retiró con la spec 09**, que reemplazó esa pantalla (ver `docs/manual/frontend/09-caja.md`).
 
 ## Lo que queda para otras specs
 

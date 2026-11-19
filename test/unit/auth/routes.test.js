@@ -16,7 +16,7 @@ describe("routes", () => {
       ["/tarifas", "tarifas.ver"],
       ["/trazabilidad", "auditoria.ver"],
       ["/alertas-operativas", "alertas.ver"],
-      ["/caja-diaria", "caja.ver"],
+      ["/caja", "caja.ver"],
       ["/configuracion", "configuracion.ver"],
       ["/usuarios", "usuarios.ver"],
     ]);
