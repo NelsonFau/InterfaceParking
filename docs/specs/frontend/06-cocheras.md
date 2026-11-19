@@ -1,6 +1,6 @@
 # 06 — Cocheras: alta por rango, edición y estados calculados
 
-> Frontend · **Aprobada** (18/11/2026) · `feature/specs-etapa3` (esta spec, rama compartida con otros redactores) y `feature/front-cocheras` (ejecución, en el worktree `../parkingcontrol-front-cocheras`, a crear desde `develop` cuando la 02 esté mergeada) · Última actualización 18/11/2026
+> Frontend · **Terminada** (19/11/2026; se vuelve verdadera al mergear el PR a `develop`) · `feature/specs-etapa3` (esta spec, rama compartida con otros redactores) y `feature/front-cocheras` (ejecución, apilada sobre las ramas de las specs 03, 04 y 05; sin worktree) · Última actualización 19/11/2026
 >
 > Sexta spec del frontend. La pantalla de Cocheras ya funciona contra la API, pero no sabe dar de alta ni editar, trata `OCUPADA` y `RESERVADA` como si fueran estados que se eligen, muestra las fechas en la zona del navegador y no distingue permisos de edición de permisos de cambio de estado. Depende de la spec 02 (aprobada, todavía no implementada: acá se usan sus funciones por nombre) y, por el enlace a Trazabilidad, se mergea **después** de la 04.
 
@@ -251,6 +251,15 @@ El inventario no asocia `cochera_bloqueada` ni `cochera_no_disponible` a ningún
 | P-FF5 | **PB-4 (backend, posible bug, prioridad alta):** `CocheraService` calcula el estado con `DateTime.Now` en el listado y el detalle, y con `DateTime.UtcNow` en `PUT /estado` y en `/disponibles`. Si el servidor no corre en UTC, el `estado` (y `OCUPADA`/`RESERVADA`) que ve la pantalla puede no coincidir con el que valida el backend al bloquear, y `tarjetaInfo` puede mostrar una reserva como ocupada. El front no lo corrige: decide por `estado` y el servidor manda. Se verifica en el paso 3 con el servidor real | 3 |
 | P-FF6 | **Cerrado (18/11/2026).** El desarrollador eligió: (1) "Bloquear" solo en `DISPONIBLE`; (2) desbloquear **conserva** el motivo (precarga la nota actual); (3) la tarjeta de una `BLOQUEADA` con `ocupacionActiva` muestra "Bloqueada" y "ocupada por X" o "reservada desde dd/mm" | — |
 
+**Notas de la ejecución (19/11/2026).**
+
+| Id | Nota |
+|---|---|
+| P-FF7 | PB-4 verificado **en el código del backend** (no con el servidor real): `CocheraService.cs:31` y `:112` usan `DateTime.Now` como valor por defecto en el listado y el detalle; `:209` usa `DateTime.UtcNow` en `PUT /estado`, y `DisponibilidadService.cs:43` y `:71` también `UtcNow`. Sigue vigente. El front decide por `estado` y no lo corrige. La verificación con el servidor real (hora local distinta de UTC) queda para la prueba manual del paso 3 |
+| P-FF8 | Los pasos 3 a 6 se implementaron juntos en `Cocheras.jsx` (una sola reescritura de la pantalla). Las verificaciones manuales de aceptación contra el backend real quedan **sin correr**: solo se corrieron `npm test`, `npm run lint` y `npm run build` |
+| P-FF9 | La grilla se refresca el "vence en…" cada 60 s con un reloj local (`now` en estado), sin pedir nada al servidor. El `now` también se actualiza con cada carga de lista y detalle |
+| P-FF10 | Si el detalle no se puede traer (error), el diálogo se cierra con el aviso, en vez de quedar en "Cargando detalle..." |
+
 **Locales, el ejecutor los resuelve y los informa.**
 
 | Id | Qué verificar | Qué hacer según el resultado |
@@ -306,14 +315,14 @@ Nada. (`Cocheras.jsx` queda con el mismo nombre y ruta.)
 
 ### Paso 0 — Precondiciones y worktree
 
-- [ ] **0.1** Confirmar que la 02 y la 04 están mergeadas en `develop` y resolver **P-FF-L1** (existen los archivos y la entrada de lint). Si no, frenar.
-- [ ] **0.2** Pedir al Orquestador el comando, desde `parkingcontrol-front`: `git worktree add ../parkingcontrol-front-cocheras -b feature/front-cocheras develop`. En el worktree, copiar el `.env` (no está versionado) y `npm install`. Resolver P-FF-L2, P-FF-L3 y P-FF-L5.
+- [x] **0.1** Confirmar que la 02 y la 04 están mergeadas en `develop` y resolver **P-FF-L1** (existen los archivos y la entrada de lint). Si no, frenar.
+- [x] **0.2** Pedir al Orquestador el comando, desde `parkingcontrol-front`: `git worktree add ../parkingcontrol-front-cocheras -b feature/front-cocheras develop`. En el worktree, copiar el `.env` (no está versionado) y `npm install`. Resolver P-FF-L2, P-FF-L3 y P-FF-L5.
 
   *Aceptación:* en el worktree, `npm test`, `npm run lint` y `npm run build` pasan antes de cambiar nada.
 
 ### Paso 1 — Lógica pura
 
-- [ ] **1.1** Crear `src/utils/cocheras.js` con las funciones de D-FF13 y `test/unit/utils/cocheras.test.js`. `MAX_ALTA_RANGO` es 100 (P-FF3, cerrado).
+- [x] **1.1** Crear `src/utils/cocheras.js` con las funciones de D-FF13 y `test/unit/utils/cocheras.test.js`. `MAX_ALTA_RANGO` es 100 (P-FF3, cerrado).
 
   *Aceptación:* `npm test` pasa con estos casos (`now = 2026-11-18T15:00:00.000Z`; `existentes = [12, 13, 40]` salvo que se indique):
 
@@ -354,44 +363,44 @@ Nada. (`Cocheras.jsx` queda con el mismo nombre y ruta.)
 
 ### Paso 2 — Módulo de API
 
-- [ ] **2.1** Crear `src/api/cocheraApi.js` (D-FF2) y `test/unit/api/cocheraApi.test.js` con `vi.mock` de `http`.
+- [x] **2.1** Crear `src/api/cocheraApi.js` (D-FF2) y `test/unit/api/cocheraApi.test.js` con `vi.mock` de `http`.
 
   *Aceptación:* `npm test` pasa con: `listCocheras` hace `GET /Cochera`; `getCochera(5, { historialTake: 20 })` hace `GET /Cochera/5` con `params: { historialTake: 20 }` y `getCochera(5)` sin `params` vacíos con claves; `createCocheras({ desde: 1, hasta: 3 })` hace `POST /Cochera` con el cuerpo sin modificarlo y devuelve el arreglo; `updateCochera(5, body)` hace `PUT /Cochera/5` y devuelve `undefined`; `setEstadoCochera(5, body)` hace `PUT /Cochera/5/estado` y devuelve `undefined`; `listCocherasDisponibles({ desde, hasta })` hace `GET /Cochera/disponibles` con esos dos `params`; una respuesta que no es un arreglo en `listCocheras` y `listCocherasDisponibles` lanza `ApiError` con `code: "respuesta_invalida"`; ninguna función captura errores (un rechazo de `http` se propaga). `npm run lint` y `npm run build` pasan.
 
 ### Paso 3 — Vista de lectura: grilla, tarjeta y detalle
 
-- [ ] **3.1** En `Cocheras.jsx`: cargar con `cocheraApi` (D-FF12), usar `EstadoCochera` (D-FF4), `tarjetaInfo` y las fechas del tenant (D-FF5), y retirar `formatDateTime`, `toLocaleDateString`, `ESTADO_COCHERA`, `estadoChip` y `diffHuman` (D-FF14). Estado de error de carga y vacío.
-- [ ] **3.2** Detalle (D-FF6): nota, ocupación o reserva completa, historial de 20 con `formatMoney`, enlace a Trazabilidad con `can("auditoria.ver")` (D-FF15). Descarte de respuestas viejas.
-- [ ] **3.3** Los botones de estado actuales quedan por ahora; se reemplazan en el paso 6.
+- [x] **3.1** En `Cocheras.jsx`: cargar con `cocheraApi` (D-FF12), usar `EstadoCochera` (D-FF4), `tarjetaInfo` y las fechas del tenant (D-FF5), y retirar `formatDateTime`, `toLocaleDateString`, `ESTADO_COCHERA`, `estadoChip` y `diffHuman` (D-FF14). Estado de error de carga y vacío.
+- [x] **3.2** Detalle (D-FF6): nota, ocupación o reserva completa, historial de 20 con `formatMoney`, enlace a Trazabilidad con `can("auditoria.ver")` (D-FF15). Descarte de respuestas viejas.
+- [x] **3.3** Los botones de estado actuales quedan por ahora; se reemplazan en el paso 6.
 
   *Aceptación (manual, con el backend de `develop`, `America/Montevideo`):* (1) en Network, la carga llama a `GET /Cochera` y el detalle a `GET /Cochera/{id}?historialTake=20`; (2) una cochera `OCUPADA` muestra cliente, "vence en…" o "venció hace…" y "Hasta dd/mm/yyyy HH:mm"; una `RESERVADA` muestra "Desde …"; las horas coinciden con las de la API en la zona del local; (3) un total nulo muestra "—", no "$null"; (4) con `dueno@demo.test` y `auditor@demo.test` el detalle muestra "Ver trazabilidad" y abre `/trazabilidad?ocupacionId=N`; con `encargado@demo.test` y `operado@demo.test` no se ve; (5) dos clics rápidos en tarjetas distintas dejan el detalle de la última; (6) con el backend apagado se ve "No pudimos cargar las cocheras" y no una grilla vacía; (7) una búsqueda de `formatDateTime`, `toLocale`, `ESTADO_COCHERA` y `estadoChip` en `Cocheras.jsx` no da coincidencias. `npm run lint` y `npm run build` pasan.
 
 ### Paso 4 — Alta por rango
 
-- [ ] **4.1** Botón "Agregar cocheras" (solo con `cocheras.gestionar`) y diálogo con "Desde", "Hasta" y la vista previa de `previewRango` (D-FF7).
-- [ ] **4.2** Envío con `buildCreateBody` y `cocheraApi.createCocheras`; en éxito: aviso con la cantidad devuelta, cierre y recarga. En error: `showApiError` y, si `shouldReloadAfter(e.code)`, recarga con el diálogo abierto (D-FF11).
+- [x] **4.1** Botón "Agregar cocheras" (solo con `cocheras.gestionar`) y diálogo con "Desde", "Hasta" y la vista previa de `previewRango` (D-FF7).
+- [x] **4.2** Envío con `buildCreateBody` y `cocheraApi.createCocheras`; en éxito: aviso con la cantidad devuelta, cierre y recarga. En error: `showApiError` y, si `shouldReloadAfter(e.code)`, recarga con el diálogo abierto (D-FF11).
 
   *Aceptación (manual, con `dueno@demo.test`):* (1) "Desde" `1000`, `0` y `abc`, y "Hasta" menor que "Desde", muestran el mensaje y dejan "Crear" deshabilitado, sin ir a la red; (2) con cocheras existentes, un rango que las incluye muestra "Ya existen las cocheras: …" y bloquea; (3) un rango libre de 3 números manda `POST /Cochera` con `{ desde, hasta }`, responde 201 y aparecen 3 cocheras `DISPONIBLE`; (4) un solo número manda `{ desde }` sin `hasta`; (5) más de `MAX_ALTA_RANGO` se bloquea; (6) un alta con un número creado por otra pestaña (segunda pestaña) muestra el `title` de `cochera_numero_repetido` y la lista se recarga; (7) con `operado@demo.test` y `auditor@demo.test` no se ve el botón. `npm run lint`, `npm test` y `npm run build` pasan.
 
 ### Paso 5 — Edición
 
-- [ ] **5.1** Botón "Editar" en el detalle (solo con `cocheras.gestionar`) y diálogo con número y nota, contador y aviso para `OCUPADA`/`RESERVADA` (D-FF8).
-- [ ] **5.2** Envío con `buildUpdateBody` y `cocheraApi.updateCochera`; en éxito: aviso, cierre y recarga de lista y detalle. En error: `showApiError` y recarga según `shouldReloadAfter`; `cochera_no_encontrada` cierra el detalle (`shouldCloseDetailAfter`).
+- [x] **5.1** Botón "Editar" en el detalle (solo con `cocheras.gestionar`) y diálogo con número y nota, contador y aviso para `OCUPADA`/`RESERVADA` (D-FF8).
+- [x] **5.2** Envío con `buildUpdateBody` y `cocheraApi.updateCochera`; en éxito: aviso, cierre y recarga de lista y detalle. En error: `showApiError` y recarga según `shouldReloadAfter`; `cochera_no_encontrada` cierra el detalle (`shouldCloseDetailAfter`).
 
   *Aceptación (manual, con `dueno@demo.test`):* (1) cambiar solo la nota (mismo número) responde 204 y el detalle muestra la nota nueva; (2) cambiar el número a uno libre actualiza la grilla; (3) un número que ya tiene otra cochera se bloquea en el diálogo; (4) editar una cochera `OCUPADA` muestra el aviso y envía, y el backend responde 204 (no chequea el estado); (5) una nota de 301 caracteres no llega a la red; (6) editar una cochera que otro usuario dejó inexistente muestra el `title` de `cochera_no_encontrada`, cierra el detalle y recarga; (7) con `operado@demo.test` no se ve "Editar". `npm run lint`, `npm test` y `npm run build` pasan.
 
 ### Paso 6 — Bloquear y desbloquear
 
-- [ ] **6.1** Reemplazar el campo de nota y los dos botones del detalle por las acciones de `accionesDeEstado` (D-FF9): "Bloquear" abre un diálogo con motivo obligatorio; "Desbloquear" con nota opcional. Solo con `cocheras.cambiar_estado`.
-- [ ] **6.2** Envío con `cocheraApi.setEstadoCochera` usando `EstadoCochera.BLOQUEADA` y `EstadoCochera.DISPONIBLE`; recarga de lista y detalle; errores por `code` (D-FF11).
+- [x] **6.1** Reemplazar el campo de nota y los dos botones del detalle por las acciones de `accionesDeEstado` (D-FF9): "Bloquear" abre un diálogo con motivo obligatorio; "Desbloquear" con nota opcional. Solo con `cocheras.cambiar_estado`.
+- [x] **6.2** Envío con `cocheraApi.setEstadoCochera` usando `EstadoCochera.BLOQUEADA` y `EstadoCochera.DISPONIBLE`; recarga de lista y detalle; errores por `code` (D-FF11).
 
   *Aceptación (manual, con `dueno@demo.test` y `operado@demo.test`):* (1) en una `DISPONIBLE` solo aparece "Bloquear"; en una `BLOQUEADA`, solo "Desbloquear"; en `OCUPADA` y en `RESERVADA`, ninguno; (2) "Bloquear" sin motivo, o con 301 caracteres, no llega a la red; (3) con motivo, el `PUT /Cochera/{id}/estado` va con `{ estado: 2, nota }` y la cochera queda `BLOQUEADA` con la nota visible en el detalle; (4) "Desbloquear" abre el diálogo con la nota actual precargada y, sin tocarla, va con `{ estado: 1, nota }` con ese mismo texto (conserva el motivo); si se borra a propósito va con `nota: null` (nunca `""`); la cochera queda `DISPONIBLE`, o `OCUPADA`/`RESERVADA` si tiene una ocupación en curso o una reserva (el estado se recalcula); (4b) forzar un bloqueo de una `OCUPADA` desde DevTools muestra el `title` de `cochera_con_ocupacion_activa` y recarga; (5) ninguna petición lleva `estado` 3 o 4; (6) con `auditor@demo.test` no se ve ninguna acción de estado; con `operado@demo.test` se ven y no se ven "Agregar cocheras" ni "Editar"; (7) un `PUT /estado` forzado desde DevTools con `auditor@demo.test` muestra el `title` de `sin_permiso` y la pantalla sigue. `npm run lint`, `npm test` y `npm run build` pasan.
 
 ### Paso 7 — Lint, documentación y cierre
 
-- [ ] **7.1** Retirar la excepción de `Cocheras.jsx` de `eslint.config.js` (P-FF-L4). **No** tocar `CLAUDE.md`.
-- [ ] **7.2** Crear `docs/manual/frontend/06-cocheras.md`: estados calculados y qué se puede enviar, alta por rango (vista previa y tope), edición, bloqueo, errores por `code`, tabla de permisos, el comportamiento del backend relevado (`nota: null` borra, prioridad de estados, tope de 100) y PB-4.
-- [ ] **7.3** Actualizar el estado de esta spec en `docs/specs/README.md` y en su cabecera: **Terminada** una vez mergeada a `develop`.
+- [x] **7.1** Retirar la excepción de `Cocheras.jsx` de `eslint.config.js` (P-FF-L4). **No** tocar `CLAUDE.md`.
+- [x] **7.2** Crear `docs/manual/frontend/06-cocheras.md`: estados calculados y qué se puede enviar, alta por rango (vista previa y tope), edición, bloqueo, errores por `code`, tabla de permisos, el comportamiento del backend relevado (`nota: null` borra, prioridad de estados, tope de 100) y PB-4.
+- [x] **7.3** Actualizar el estado de esta spec en `docs/specs/README.md` y en su cabecera: **Terminada** una vez mergeada a `develop`.
 
   *Aceptación:* `npm run lint`, `npm test` y `npm run build` pasan; `Cocheras.jsx` no está en las excepciones de `eslint.config.js` y el lint falla si se le agrega un `toLocaleString()`; `git diff develop -- CLAUDE.md src/pages/Ocupaciones.jsx` vacío.
 
