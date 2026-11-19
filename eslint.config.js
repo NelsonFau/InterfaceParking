@@ -84,10 +84,6 @@ export default defineConfig([
   sinToLocale(['src/utils/fechas.js', 'src/utils/formato.js']),
   // D-FB9: excepciones TEMPORALES. Cada una se saca cuando la spec indicada reescribe la página
   // (sección 5.4 de la spec frontend 02). Al sacarla, la página usa formatInstant / formatMoney.
-  // OperationalAlerts.jsx: se retira con la spec 05.
-  sinToLocale(['src/pages/OperationalAlerts.jsx']),
-  // OperationalDashboard.jsx: se retira con la spec 05 (o con la 09 si la parte de caja se mueve allí; P-FB8).
-  sinToLocale(['src/pages/OperationalDashboard.jsx']),
   // Cocheras.jsx: se retira con la spec 06.
   sinToLocale(['src/pages/Cocheras.jsx']),
   // Ocupaciones.jsx: se retira con la spec 07.

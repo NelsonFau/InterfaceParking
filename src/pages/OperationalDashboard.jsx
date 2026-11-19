@@ -1,56 +1,62 @@
-import { useEffect, useMemo, useState } from "react";
+// Monitor operativo: indicadores de alertas y críticas recientes (spec 05, D-FE3, D-FE11, D-FE12).
+// Cada indicador sale del `total` de una consulta liviana y se carga por separado: si una falla,
+// esa tarjeta muestra "—" y las demás siguen.
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  Box,
-  Button,
-  Card,
-  CardContent,
-  Chip,
-  Divider,
-  Grid,
-  Skeleton,
-  Stack,
-  Typography,
-} from "@mui/material";
+import { Alert, Box, Button, Card, CardContent, Chip, Divider, Grid, LinearProgress, Skeleton, Stack, Typography } from "@mui/material";
 
-import { operationalAlertsApi } from "../api/operationalAlertsApi";
-import { pagosApi } from "../api/pagosApi";
 import { showApiError } from "../api/errors";
+import { countAlertas, listAlertas } from "../api/operationalAlertsApi";
+import { SeveridadAlerta, TipoAlertaOperativa, colorOf, labelOf } from "../constants/enums";
 import {
-  SeveridadAlerta,
-  TipoAlertaOperativa,
-  colorOf,
-  labelOf,
-} from "../constants/enums";
+  ALERTAS_PATH,
+  ALERTS_REFRESH_MS,
+  TIPOS_OCUPACIONES_VENCIDAS,
+  TIPOS_PAGOS_SOSPECHOSOS,
+  buildAlertasPath,
+  sumCounts,
+} from "../utils/alertas";
+import { formatNumber } from "../utils/formato";
+import { useAutoRefresh } from "../utils/useAutoRefresh";
+import { useTenantDates } from "../utils/useTenantDates";
 
-function todayISO() {
-  return new Date().toISOString().slice(0, 10);
+const CRITICAS_RECIENTES = 5;
+const ABIERTAS = { resuelta: false };
+
+// 8 pedidos livianos en paralelo (los de conteo traen una sola fila). Devuelve los resultados sueltos.
+function fetchAll() {
+  return Promise.allSettled([
+    countAlertas(ABIERTAS),
+    listAlertas({ ...ABIERTAS, severidad: SeveridadAlerta.CRITICA, page: 1, pageSize: CRITICAS_RECIENTES }),
+    countAlertas({ ...ABIERTAS, severidad: SeveridadAlerta.ALTA }),
+    ...TIPOS_PAGOS_SOSPECHOSOS.map((tipo) => countAlertas({ ...ABIERTAS, tipo })),
+    ...TIPOS_OCUPACIONES_VENCIDAS.map((tipo) => countAlertas({ ...ABIERTAS, tipo })),
+  ]);
 }
 
-function money(value) {
-  const n = Number(value ?? 0);
-
-  return new Intl.NumberFormat("es-UY", {
-    style: "currency",
-    currency: "UYU",
-    maximumFractionDigits: 0,
-  }).format(n);
-}
-
-function fmtDate(dt) {
-  if (!dt) return "-";
-  const d = new Date(dt);
-  if (Number.isNaN(d.getTime())) return String(dt);
-  return d.toLocaleString();
+// Pasa los resultados a lo que muestra la pantalla; lo que falló queda en `null`.
+function toView(settled) {
+  const [abiertas, criticas, altas, ...resto] = settled;
+  const pagos = resto.slice(0, TIPOS_PAGOS_SOSPECHOSOS.length);
+  const vencidas = resto.slice(TIPOS_PAGOS_SOSPECHOSOS.length);
+  return {
+    abiertas: sumCounts([abiertas]),
+    criticas: criticas.status === "fulfilled" ? criticas.value.total : null,
+    criticasRecientes: criticas.status === "fulfilled" ? criticas.value.items : null,
+    altas: sumCounts([altas]),
+    pagosSospechosos: sumCounts(pagos),
+    ocupacionesVencidas: sumCounts(vencidas),
+  };
 }
 
 function KpiCard({ title, value, subtitle, danger }) {
+  const active = danger && typeof value === "number" && value > 0;
   return (
     <Card
       sx={{
         borderRadius: 3,
         border: "1px solid",
-        borderColor: danger ? "error.main" : "divider",
+        borderColor: active ? "error.main" : "divider",
         height: "100%",
       }}
     >
@@ -59,15 +65,8 @@ function KpiCard({ title, value, subtitle, danger }) {
           {title}
         </Typography>
 
-        <Typography
-          variant="h4"
-          sx={{
-            fontWeight: 900,
-            mt: 0.5,
-            color: danger ? "error.main" : "text.primary",
-          }}
-        >
-          {value}
+        <Typography variant="h4" sx={{ fontWeight: 900, mt: 0.5, color: active ? "error.main" : "text.primary" }}>
+          {formatNumber(value)}
         </Typography>
 
         {subtitle && (
@@ -80,352 +79,209 @@ function KpiCard({ title, value, subtitle, danger }) {
   );
 }
 
-function SeverityChip({ severidad }) {
-  const valor = Number(severidad);
-  const data = Object.values(SeveridadAlerta).includes(valor)
-    ? { label: labelOf(SeveridadAlerta, valor), color: colorOf(SeveridadAlerta, valor) }
-    : { label: "SIN SEVERIDAD", color: "default" };
-
-  return (
-    <Chip
-      size="small"
-      label={data.label}
-      color={data.color}
-      sx={{ fontWeight: 800 }}
-    />
-  );
-}
-
 export default function OperationalDashboard() {
   const navigate = useNavigate();
+  const { formatInstant } = useTenantDates();
 
-  const [alertas, setAlertas] = useState([]);
-  const [caja, setCaja] = useState(null);
-  const [loading, setLoading] = useState(false);
-
-  async function cargarDatos() {
-    try {
-      setLoading(true);
-
-      const [alertasRes, cajaRes] = await Promise.all([
-        operationalAlertsApi.getAll({
-          page: 1,
-          pageSize: 50,
-          resuelta: false,
-        }),
-        pagosApi.getCajaDiaria(todayISO()),
-      ]);
-
-      setAlertas(Array.isArray(alertasRes.data) ? alertasRes.data : []);
-      setCaja(cajaRes.data);
-    } catch (e) {
-      showApiError(e);
-    } finally {
-      setLoading(false);
-    }
-  }
+  const [reloadKey, setReloadKey] = useState(0);
+  // `{ key, view, failed }` del último pedido que terminó; `null` hasta la primera carga.
+  const [result, setResult] = useState(null);
+  const [lastLoadedAt, setLastLoadedAt] = useState(null);
+  const [lastAttemptAt, setLastAttemptAt] = useState(null);
+  // Un fallo de una actualización automática no abre un aviso (D-FE12); lo demás sí.
+  const modeRef = useRef("manual");
+  const inFlightRef = useRef(false);
 
   useEffect(() => {
-    cargarDatos();
-  }, []);
-
-  const metricas = useMemo(() => {
-    const abiertas = alertas.filter((a) => !a.resuelta).length;
-
-    const criticas = alertas.filter(
-      (a) => !a.resuelta && Number(a.severidad) === 4
-    ).length;
-
-    const altas = alertas.filter(
-      (a) => !a.resuelta && Number(a.severidad) === 3
-    ).length;
-
-    const pagosSospechosos = alertas.filter((a) =>
-      [5, 6, 7].includes(Number(a.tipo))
-    ).length;
-
-    const ocupacionesVencidas = alertas.filter((a) =>
-      [1, 2].includes(Number(a.tipo))
-    ).length;
-
-    const criticasRecientes = alertas
-      .filter((a) => Number(a.severidad) === 4)
-      .slice(0, 5);
-
-    return {
-      abiertas,
-      criticas,
-      altas,
-      pagosSospechosos,
-      ocupacionesVencidas,
-      criticasRecientes,
+    const manual = modeRef.current !== "auto";
+    modeRef.current = "manual";
+    inFlightRef.current = true;
+    let ignore = false;
+    (async () => {
+      const settled = await fetchAll();
+      if (ignore) return;
+      const rechazos = settled.filter((s) => s.status === "rejected");
+      // Un solo aviso con el primer error, para no apilar ocho si el servidor no responde.
+      if (rechazos.length > 0 && manual) showApiError(rechazos[0].reason);
+      setResult((prev) => ({
+        key: reloadKey,
+        // Si todo falló se conserva lo que ya se veía.
+        view: rechazos.length === settled.length && prev ? prev.view : toView(settled),
+        failed: rechazos.length > 0,
+      }));
+      if (rechazos.length < settled.length) setLastLoadedAt(Date.now());
+      setLastAttemptAt(Date.now());
+      inFlightRef.current = false;
+    })();
+    return () => {
+      ignore = true;
     };
-  }, [alertas]);
+  }, [reloadKey]);
+
+  const reload = useCallback(() => setReloadKey((k) => k + 1), []);
+  const refreshAuto = useCallback(() => {
+    if (inFlightRef.current) return;
+    modeRef.current = "auto";
+    reload();
+  }, [reload]);
+  useAutoRefresh({ lastAttemptAt, onRefresh: refreshAuto, intervalMs: ALERTS_REFRESH_MS });
+
+  const firstLoad = result === null;
+  const loading = result?.key !== reloadKey;
+  const view = result?.view;
+  const criticasPath = buildAlertasPath({ severidad: SeveridadAlerta.CRITICA });
+
+  function renderCriticas() {
+    if (firstLoad) {
+      return (
+        <Stack spacing={1}>
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} variant="rounded" height={72} />
+          ))}
+        </Stack>
+      );
+    }
+    if (view.criticasRecientes === null) {
+      return (
+        <Alert
+          severity="error"
+          action={
+            <Button color="inherit" size="small" onClick={reload} disabled={loading}>
+              Reintentar
+            </Button>
+          }
+        >
+          No se pudieron cargar las alertas críticas
+        </Alert>
+      );
+    }
+    if (view.criticasRecientes.length === 0) {
+      return <Typography color="text.secondary">No hay alertas críticas abiertas.</Typography>;
+    }
+    return (
+      <Stack spacing={1.5}>
+        {view.criticasRecientes.map((a) => (
+          <Card key={a.id} variant="outlined" sx={{ borderRadius: 2, borderColor: "error.main" }}>
+            <CardContent sx={{ py: 1.5 }}>
+              <Stack spacing={1}>
+                <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between">
+                  <Chip
+                    size="small"
+                    label={labelOf(SeveridadAlerta, a.severidad)}
+                    color={colorOf(SeveridadAlerta, a.severidad)}
+                    sx={{ fontWeight: 800 }}
+                  />
+                  <Typography variant="caption" color="text.secondary">
+                    {formatInstant(a.fechaCreacion)}
+                  </Typography>
+                </Stack>
+
+                <Box>
+                  <Typography sx={{ fontWeight: 800 }}>{labelOf(TipoAlertaOperativa, a.tipo)}</Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 0.3 }}>
+                    {a.mensaje}
+                  </Typography>
+                </Box>
+
+                <Button
+                  size="small"
+                  variant="contained"
+                  color="error"
+                  onClick={() => navigate(criticasPath)}
+                  sx={{ alignSelf: "flex-start" }}
+                >
+                  Revisar
+                </Button>
+              </Stack>
+            </CardContent>
+          </Card>
+        ))}
+      </Stack>
+    );
+  }
+
+  const kpis = [
+    { title: "Alertas abiertas", key: "abiertas", subtitle: "Pendientes de revisión" },
+    { title: "Críticas", key: "criticas", subtitle: "Requieren acción inmediata" },
+    { title: "Alta severidad", key: "altas", subtitle: "Riesgo operativo alto" },
+    { title: "Pagos sospechosos", key: "pagosSospechosos", subtitle: "Sin pago, menor o tardío" },
+    { title: "Ocupaciones vencidas", key: "ocupacionesVencidas", subtitle: "Sin cierre o sin pago" },
+  ];
 
   return (
     <Box>
       <Stack spacing={2.5}>
-        <Stack
-          direction={{ xs: "column", md: "row" }}
-          justifyContent="space-between"
-          spacing={2}
-        >
+        <Stack direction={{ xs: "column", md: "row" }} justifyContent="space-between" spacing={2}>
           <Box>
             <Typography variant="h4" sx={{ fontWeight: 900 }}>
               Monitor operativo
             </Typography>
 
             <Typography sx={{ color: "text.secondary", mt: 0.5 }}>
-              Centro de control para alertas, caja diaria y riesgo operativo del garage.
+              Centro de control de alertas y riesgo operativo del garage.
             </Typography>
           </Box>
 
-          <Stack direction="row" spacing={1}>
-            <Button variant="outlined" onClick={cargarDatos}>
-              Actualizar
-            </Button>
+          <Stack alignItems={{ xs: "flex-start", md: "flex-end" }} spacing={0.5}>
+            <Stack direction="row" spacing={1}>
+              <Button variant="outlined" onClick={reload} disabled={loading}>
+                Actualizar
+              </Button>
 
-            <Button
-              variant="contained"
-              onClick={() => navigate("/alertas-operativas")}
-            >
-              Ver alertas
-            </Button>
+              <Button variant="contained" onClick={() => navigate(ALERTAS_PATH)}>
+                Ver alertas
+              </Button>
+            </Stack>
+            {lastLoadedAt !== null && (
+              <Typography variant="caption" color="text.secondary">
+                Actualizado: {formatInstant(new Date(lastLoadedAt).toISOString())}
+              </Typography>
+            )}
+            {!firstLoad && !loading && result.failed && (
+              <Typography variant="caption" color="error">
+                No se pudo actualizar. Reintentá con 'Actualizar'
+              </Typography>
+            )}
           </Stack>
         </Stack>
 
-        {loading ? (
-          <Grid container spacing={2}>
-            {Array.from({ length: 5 }).map((_, i) => (
-              <Grid item xs={12} md={2.4} key={i}>
-                <Skeleton variant="rounded" height={120} />
-              </Grid>
-            ))}
-          </Grid>
-        ) : (
-          <Grid container spacing={2}>
-            <Grid item xs={12} md={2.4}>
-              <KpiCard
-                title="Alertas abiertas"
-                value={metricas.abiertas}
-                subtitle="Pendientes de revisión"
-                danger={metricas.abiertas > 0}
-              />
-            </Grid>
-
-            <Grid item xs={12} md={2.4}>
-              <KpiCard
-                title="Críticas"
-                value={metricas.criticas}
-                subtitle="Requieren acción inmediata"
-                danger={metricas.criticas > 0}
-              />
-            </Grid>
-
-            <Grid item xs={12} md={2.4}>
-              <KpiCard
-                title="Alta severidad"
-                value={metricas.altas}
-                subtitle="Riesgo operativo alto"
-                danger={metricas.altas > 0}
-              />
-            </Grid>
-
-            <Grid item xs={12} md={2.4}>
-              <KpiCard
-                title="Pagos sospechosos"
-                value={metricas.pagosSospechosos}
-                subtitle="Sin pago, menor o tardío"
-                danger={metricas.pagosSospechosos > 0}
-              />
-            </Grid>
-
-            <Grid item xs={12} md={2.4}>
-              <KpiCard
-                title="Ocupaciones vencidas"
-                value={metricas.ocupacionesVencidas}
-                subtitle="Sin cierre o sin pago"
-                danger={metricas.ocupacionesVencidas > 0}
-              />
-            </Grid>
-          </Grid>
-        )}
+        {!firstLoad && loading && <LinearProgress />}
 
         <Grid container spacing={2}>
-          <Grid item xs={12} md={7}>
-            <Card sx={{ borderRadius: 3, height: "100%" }}>
-              <CardContent>
-                <Stack
-                  direction="row"
-                  justifyContent="space-between"
-                  alignItems="center"
-                >
-                  <Box>
-                    <Typography variant="h6" sx={{ fontWeight: 900 }}>
-                      Alertas críticas recientes
-                    </Typography>
+          {kpis.map(({ title, key, subtitle }) => (
+            <Grid size={{ xs: 12, md: 2.4 }} key={key}>
+              {firstLoad ? (
+                <Skeleton variant="rounded" height={120} />
+              ) : (
+                <KpiCard title={title} value={view[key]} subtitle={subtitle} danger />
+              )}
+            </Grid>
+          ))}
+        </Grid>
 
-                    <Typography variant="body2" color="text.secondary">
-                      Casos que deberían revisarse primero.
-                    </Typography>
-                  </Box>
-
-                  <Button
-                    size="small"
-                    onClick={() => navigate("/alertas-operativas")}
-                  >
-                    Ver todas
-                  </Button>
-                </Stack>
-
-                <Divider sx={{ my: 2 }} />
-
-                {loading ? (
-                  <Stack spacing={1}>
-                    {Array.from({ length: 4 }).map((_, i) => (
-                      <Skeleton key={i} variant="rounded" height={72} />
-                    ))}
-                  </Stack>
-                ) : metricas.criticasRecientes.length === 0 ? (
-                  <Typography color="text.secondary">
-                    No hay alertas críticas abiertas.
-                  </Typography>
-                ) : (
-                  <Stack spacing={1.5}>
-                    {metricas.criticasRecientes.map((a) => (
-                      <Card
-                        key={a.id}
-                        variant="outlined"
-                        sx={{
-                          borderRadius: 2,
-                          borderColor: "error.main",
-                        }}
-                      >
-                        <CardContent sx={{ py: 1.5 }}>
-                          <Stack spacing={1}>
-                            <Stack
-                              direction="row"
-                              spacing={1}
-                              alignItems="center"
-                              justifyContent="space-between"
-                            >
-                              <SeverityChip severidad={a.severidad} />
-
-                              <Typography
-                                variant="caption"
-                                color="text.secondary"
-                              >
-                                {fmtDate(a.fechaCreacion)}
-                              </Typography>
-                            </Stack>
-
-                            <Box>
-                              <Typography sx={{ fontWeight: 800 }}>
-                                {labelOf(TipoAlertaOperativa, Number(a.tipo))}
-                              </Typography>
-
-                              <Typography
-                                variant="body2"
-                                color="text.secondary"
-                                sx={{ mt: 0.3 }}
-                              >
-                                {a.mensaje}
-                              </Typography>
-                            </Box>
-
-                            <Button
-                              size="small"
-                              variant="contained"
-                              color="error"
-                              onClick={() => navigate("/alertas-operativas")}
-                              sx={{ alignSelf: "flex-start" }}
-                            >
-                              Revisar
-                            </Button>
-                          </Stack>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </Stack>
-                )}
-              </CardContent>
-            </Card>
-          </Grid>
-
-          <Grid item xs={12} md={5}>
-            <Card sx={{ borderRadius: 3, height: "100%" }}>
-              <CardContent>
+        <Card sx={{ borderRadius: 3 }}>
+          <CardContent>
+            <Stack direction="row" justifyContent="space-between" alignItems="center">
+              <Box>
                 <Typography variant="h6" sx={{ fontWeight: 900 }}>
-                  Caja diaria
+                  Alertas críticas recientes
                 </Typography>
 
                 <Typography variant="body2" color="text.secondary">
-                  Resumen financiero del día.
+                  Casos que deberían revisarse primero.
                 </Typography>
+              </Box>
 
-                <Divider sx={{ my: 2 }} />
+              <Button size="small" onClick={() => navigate(criticasPath)}>
+                Ver todas
+              </Button>
+            </Stack>
 
-                {loading ? (
-                  <Stack spacing={1}>
-                    <Skeleton variant="rounded" height={50} />
-                    <Skeleton variant="rounded" height={50} />
-                    <Skeleton variant="rounded" height={50} />
-                  </Stack>
-                ) : !caja ? (
-                  <Typography color="text.secondary">
-                    No se pudo cargar la caja diaria.
-                  </Typography>
-                ) : (
-                  <Stack spacing={1.5}>
-                    <Stack direction="row" justifyContent="space-between">
-                      <Typography color="text.secondary">Total cobrado</Typography>
-                      <Typography sx={{ fontWeight: 900 }}>
-                        {money(caja.totalCobrado ?? caja.total)}
-                      </Typography>
-                    </Stack>
+            <Divider sx={{ my: 2 }} />
 
-                    <Stack direction="row" justifyContent="space-between">
-                      <Typography color="text.secondary">Efectivo</Typography>
-                      <Typography sx={{ fontWeight: 700 }}>
-                        {money(caja.totalEfectivo ?? caja.efectivo)}
-                      </Typography>
-                    </Stack>
-
-                    <Stack direction="row" justifyContent="space-between">
-                      <Typography color="text.secondary">Tarjeta</Typography>
-                      <Typography sx={{ fontWeight: 700 }}>
-                        {money(caja.totalTarjeta ?? caja.tarjeta)}
-                      </Typography>
-                    </Stack>
-
-                    <Stack direction="row" justifyContent="space-between">
-                      <Typography color="text.secondary">Transferencia</Typography>
-                      <Typography sx={{ fontWeight: 700 }}>
-                        {money(caja.totalTransferencia ?? caja.transferencia)}
-                      </Typography>
-                    </Stack>
-
-                    <Divider />
-
-                    <Stack direction="row" justifyContent="space-between">
-                      <Typography color="text.secondary">Cantidad de pagos</Typography>
-                      <Typography sx={{ fontWeight: 700 }}>
-                        {caja.cantidadPagos ?? caja.pagos?.length ?? "-"}
-                      </Typography>
-                    </Stack>
-
-                    <Button
-                        variant="outlined"
-                        onClick={() => navigate("/caja-diaria")}
-                        >
-                        Ver detalle de caja
-                    </Button>
-                  </Stack>
-                )}
-              </CardContent>
-            </Card>
-          </Grid>
-        </Grid>
+            {renderCriticas()}
+          </CardContent>
+        </Card>
       </Stack>
     </Box>
   );

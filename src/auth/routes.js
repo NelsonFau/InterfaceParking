@@ -7,7 +7,8 @@ export const TRAZABILIDAD_PATH = "/trazabilidad";
 
 export const PRIVATE_ROUTES = [
   { path: "/dashboard", label: "Dashboard", permiso: "panel.ver" },
-  // P-FA4: mezcla alertas y caja; se guarda con alertas.ver.
+  // P-FA4 cerrado (spec 05): el Monitor ya no mezcla caja, así que alertas.ver alcanza. Si la 09 repone un
+  // widget de caja, revisa si esta ruta debe exigir además caja.ver.
   { path: "/operaciones", label: "Monitor operativo", permiso: "alertas.ver" },
   { path: "/cocheras", label: "Cocheras", permiso: "cocheras.ver" },
   { path: "/ocupaciones", label: "Ocupaciones", permiso: "ocupaciones.ver" },

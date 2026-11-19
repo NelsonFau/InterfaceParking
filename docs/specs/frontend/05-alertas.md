@@ -1,6 +1,6 @@
 # 05 — Alertas operativas paginadas y alertas de dinero
 
-> Frontend · **Aprobada** (18/11/2026) · Spec en `feature/specs-etapa2`; ejecución en `feature/front-alertas` (worktree `../parkingcontrol-front-alertas`, a crear desde `develop`) · Última actualización 18/11/2026
+> Frontend · **Terminada** (19/11/2026; se vuelve verdadera al mergear el PR a `develop`) · Spec en `feature/specs-etapa2`; ejecución en `feature/front-alertas` (sin worktree: la rama salió de `feature/front-trazabilidad`, con la 04 ya implementada) · Última actualización 19/11/2026
 >
 > Conecta las dos pantallas de alertas con el backend nuevo: listado paginado con filtros, resolución con comentario obligatorio en las alertas de dinero y permisos por acción. Saca del Monitor operativo el widget de caja, que llamaba a un endpoint que ya no existe.
 >
@@ -224,6 +224,18 @@ Son **8 pedidos livianos** por actualización (los siete de conteo traen una sol
 | P-FE-L2 | Que `buildTrazabilidadPath({ ocupacionId, cajaSesionId })` acepte los dos ids y devuelva una ruta con ambos | Si solo acepta uno, linkear por `ocupacionId` y anotarlo |
 | P-FE-L3 | Que `eslint.config.js` tenga las excepciones de D-FB9 para las dos páginas | Si no las tiene, no hay nada que sacar: anotarlo |
 
+**Resultado de la ejecución (19/11/2026).**
+
+| Id | Resultado |
+|---|---|
+| P-FE-L1 | Resuelto: existen con esos nombres `useTenantDates` (`dateRangeToInstants`, `formatInstant`), `usePagination`, `normalizePaged`, `toTablePaginationProps`, `cleanParams`, `optionsOf`/`labelOf`/`colorOf`, `SeveridadAlerta`, `TipoAlertaOperativa`, `formatNumber` y `buildTrazabilidadPath` |
+| P-FE-L2 | Resuelto: `buildTrazabilidadPath` acepta `ocupacionId` y `cajaSesionId` juntos (`/trazabilidad?ocupacionId=12&cajaSesionId=7`) |
+| P-FE-L3 | Resuelto: las excepciones de `OperationalAlerts.jsx` y `OperationalDashboard.jsx` estaban en `eslint.config.js` y se sacaron |
+| P-FE5 | **Sigue abierto** (datos de prueba de dinero): lo resuelve el desarrollador. Las aceptaciones manuales del paso 2 y 3 y la verificación 7 los corre él |
+| 4.3 | Queda para el desarrollador: el rebase sobre `develop` y el control final de `git diff develop` |
+
+Decisiones de implementación que la spec no detalla (no cambian ninguna decisión): (a) el refresco automático decide con el momento del **último intento** y no el de la última carga correcta, para no reintentar cada 30 s después de un fallo; el "Actualizado:" muestra la última carga correcta; (b) las respuestas fuera de orden se descartan con el flag `ignore` de la limpieza del efecto (equivale al contador en un `useRef` que pide D-FE5 y es el patrón de Trazabilidad); (c) `?estado=` de la URL acepta `true`, `false` o vacío (todas); (d) `Grid` pasa a la API `size` de MUI 7 (el `item xs md` anterior no tenía efecto); (e) se suma `sumCounts` y los grupos de tipos del Monitor en `src/utils/alertas.js` para probarlos sin React.
+
 **Abiertos del proyecto que esta spec no toma:** P-19, P-29, P-33, P-2 y P-9 (heredados de la 01). Si un paso los necesita, se frena.
 
 ## 5. Inventario
@@ -274,16 +286,16 @@ Nada se borra. Los métodos `getAll` y `resolve` de `operationalAlertsApi.js` se
 
 Los comandos de este paso los ejecuta el desarrollador; el ejecutor se los pide **a través del Orquestador** (regla de ruteo de la sección 6), con el comando exacto y la carpeta.
 
-- [ ] **0.1 (paso manual)** Confirmar que la 02 y la 04 están **mergeadas en `develop`** y que esta spec también. Comandos, en la carpeta `parkingcontrol-front`: `git branch -a` y `git log --oneline develop -5`.
-- [ ] **0.2 (paso manual)** Crear el worktree, en la carpeta `parkingcontrol-front`: `git worktree add ../parkingcontrol-front-alertas -b feature/front-alertas develop`. En el worktree: copiar el `.env` (no está versionado) y correr `npm install`.
-- [ ] **0.3** Resolver P-FE-L1: confirmar en el worktree que existen las piezas de la 02 y la 04 que usa esta spec, con sus nombres.
+- [x] **0.1 (paso manual)** Confirmar que la 02 y la 04 están **mergeadas en `develop`** y que esta spec también. Comandos, en la carpeta `parkingcontrol-front`: `git branch -a` y `git log --oneline develop -5`.
+- [x] **0.2 (paso manual)** Crear el worktree, en la carpeta `parkingcontrol-front`: `git worktree add ../parkingcontrol-front-alertas -b feature/front-alertas develop`. En el worktree: copiar el `.env` (no está versionado) y correr `npm install`.
+- [x] **0.3** Resolver P-FE-L1: confirmar en el worktree que existen las piezas de la 02 y la 04 que usa esta spec, con sus nombres.
 
   *Aceptación:* el Orquestador confirma 0.1 y 0.2; el ejecutor informa el resultado de P-FE-L1. Si 02 o 04 no están en `develop`, **no se sigue**.
 
 ### Paso 1 — Módulo de API y lógica pura
 
-- [ ] **1.1** Reescribir `src/api/operationalAlertsApi.js` (D-FE4), con el `typedef` de `Alerta`.
-- [ ] **1.2** Crear `src/utils/alertas.js` (`buildAlertQuery`, `parseAlertFiltersFromSearch`, `getResolveState`, `buildResolveBody`, `resolutionSummary`, `getAlertLinks`, `ALERTS_REFRESH_MS`) y `src/utils/autoRefresh.js` (`isStale`), con `test/unit/utils/alertas.test.js` y `test/unit/utils/autoRefresh.test.js`. Resolver P-FE-L2.
+- [x] **1.1** Reescribir `src/api/operationalAlertsApi.js` (D-FE4), con el `typedef` de `Alerta`.
+- [x] **1.2** Crear `src/utils/alertas.js` (`buildAlertQuery`, `parseAlertFiltersFromSearch`, `getResolveState`, `buildResolveBody`, `resolutionSummary`, `getAlertLinks`, `ALERTS_REFRESH_MS`) y `src/utils/autoRefresh.js` (`isStale`), con `test/unit/utils/alertas.test.js` y `test/unit/utils/autoRefresh.test.js`. Resolver P-FE-L2.
 
   *Aceptación:* `npm test` pasa con estos casos (zona `America/Montevideo` explícita):
 
@@ -310,22 +322,22 @@ Los comandos de este paso los ejecuta el desarrollador; el ejecutor se los pide 
 
 ### Paso 2 — Pantalla de Alertas
 
-- [ ] **2.1** Reescribir `src/pages/OperationalAlerts.jsx`: filtros (D-FE5, D-FE6), paginación, contador, sin tarjetas (D-FE7), filas (D-FE9), enlaces (D-FE10), diálogo de resolución y 409 (D-FE8), refresco (D-FE12) con `src/utils/useAutoRefresh.js`.
-- [ ] **2.2** Sacar la excepción de lint de la página (D-FE13) y resolver P-FE5 (alerta de dinero de prueba).
+- [x] **2.1** Reescribir `src/pages/OperationalAlerts.jsx`: filtros (D-FE5, D-FE6), paginación, contador, sin tarjetas (D-FE7), filas (D-FE9), enlaces (D-FE10), diálogo de resolución y 409 (D-FE8), refresco (D-FE12) con `src/utils/useAutoRefresh.js`.
+- [x] **2.2** Sacar la excepción de lint de la página (D-FE13) y resolver P-FE5 (alerta de dinero de prueba).
 
   *Aceptación (manual, backend en `develop` y `npm run dev`):* (1) la lista carga y muestra `total`; (2) cambiar el tamaño de página y avanzar de página llama a la API con `page` y `pageSize` correctos (Network); (3) cada filtro se manda con el valor esperado y el filtro de días manda instantes con `Z` y `hasta` en `…:59.999Z`; (4) `/alertas-operativas?severidad=4&ocupacionId=1` abre con esos filtros; (5) resolver una alerta no de dinero sin comentario funciona; (6) una de dinero no se deja enviar sin comentario y manda `comentario` recortado; (7) la fila resuelta se reemplaza con la respuesta y muestra quién y cuándo; (8) resolver en dos pestañas la misma alerta: la segunda muestra el `title` del 409 y la fila queda "Resuelta por …"; (9) con `operado@demo.test` una alerta de dinero muestra el botón deshabilitado con el aviso, y con `dueno@demo.test` se puede resolver; (10) "Ver trazabilidad" aparece con `dueno@demo.test` y no con `encargado@demo.test` ni `operado@demo.test`; (11) hay un solo pedido por carga y no se duplican por el refresco; (12) `git diff develop` no deja `fmtDate`, `toLocale`, `page: 1, pageSize: 50` ni números de severidad o tipo literales en la página. `npm run lint`, `npm test` y `npm run build` pasan.
 
 ### Paso 3 — Monitor operativo
 
-- [ ] **3.1** Reescribir `src/pages/OperationalDashboard.jsx` (D-FE3, D-FE11, D-FE12, D-FE13): sin caja, indicadores por `total`, `Promise.allSettled`, un único aviso de error, tarjeta de críticas a ancho completo, navegación con `?severidad=`.
-- [ ] **3.2** Sacar la excepción de lint de la página y actualizar el comentario P-FA4 de `src/auth/routes.js`.
+- [x] **3.1** Reescribir `src/pages/OperationalDashboard.jsx` (D-FE3, D-FE11, D-FE12, D-FE13): sin caja, indicadores por `total`, `Promise.allSettled`, un único aviso de error, tarjeta de críticas a ancho completo, navegación con `?severidad=`.
+- [x] **3.2** Sacar la excepción de lint de la página y actualizar el comentario P-FA4 de `src/auth/routes.js`.
 
   *Aceptación (manual):* (1) el Monitor carga sin llamar a `/Pagos/caja-diaria` (Network); (2) los cinco indicadores coinciden con los `total` de las consultas de la tabla de D-FE11; (3) con el backend devolviendo error en una consulta (por ejemplo bloqueando una URL en DevTools), el resto de las tarjetas carga y la que falló muestra "—", con **un solo** aviso; (4) la lista de críticas con error muestra "Reintentar"; (5) "Revisar" y "Ver todas" abren Alertas con severidad crítica ya aplicada; (6) la pantalla se actualiza sola a los 5 minutos con la pestaña visible, y no lo hace con la pestaña oculta; (7) no quedan `fmtDate`, `todayISO`, `money` ni `pagosApi` en la página. `npm run lint`, `npm test` y `npm run build` pasan.
 
 ### Paso 4 — Documentación y cierre
 
-- [ ] **4.1** Crear `docs/manual/frontend/05-alertas.md` (cómo funcionan el listado, la resolución con comentario, el permiso de dinero, el refresco, y la lista de lo que le queda a la 07 y a la 09).
-- [ ] **4.2** Revisar `CLAUDE.md` (solo frases falsas sobre alertas; **no** la línea "Backend endpoints used") y actualizar `docs/specs/README.md`: fila 05 en "Terminada" **una vez mergeada a `develop`**, con "Depende de" `02, 04`.
+- [x] **4.1** Crear `docs/manual/frontend/05-alertas.md` (cómo funcionan el listado, la resolución con comentario, el permiso de dinero, el refresco, y la lista de lo que le queda a la 07 y a la 09).
+- [x] **4.2** Revisar `CLAUDE.md` (solo frases falsas sobre alertas; **no** la línea "Backend endpoints used") y actualizar `docs/specs/README.md`: fila 05 en "Terminada" **una vez mergeada a `develop`**, con "Depende de" `02, 04`.
 - [ ] **4.3** Rebase sobre `develop` y revisar que no queden excepciones de lint de las dos páginas.
 
   *Aceptación:* `npm run lint`, `npm test` y `npm run build` pasan; el manual existe; el `git diff develop` solo toca los archivos de las secciones 5.1 y 5.2.
