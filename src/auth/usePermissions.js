@@ -9,7 +9,7 @@ export const ME_STATUS = {
   ERROR: "error",
 };
 
-// Valor: { status, me, error, reload }. Lo provee MeProvider.
+// Valor: { status, me, error, reload, refreshMe }. Lo provee MeProvider.
 export const MeContext = createContext(null);
 
 export function useMe() {

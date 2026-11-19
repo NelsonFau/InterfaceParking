@@ -1,6 +1,6 @@
 # 11 — Configuración del tenant
 
-> Frontend · **Aprobada** (18/11/2026) · `feature/specs-etapa3` (esta spec, rama compartida con otros redactores) y `feature/front-configuracion` (ejecución, en el worktree `../parkingcontrol-front-configuracion`, a crear desde `develop` cuando la 02 esté implementada y mergeada) · Última actualización 18/11/2026
+> Frontend · **Terminada** (19/11/2026; se vuelve verdadera al mergear el PR a `develop`; aprobada el 18/11/2026) · `feature/specs-etapa3` (esta spec, rama compartida con otros redactores) y `feature/front-configuracion` (ejecución, en el worktree `../parkingcontrol-front-configuracion`, a crear desde `develop` cuando la 02 esté implementada y mergeada) · Última actualización 18/11/2026
 >
 > Undécima spec del frontend. Pantalla **nueva**: lee y edita la configuración del local (`/Configuracion`): zona horaria, modo de caja y los parámetros de ocupaciones mensuales, retroactivas y mora. Depende de la spec 02 (fechas con zona del tenant, enums, patrón de `src/api/`). Como la zona horaria que se edita acá es la que usa todo el front, agrega a `MeProvider` una función aditiva para refrescar `/me` (D-FK2).
 
@@ -248,6 +248,8 @@ Ninguno. La 11 cumple las fuentes. Una nota sobre `MeProvider`: la spec 01 defin
 | P-FK-L3 | Que `routes.test.js` y su fixture hayan cambiado por otras specs (04 renombra Auditoría, 09 reemplaza Caja diaria, 12 suma Usuarios) | Conservar todas las entradas de las otras specs y sumar `/configuracion` al final; actualizar las expectativas del test |
 | P-FK-L4 | Que `GET /Configuracion` devuelva `modoCaja`, `modoMes` y `fraccionMes` como **enteros** | Si llegan como texto, **frenar** (cambia `enums.js`) |
 
+**Resueltos al ejecutar (19/11/2026).** P-FK-L1 a L4 dieron bien: la 02 está implementada; `GET /Configuracion` serializa los enums como enteros (el backend no registra `JsonStringEnumConverter`; `ConfiguracionDtos.cs:11,23,26`); `routes.test.js` conserva las entradas de las otras specs y suma `/configuracion` antes de `/usuarios`. **P-FK-L5** (contradicción menor en la tabla del paso 3): el caso 3 pide que `-1` dé "Tiene que estar entre X y Y" y el caso 4 que `-3` dé "Ingresá un número entero". Se siguió D-FK6 y el caso 4 (no se aceptan signos): todo negativo da "Ingresá un número entero", y el test del límite inferior usa `min - 1` solo donde `min > 0`. Además, `modoMes` y `fraccionMes` vacíos dan error de campo obligatorio (el formulario siempre los tiene cargados).
+
 **Abiertos del proyecto que esta spec no toma:** P-19, P-29, P-33, P-2 y P-9 (heredados de la 01), P-FB3 (moneda por tenant).
 
 ## 5. Inventario
@@ -298,27 +300,27 @@ Nada.
 
 ### Paso 0 — Precondiciones y worktree
 
-- [ ] **0.1** Confirmar que la 02 está mergeada en `develop` y resolver **P-FK-L1**. Si no, frenar.
-- [ ] **0.2** Desde `parkingcontrol-front`: `git worktree add ../parkingcontrol-front-configuracion -b feature/front-configuracion develop` (el ejecutor le **pide** el comando al Orquestador). En el worktree, copiar el `.env` (no está versionado) y correr `npm install`. Resolver P-FK-L2.
+- [x] **0.1** Confirmar que la 02 está mergeada en `develop` y resolver **P-FK-L1**. Si no, frenar.
+- [x] **0.2** Desde `parkingcontrol-front`: `git worktree add ../parkingcontrol-front-configuracion -b feature/front-configuracion develop` (el ejecutor le **pide** el comando al Orquestador). En el worktree, copiar el `.env` (no está versionado) y correr `npm install`. Resolver P-FK-L2.
 
   *Aceptación:* en el worktree, `npm test`, `npm run lint` y `npm run build` pasan antes de cambiar nada.
 
 ### Paso 1 — `refreshMe()` en `MeProvider`
 
-- [ ] **1.1** En `src/auth/MeProvider.jsx`, agregar `refreshMe()` según D-FK2 (sin pasar por `cargando`, con la validación de zona, conservando el `me` anterior si falla, última respuesta gana) y exponerla en el valor del contexto. Actualizar el comentario de `usePermissions.js`. **No** cambiar la carga inicial, la validación de zona ni `reload`.
+- [x] **1.1** En `src/auth/MeProvider.jsx`, agregar `refreshMe()` según D-FK2 (sin pasar por `cargando`, con la validación de zona, conservando el `me` anterior si falla, última respuesta gana) y exponerla en el valor del contexto. Actualizar el comentario de `usePermissions.js`. **No** cambiar la carga inicial, la validación de zona ni `reload`.
 
   *Aceptación (manual, con el backend de `develop`):* (1) `useMe().refreshMe` existe y devuelve una promesa; (2) llamarla desde la consola de React o con una página de prueba temporal (sin commitear) vuelve a pedir `GET /me` y la pantalla no pasa por "cargando"; (3) con el backend apagado, rechaza con `ApiError`, el `me` anterior se conserva y la app no pasa a la pantalla de error de `/me`; (4) `reload` sigue funcionando como antes (parpadea a "cargando"). `git diff develop -- src/auth/MeProvider.jsx` solo agrega lo de `refreshMe`. `npm run lint` y `npm run build` pasan.
 
 ### Paso 2 — Zonas y módulo de API
 
-- [ ] **2.1** Crear `src/constants/zonasHorarias.js` (D-FK4) y `test/unit/constants/zonasHorarias.test.js`.
-- [ ] **2.2** Crear `src/api/configuracionApi.js` (D-FK3) y `test/unit/api/configuracionApi.test.js` con `vi.mock` de `http`.
+- [x] **2.1** Crear `src/constants/zonasHorarias.js` (D-FK4) y `test/unit/constants/zonasHorarias.test.js`.
+- [x] **2.2** Crear `src/api/configuracionApi.js` (D-FK3) y `test/unit/api/configuracionApi.test.js` con `vi.mock` de `http`.
 
   *Aceptación:* `npm test` pasa con: la lista tiene 12 zonas, sin repetidas, con los IANA exactos de la sección 5 del inventario y en su orden; cada una pasa `isValidTimeZone`; `labelOfZona("America/Montevideo")` da "Montevideo (Uruguay)" y `labelOfZona("Europe/Madrid")` da `Europe/Madrid`; `getConfiguracion` hace `GET /Configuracion` y devuelve el objeto; una respuesta que no es un objeto con `zonaHoraria`, `modoCaja` y `version` lanza `ApiError` con `code: "respuesta_invalida"`; `updateConfiguracion` hace `PUT /Configuracion` con el cuerpo recibido, sin modificarlo; ninguna función captura errores (un rechazo de `http` se propaga). `npm run lint` y `npm run build` pasan.
 
 ### Paso 3 — Lógica pura
 
-- [ ] **3.1** Crear `src/utils/configuracion.js` con las funciones de D-FK12 y `test/unit/utils/configuracion.test.js`.
+- [x] **3.1** Crear `src/utils/configuracion.js` con las funciones de D-FK12 y `test/unit/utils/configuracion.test.js`.
 
   *Aceptación:* `npm test` pasa con estos casos (`original` = `{ zonaHoraria: "America/Montevideo", modoCaja: 1, toleranciaInicioHoras: 2, topePasadoDias: 30, techoFuturoMeses: 6, modoMes: 1, fraccionMes: 1, graciaHoraMinutos: 10, diasGraciaMora: 5, ventanaAlertasDias: 30, version: "AAAAAAAB=" }`):
 
@@ -341,24 +343,24 @@ Nada.
 
 ### Paso 4 — Pantalla de lectura, ruta y menú
 
-- [ ] **4.1** Crear `src/pages/Configuracion.jsx` con la carga (D-FK10), el formulario con ayuda (D-FK6, D-FK11) y el modo solo lectura (D-FK5). Resolver **P-FK-L4**.
-- [ ] **4.2** Agregar la ruta a `src/auth/routes.js` y `src/App.jsx`, y actualizar `test/unit/auth/routes.test.js` (P-FK-L3).
+- [x] **4.1** Crear `src/pages/Configuracion.jsx` con la carga (D-FK10), el formulario con ayuda (D-FK6, D-FK11) y el modo solo lectura (D-FK5). Resolver **P-FK-L4**.
+- [x] **4.2** Agregar la ruta a `src/auth/routes.js` y `src/App.jsx`, y actualizar `test/unit/auth/routes.test.js` (P-FK-L3).
 
   *Aceptación (manual, con el backend de `develop` y un usuario cuyo tenant tenga `America/Montevideo`):* (1) con `dueno@demo.test`, `GET /Configuracion` responde 200 y el formulario muestra los valores con sus etiquetas ("Diaria"/"Por turno", "Calendario"/"Corrido"/"Bloques de 30 días", "Completo"/"Proporcional"); (2) con `encargado@demo.test` y con un AUDITOR, la pantalla se ve completa, con campos deshabilitados, sin "Guardar" y con "Solo el dueño puede modificar la configuración"; (3) con `operado@demo.test`, "Configuración" no aparece en el menú y entrar a `/configuracion` por URL muestra "No tenés permiso"; (4) con el backend apagado se ve "No pudimos cargar la configuración" con "Reintentar" y no un formulario vacío; (5) `ventanaAlertasDias` se ve como dato, sin campo editable; (6) si el tenant tuviera una zona fuera de la lista, el selector muestra "`<IANA>` (fuera de la lista)". `npm test`, `npm run lint` y `npm run build` pasan.
 
 ### Paso 5 — Edición, guardado, confirmaciones y errores
 
-- [ ] **5.1** Edición con `validateConfiguracionForm` y "Descartar cambios"; "Guardar" deshabilitado sin cambios o con errores.
-- [ ] **5.2** Guardado con `buildUpdateBody` y `updateConfiguracion`; en éxito, aviso "Configuración guardada" y recarga (D-FK10); si cambió la zona, `refreshMe()` y su error aparte.
-- [ ] **5.3** Diálogo de confirmación de zona y de modo de caja (D-FK8) con `summarizeChanges`.
-- [ ] **5.4** Errores por `code` (D-FK9): `configuracion_modificada` con "Recargar valores" (D-FK7), `caja_abierta`, `datos_invalidos` y `sin_permiso`.
+- [x] **5.1** Edición con `validateConfiguracionForm` y "Descartar cambios"; "Guardar" deshabilitado sin cambios o con errores.
+- [x] **5.2** Guardado con `buildUpdateBody` y `updateConfiguracion`; en éxito, aviso "Configuración guardada" y recarga (D-FK10); si cambió la zona, `refreshMe()` y su error aparte.
+- [x] **5.3** Diálogo de confirmación de zona y de modo de caja (D-FK8) con `summarizeChanges`.
+- [x] **5.4** Errores por `code` (D-FK9): `configuracion_modificada` con "Recargar valores" (D-FK7), `caja_abierta`, `datos_invalidos` y `sin_permiso`.
 
   *Aceptación (manual, con `dueno@demo.test`):* (1) cambiar solo `topePasadoDias` guarda sin diálogo, el `PUT` lleva los tres obligatorios y solo ese campo, con `version` idéntica a la que vino, y el formulario toma la respuesta del `PUT` (con la `version` nueva) **sin** un `GET /Configuracion` aparte; (2) un valor fuera de rango o decimal no llega a la red y muestra el mensaje; (3) cambiar la zona abre el diálogo con el texto de D-FK8; "Cancelar" no envía nada; "Confirmar" guarda, y después `GET /me` devuelve la zona nueva y `useTenantDates` la usa **sin recargar la pestaña** (verificable mostrando una fecha en otra pantalla); (4) cambiar el modo de caja, el modo del mes o la fracción del mes abre el diálogo con el texto de D-FK8 (los dos últimos dicen "Afecta solo a los contratos nuevos"); (5) con una caja abierta, cambiar la zona o el modo de caja muestra el `title` de `caja_abierta`, el borrador queda y no se recarga; (6) con dos pestañas, guardar en la primera y luego en la segunda muestra el `title` de `configuracion_modificada` y el botón "Recargar valores", que trae los valores nuevos y descarta lo editado; no hay reintento automático; (7) con el backend apagado en el `PUT`, el borrador se conserva; (8) con `encargado@demo.test` y un AUDITOR, un `PUT` forzado desde DevTools muestra el `title` de `sin_permiso`; (9) si `refreshMe` falla después de guardar la zona, se ve "La configuración se guardó, pero no pudimos actualizar la zona horaria en esta sesión" y no se pierde el guardado. `npm run lint`, `npm test` y `npm run build` pasan.
 
 ### Paso 6 — Documentación y cierre
 
-- [ ] **6.1** Crear `docs/manual/frontend/11-configuracion.md`: qué hace cada campo (con los textos de D-FK11), cómo funciona la concurrencia con `version`, qué hace `refreshMe` y su límite (otras sesiones y datos ya cargados), la tabla de permisos y de errores por `code`.
-- [ ] **6.2** Actualizar el estado de esta spec en `docs/specs/README.md` y en su cabecera: **Terminada** una vez mergeada a `develop`. **No** tocar `CLAUDE.md`.
+- [x] **6.1** Crear `docs/manual/frontend/11-configuracion.md`: qué hace cada campo (con los textos de D-FK11), cómo funciona la concurrencia con `version`, qué hace `refreshMe` y su límite (otras sesiones y datos ya cargados), la tabla de permisos y de errores por `code`.
+- [x] **6.2** Actualizar el estado de esta spec en `docs/specs/README.md` y en su cabecera: **Terminada** una vez mergeada a `develop`. **No** tocar `CLAUDE.md`.
 
   *Aceptación:* `npm run lint`, `npm test` y `npm run build` pasan; `git diff develop -- CLAUDE.md src/api/http.js src/utils/fechas.js` vacío.
 
