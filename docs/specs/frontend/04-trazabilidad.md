@@ -1,6 +1,6 @@
 # 04 — Trazabilidad: línea de tiempo de eventos (reemplaza a Auditoría)
 
-> Frontend · **Aprobada** (18/11/2026) · `feature/specs-etapa2` (esta spec; la comparten otros redactores) y `feature/front-trazabilidad` (ejecución, en el worktree `../parkingcontrol-front-trazabilidad`, a crear desde `develop` cuando estén mergeadas la 02 y esta spec) · Última actualización 18/11/2026
+> Frontend · **Terminada** (19/11/2026; se vuelve verdadera al mergear el PR a `develop`) · `feature/specs-etapa2` (esta spec; la comparten otros redactores) y `feature/front-trazabilidad` (ejecución, en el worktree `../parkingcontrol-front-trazabilidad`, a crear desde `develop` cuando estén mergeadas la 02 y esta spec) · Última actualización 19/11/2026
 >
 > Cuarta spec del frontend. `GET /Auditoria` ya no existe en el backend (404): la pantalla de Auditoría no carga nada hoy. Esta spec la reemplaza por Trazabilidad, que une en una sola línea de tiempo los eventos de auditoría, pagos, devoluciones, caja y alertas. **Depende de la 02** (fechas con zona del tenant, enums, paginación, patrón de módulos de API): usa sus funciones por nombre y no puede arrancar hasta que esté implementada y mergeada.
 
@@ -293,6 +293,18 @@ El módulo no convierte fechas ni valida (D-FB14, regla 4): recibe los parámetr
 | P-FD-L2 | La estructura real de `detalle` por fuente (P-FD2) con el backend en `develop` | Ajustar solo las etiquetas y el `humanizeKey`; si la estructura cambia el diseño (por ejemplo, `detalle` no es un objeto), **frenar** y anotar en la sección 4 |
 | P-FD-L3 | Que los nombres de la 02 (`dateRangeToInstants`, `useTenantDates`, `usePagination`, `toTablePaginationProps`, `normalizePaged`, `cleanParams`, `labelOf`, `colorOf`, `labelOfKey`, `optionsOf`, `formatMoney`, `addDays`, `todayInZone`) existan con esa firma en `develop`, según `docs/manual/frontend/02-base-comun.md` | Si difieren, usar los nombres reales y anotarlo; si falta una función que esta spec necesita, **frenar** |
 
+**Resueltos o abiertos durante la ejecución (19/11/2026).**
+
+| Id | Qué pasó | Estado |
+|---|---|---|
+| P-FD-L1 | `defineEnum` ya admitía `value` de texto: no hizo falta ampliarlo | Resuelto |
+| P-FD-L2 / P-FD2 | La estructura de `detalle` se relevó **leyendo el código del backend** (`ConsultaDeTrazabilidad.cs:258-320`, `AuditWriter.cs`), no con respuestas reales. Contradicción menor con D-FD9: en CAJA solo seis claves son dinero; `observacion` y `motivo` son texto y no pasan por `formatMoney`. Ajustado en `trazabilidadEvento.js`. La estructura de `antes`/`despues` es la de cada tipo anónimo del servicio (claves PascalCase, enums como entero salvo los que usan `ToString()`); se muestra cruda (D-FD10) | Resuelto; conviene confirmarlo con una respuesta real en la verificación manual |
+| P-FD-L3 | Los nombres de la 02 existen con esa firma (`dateRangeToInstants`, `useTenantDates`, `usePagination`, `toTablePaginationProps`, `normalizePaged`, `cleanParams`, `labelOf`, `colorOf`, `labelOfKey`, `optionsOf`, `formatMoney`, `addDays`, `todayInZone`) | Resuelto |
+| P-FD7 | **Instantes dentro de `antes`/`despues`**: el backend serializa `DateTime` con `System.Text.Json` por defecto; los que se leyeron de la base salen **sin `Z`** (Kind sin especificar) y los asignados desde el pedido, con `Z`. `formatValor` (D-FD10) solo convierte los que traen `Z`; los demás se muestran tal cual, en UTC aunque no lo diga. Pedirle al backend que serialice siempre con `Z`, o decidir si el front los trata como UTC | Abierto (decisión de producto, no bloquea) |
+| DV-FD2 | `4.4`: por lectura, `RequireAuth` conserva `location.search` en `returnTo` y `safeReturnTo` acepta rutas con query; no hizo falta tocar `RequireAuth`, `safeReturnTo` ni `AuthProvider`. La verificación 8 de punta a punta (con Auth0) queda manual | Sin desvío; verificación manual pendiente |
+| P-FD8 | Los pasos 1.1 (worktree, `.env`) y 0.1 los cubre la rama `feature/front-trazabilidad` creada por el orquestador; no se usó worktree. El paso 1.2 se resolvió con lectura del código, no con el backend en ejecución | Informativo |
+| P-FD9 | Las verificaciones 2 a 19 de la sección 7 son manuales (navegador, Auth0 y backend) y **no se corrieron** en esta ejecución; sí `npm test`, `npm run lint` y `npm run build` | Pendiente del desarrollador |
+
 **Abiertos del proyecto que esta spec no toma:** P-19, P-29, P-33, P-2 y P-9 (heredados de la 01). Si un paso los necesita, se frena.
 
 ## 5. Inventario
@@ -347,24 +359,24 @@ Rutas relativas a la raíz del repo del frontend. Los nombres de archivo son los
 
 ### Paso 0 — Condiciones previas (manual)
 
-- [ ] **0.1** La spec 02 está implementada y mergeada en `develop` (sus 8 pasos, `npm test` en verde). Esta spec está aprobada y mergeada.
+- [x] **0.1** La spec 02 está implementada y mergeada en `develop` (sus 8 pasos, `npm test` en verde). Esta spec está aprobada y mergeada.
 - [x] **0.2** El desarrollador respondió las tres preguntas (D-FD3, D-FD6, D-FD9) el 18/11/2026; quedaron anotadas en esas decisiones.
 
   *Aceptación:* el desarrollador confirma y las respuestas quedan anotadas en las decisiones.
 
 ### Paso 1 — Worktree, enums y relevamiento de datos reales
 
-- [ ] **1.1** Crear el worktree desde `develop` (desde la carpeta `parkingcontrol-front`): `git worktree add ../parkingcontrol-front-trazabilidad -b feature/front-trazabilidad develop`. En el worktree, copiar el `.env` (no está versionado) y correr `npm install`. Resolver P-FD-L3.
-- [ ] **1.2** Con el backend en `develop` y un usuario con `auditoria.ver`, pedir `GET /Trazabilidad` de cada fuente (con un rango corto de datos demo) y anotar en el manual la estructura real de `detalle` (claves de CAJA, de `antes` y `despues`, valores de `entidad`, formato de los instantes dentro de `antes` y `despues`). Resuelve P-FD2 y P-FD-L2.
-- [ ] **1.3** Sumar `Fuente` y `AccionTrazabilidad` a `src/constants/enums.js` (D-FD4) y sus casos a `test/unit/constants/enums.test.js`. Resolver P-FD-L1.
+- [x] **1.1** Crear el worktree desde `develop` (desde la carpeta `parkingcontrol-front`): `git worktree add ../parkingcontrol-front-trazabilidad -b feature/front-trazabilidad develop`. En el worktree, copiar el `.env` (no está versionado) y correr `npm install`. Resolver P-FD-L3.
+- [x] **1.2** Con el backend en `develop` y un usuario con `auditoria.ver`, pedir `GET /Trazabilidad` de cada fuente (con un rango corto de datos demo) y anotar en el manual la estructura real de `detalle` (claves de CAJA, de `antes` y `despues`, valores de `entidad`, formato de los instantes dentro de `antes` y `despues`). Resuelve P-FD2 y P-FD-L2.
+- [x] **1.3** Sumar `Fuente` y `AccionTrazabilidad` a `src/constants/enums.js` (D-FD4) y sus casos a `test/unit/constants/enums.test.js`. Resolver P-FD-L1.
 
   *Aceptación:* `npm test` pasa con: `Fuente` tiene exactamente las 5 fuentes del inventario; `AccionTrazabilidad` tiene exactamente las 20 acciones, sin duplicados; `labelOf(AccionTrazabilidad, "FINALIZAR")` da "Finalizar"; `labelOf` de un valor desconocido da el string recibido y `colorOf` da `"default"`; `optionsOf(Fuente, { allLabel: "Todas" })` empieza con `{ value: "", label: "Todas" }`. `npm run lint` y `npm run build` pasan.
 
 ### Paso 2 — Lógica pura: enlace, filtros y evento
 
-- [ ] **2.1** Crear `src/utils/trazabilidadLink.js` y su test (D-FD5). Exportar `TRAZABILIDAD_PATH` desde `src/auth/routes.js` y usarla.
-- [ ] **2.2** Crear `src/utils/trazabilidadFiltros.js` y su test (D-FD6).
-- [ ] **2.3** Crear `src/utils/trazabilidadEvento.js` y su test (D-FD4, D-FD9, D-FD10).
+- [x] **2.1** Crear `src/utils/trazabilidadLink.js` y su test (D-FD5). Exportar `TRAZABILIDAD_PATH` desde `src/auth/routes.js` y usarla.
+- [x] **2.2** Crear `src/utils/trazabilidadFiltros.js` y su test (D-FD6).
+- [x] **2.3** Crear `src/utils/trazabilidadEvento.js` y su test (D-FD4, D-FD9, D-FD10).
 
   *Aceptación:* `npm test` pasa con estos casos (zona `America/Montevideo`):
 
@@ -399,24 +411,24 @@ Rutas relativas a la raíz del repo del frontend. Los nombres de archivo son los
 
 ### Paso 3 — Módulos de API
 
-- [ ] **3.1** Crear `src/api/trazabilidadApi.js` (D-FD12).
-- [ ] **3.2** Crear `src/api/usuariosApi.js` con `listUsuarios()` (D-FD8), **solo si** el archivo no existe en `develop`. Si la 12 ya lo creó, importar de ahí y tildar el paso.
+- [x] **3.1** Crear `src/api/trazabilidadApi.js` (D-FD12).
+- [x] **3.2** Crear `src/api/usuariosApi.js` con `listUsuarios()` (D-FD8), **solo si** el archivo no existe en `develop`. Si la 12 ya lo creó, importar de ahí y tildar el paso.
 
   *Aceptación:* `npm run lint` y `npm run build` pasan. A mano, con un componente temporal o la consola del navegador no hace falta: se verifica en el paso 4 (Network muestra `GET /api/v1/Trazabilidad` con `fuente=PAGO&fuente=CAJA` y `GET /api/v1/Usuarios`).
 
 ### Paso 4 — Pantalla, diálogo, ruta y retiro de Auditoría
 
-- [ ] **4.1** Crear `src/pages/Trazabilidad.jsx` y `src/componentes/DetalleEventoDialog.jsx` (D-FD5 a D-FD10): filtros desde la URL, validación previa, carga con aviso de espera, tabla, paginación, selector de usuario con fallback, y detalle.
-- [ ] **4.2** Actualizar `src/auth/routes.js`, `src/App.jsx` (incluida la redirección de `/auditoria`) y `test/unit/auth/routes.test.js` (D-FD3, D-FD13).
-- [ ] **4.3** Borrar `src/pages/Auditoria.jsx` y quitar su excepción de `eslint.config.js` (D-FD13). Las excepciones de lint se sacan en orden de merge (02, 03, 04, 05): antes del PR, `git rebase develop` y resolver el conflicto de `eslint.config.js` quitando solo la línea de `Auditoria.jsx`.
-- [ ] **4.4** **Verificar que `RequireAuth` conserve el query string en `returnTo`** tras el redirect a Auth0 (el contrato de D-FD5 lo necesita). Por lectura, `src/auth/RequireAuth.jsx` ya arma `returnTo` con `location.pathname + location.search + location.hash`, pero hay que confirmarlo de punta a punta: abrir `/trazabilidad?ocupacionId=12` sin sesión, loguearse y comprobar que vuelve con el filtro (verificación 8). Si **no** lo conserva (por ejemplo, `safeReturnTo` o `onRedirectCallback` descartan el query), se anota como desvío DV-FD2 en la sección 4 y se arregla dentro de esta spec, tocando solo `RequireAuth.jsx`, `safeReturnTo.js` o `AuthProvider.jsx` y sumando el caso a `test/unit/auth/safeReturnTo.test.js`.
+- [x] **4.1** Crear `src/pages/Trazabilidad.jsx` y `src/componentes/DetalleEventoDialog.jsx` (D-FD5 a D-FD10): filtros desde la URL, validación previa, carga con aviso de espera, tabla, paginación, selector de usuario con fallback, y detalle.
+- [x] **4.2** Actualizar `src/auth/routes.js`, `src/App.jsx` (incluida la redirección de `/auditoria`) y `test/unit/auth/routes.test.js` (D-FD3, D-FD13).
+- [x] **4.3** Borrar `src/pages/Auditoria.jsx` y quitar su excepción de `eslint.config.js` (D-FD13). Las excepciones de lint se sacan en orden de merge (02, 03, 04, 05): antes del PR, `git rebase develop` y resolver el conflicto de `eslint.config.js` quitando solo la línea de `Auditoria.jsx`.
+- [x] **4.4** **Verificar que `RequireAuth` conserve el query string en `returnTo`** tras el redirect a Auth0 (el contrato de D-FD5 lo necesita). Por lectura, `src/auth/RequireAuth.jsx` ya arma `returnTo` con `location.pathname + location.search + location.hash`, pero hay que confirmarlo de punta a punta: abrir `/trazabilidad?ocupacionId=12` sin sesión, loguearse y comprobar que vuelve con el filtro (verificación 8). Si **no** lo conserva (por ejemplo, `safeReturnTo` o `onRedirectCallback` descartan el query), se anota como desvío DV-FD2 en la sección 4 y se arregla dentro de esta spec, tocando solo `RequireAuth.jsx`, `safeReturnTo.js` o `AuthProvider.jsx` y sumando el caso a `test/unit/auth/safeReturnTo.test.js`.
 
   *Aceptación (manual, con `dueno@demo.test` y el backend levantado):* ver la sección 7. `npm test`, `npm run lint` y `npm run build` pasan, y una búsqueda de `Auditoria.jsx`, `fmtDate` y `ACCION` en `src/` no encuentra nada de esta pantalla.
 
 ### Paso 5 — Documentación y cierre
 
-- [ ] **5.1** Crear `docs/manual/frontend/04-trazabilidad.md` (cómo funciona la pantalla, el contrato de enlace con ejemplos y la estructura real de `detalle` relevada en 1.2) y actualizar `CLAUDE.md`.
-- [ ] **5.2** Actualizar el estado de esta spec en `docs/specs/README.md` y en su cabecera: **Terminada** una vez mergeada a `develop`.
+- [x] **5.1** Crear `docs/manual/frontend/04-trazabilidad.md` (cómo funciona la pantalla, el contrato de enlace con ejemplos y la estructura real de `detalle` relevada en 1.2) y actualizar `CLAUDE.md`.
+- [x] **5.2** Actualizar el estado de esta spec en `docs/specs/README.md` y en su cabecera: **Terminada** una vez mergeada a `develop`.
 
   *Aceptación:* el manual lista los parámetros del contrato; `CLAUDE.md` menciona el contrato de enlace y no se modificó su línea de endpoints.
 
@@ -450,7 +462,7 @@ Con el backend en `develop` corriendo y `npm run dev` en `http://localhost:5173`
 
 ## 8. Cómo retomar
 
-**Estado:** Aprobada (18/11/2026). El desarrollador aprobó todas las decisiones: ruta `/trazabilidad` con menú "Trazabilidad" (D-FD3), rango por defecto de 7 días escrito en la URL con `replace` (D-FD5, D-FD6), resumen más diálogo (D-FD9), y salir sin filtro por entidad (P-FD5 → PB-1). P-FD1 quedó cerrado (usuariosApi.js, opción A). Falta: que la 02 esté implementada y mergeada, y los pasos 0.1 y 1 a 5. El contrato de enlace (D-FD5) ya se comunicó al chat orquestador para que lo usen las specs 05, 07, 08 y 09.
+**Estado:** Terminada (19/11/2026; se vuelve verdadera al mergear el PR a `develop`). Historia: aprobada el 18/11/2026. El desarrollador aprobó todas las decisiones: ruta `/trazabilidad` con menú "Trazabilidad" (D-FD3), rango por defecto de 7 días escrito en la URL con `replace` (D-FD5, D-FD6), resumen más diálogo (D-FD9), y salir sin filtro por entidad (P-FD5 → PB-1). P-FD1 quedó cerrado (usuariosApi.js, opción A). Falta: que la 02 esté implementada y mergeada, y los pasos 0.1 y 1 a 5. El contrato de enlace (D-FD5) ya se comunicó al chat orquestador para que lo usen las specs 05, 07, 08 y 09.
 
 **Cuándo arrancar la ejecución:** solo con la spec 02 implementada y mergeada en `develop` y esta spec aprobada (paso 0).
 

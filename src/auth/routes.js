@@ -2,6 +2,9 @@
 // El permiso de cada ruta sale de la matriz rol × recurso del backend.
 import { can } from "./permissions.js";
 
+// Ruta de Trazabilidad (D-FD3, D-FD5): una sola constante para el mapa y para el contrato de enlace.
+export const TRAZABILIDAD_PATH = "/trazabilidad";
+
 export const PRIVATE_ROUTES = [
   { path: "/dashboard", label: "Dashboard", permiso: "panel.ver" },
   // P-FA4: mezcla alertas y caja; se guarda con alertas.ver.
@@ -10,7 +13,7 @@ export const PRIVATE_ROUTES = [
   { path: "/ocupaciones", label: "Ocupaciones", permiso: "ocupaciones.ver" },
   { path: "/clientes", label: "Clientes", permiso: "clientes.ver" },
   { path: "/tarifas", label: "Tarifas", permiso: "tarifas.ver" },
-  { path: "/auditoria", label: "Auditoría", permiso: "auditoria.ver" },
+  { path: TRAZABILIDAD_PATH, label: "Trazabilidad", permiso: "auditoria.ver" },
   { path: "/alertas-operativas", label: "Alertas operativas", permiso: "alertas.ver" },
   { path: "/caja-diaria", label: "Caja diaria", permiso: "caja.ver" },
 ];

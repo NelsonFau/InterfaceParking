@@ -14,14 +14,14 @@ describe("routes", () => {
       ["/ocupaciones", "ocupaciones.ver"],
       ["/clientes", "clientes.ver"],
       ["/tarifas", "tarifas.ver"],
-      ["/auditoria", "auditoria.ver"],
+      ["/trazabilidad", "auditoria.ver"],
       ["/alertas-operativas", "alertas.ver"],
       ["/caja-diaria", "caja.ver"],
     ]);
   });
 
-  it("OPERADOR accede a todas las rutas menos /auditoria", () => {
-    expect(paths(accessibleRoutes(OPERADOR))).toEqual(paths(PRIVATE_ROUTES).filter((p) => p !== "/auditoria"));
+  it("OPERADOR accede a todas las rutas menos /trazabilidad", () => {
+    expect(paths(accessibleRoutes(OPERADOR))).toEqual(paths(PRIVATE_ROUTES).filter((p) => p !== "/trazabilidad"));
     expect(initialRoute(OPERADOR)).toBe("/dashboard");
   });
 
