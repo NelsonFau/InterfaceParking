@@ -310,9 +310,9 @@ Nada. (`Tarifas.jsx` queda con el mismo nombre y ruta.)
 
 ### Paso 5 — Quitar y editar programadas
 
-- [ ] **5.1** "Quitar" en la línea "Programada" de la tarjeta y en las filas `programada` del historial (D-FC6), solo con `tarifas.editar`. `tarifaApi.removeTarifa`, aviso "Programación quitada" y recarga; sin diálogo de confirmación.
-- [ ] **5.2** "Editar" en las filas `programada` del historial (D-FC9): abre el diálogo del paso 4 con tipo, precio y fecha de esa fila, fecha bloqueada.
-- [ ] **5.3** Errores de `DELETE` por `code` (D-FC11): `tarifa_ya_vigente`, `tarifa_no_encontrada` y `tarifa_modificada` recargan después del aviso.
+- [x] **5.1** "Quitar" en la línea "Programada" de la tarjeta y en las filas `programada` del historial (D-FC6), solo con `tarifas.editar`. `tarifaApi.removeTarifa`, aviso "Programación quitada" y recarga; sin diálogo de confirmación.
+- [x] **5.2** "Editar" en las filas `programada` del historial (D-FC9): abre el diálogo del paso 4 con tipo, precio y fecha de esa fila, fecha bloqueada.
+- [x] **5.3** Errores de `DELETE` por `code` (D-FC11): `tarifa_ya_vigente`, `tarifa_no_encontrada` y `tarifa_modificada` recargan después del aviso.
 
   *Aceptación (manual, con `dueno@demo.test`):* (1) programar dos fechas futuras para un tipo: la tarjeta muestra solo la más cercana y el historial muestra las dos como "Programada"; (2) "Quitar" en la de la tarjeta hace `DELETE /Tarifa/{id}` (204), la próxima pasa a ser la siguiente futura y el `vigenteHasta` de la fila anterior se actualiza; (3) "Quitar" en la otra fila del historial funciona igual; (4) las filas `Vigente` y `Finalizada` no tienen "Quitar" ni "Editar"; (5) "Editar" abre el diálogo con la fecha bloqueada y, al confirmar, el precio cambia sin crear una fila nueva; (6) quitar una programada que otro usuario ya quitó (segunda pestaña) muestra el `title` de `tarifa_no_encontrada` y la lista se recarga; (7) con `encargado@demo.test` no se ve ningún botón de escritura. `npm run lint`, `npm test` y `npm run build` pasan.
 

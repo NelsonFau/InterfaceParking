@@ -32,6 +32,25 @@ Las dos lecturas lanzan `ApiError` con `code: "respuesta_invalida"` si la respue
 - **Errores.** `showApiError` muestra el `title` del backend. Si `shouldReloadAfter(code)` (`tarifa_ya_vigente`, `tarifa_no_encontrada`, `tarifa_modificada`) se recarga con el diálogo abierto; el reintento es manual. `datos_invalidos` y `sin_permiso` no recargan.
 - **Repetir una fecha futura** ya programada **reemplaza** esa tarifa (comportamiento del backend); por eso el resumen lo avisa. Repetir **hoy** cuando ya hay una tarifa que empieza hoy da 409 `tarifa_ya_vigente`: el cliente no lo bloquea, el backend es la autoridad.
 
+## Quitar y editar programadas
+
+- **Quitar.** Aparece en la línea "Programada" de la tarjeta (la próxima) y en cada fila `programada` del historial, solo con `can("tarifas.editar")`. Llama a `DELETE /Tarifa/{id}` (204), avisa "Programación quitada" y recarga. No pide confirmación: es reversible (se vuelve a programar) y no afecta cobros hasta que llegue la fecha. Mientras hay un "Quitar" en curso, todos quedan deshabilitados. Al quitar la próxima, la siguiente futura pasa a ser la próxima al recargar, y el `vigenteHasta` de la fila anterior se recalcula (lo calcula el backend al leer).
+- **Editar.** Solo en filas `programada`. Abre el mismo diálogo de "Cambiar precio" con el tipo, el precio y la fecha de esa fila, y **la fecha bloqueada** (cambiarla crearía otra tarifa). Es el mismo `PUT`: el backend reemplaza la tarifa porque la fecha futura ya existe, y el resumen lo dice ("Reemplaza la tarifa programada para esa fecha").
+- **Qué filas tienen acciones.** `vigente` y `finalizada` nunca muestran "Quitar" ni "Editar"; se decide con `tarifaEstado`, no por rol.
+
+### Errores y qué hace la pantalla después del aviso
+
+El aviso lo da siempre `showApiError` con el `title` del backend. Lo que agrega la 03 es la recarga (`shouldReloadAfter`):
+
+| `code` | Cuándo | Después del aviso |
+|---|---|---|
+| `tarifa_ya_vigente` | `PUT` con hoy y ya hay una que empieza hoy; `DELETE` de una que ya rige o rigió | Recarga (el diálogo, si estaba abierto, sigue abierto) |
+| `tarifa_no_encontrada` | `DELETE` de una tarifa que ya no existe (404) | Recarga |
+| `tarifa_modificada` | Carrera con otro pedido (409) | Recarga; el reintento es manual, nunca automático |
+| `datos_invalidos` | `PUT` con fecha pasada o precio fuera de rango (400) | Sin recarga: no cambió ningún dato |
+| `sin_permiso` | Permisos cambiados a mitad de sesión | Sin recarga |
+| `tarifa_no_configurada` | — | No se mapea: no sale de `/Tarifa` (la lanza el alta de ocupación) |
+
 ## Lógica pura (`src/utils/tarifas.js`)
 
 Sin React ni estado. "Hoy" entra siempre como parámetro (un `DateOnly` en la zona del tenant); ningún test depende de la fecha del sistema.

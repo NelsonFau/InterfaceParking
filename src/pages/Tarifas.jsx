@@ -18,7 +18,12 @@ import {
 } from "@mui/material";
 import toast from "react-hot-toast";
 import { showApiError } from "../api/errors";
-import { listTarifaHistorial, listTarifasVigentes, updateTarifa } from "../api/tarifaApi";
+import {
+  listTarifaHistorial,
+  listTarifasVigentes,
+  removeTarifa,
+  updateTarifa,
+} from "../api/tarifaApi";
 import { usePermissions } from "../auth/usePermissions";
 import { TipoOcupacion, labelOf, optionsOf } from "../constants/enums";
 import { formatDateOnly } from "../utils/fechas";
@@ -83,9 +88,42 @@ export default function Tarifas() {
       tipo,
       precio: vigente ? String(vigente.precio) : "",
       fecha: "",
+      fechaFija: false,
       valores: null,
       errors: {},
     });
+  }
+
+  // "Editar" una programada (D-FC9): el mismo PUT, con la fecha bloqueada
+  // (cambiarla crearía otra tarifa en vez de editar).
+  function abrirEditar(tarifa) {
+    setTipoHist(tarifa.tipo);
+    setResumen(null);
+    setDialog({
+      tipo: tarifa.tipo,
+      precio: String(tarifa.precio),
+      fecha: tarifa.vigenteDesde,
+      fechaFija: true,
+      valores: null,
+      errors: {},
+    });
+  }
+
+  // "Quitar" una programada (D-FC6): sin confirmación, es reversible y no afecta cobros todavía.
+  const [removingId, setRemovingId] = useState(null);
+
+  async function quitar(id) {
+    try {
+      setRemovingId(id);
+      await removeTarifa(id);
+      toast.success("Programación quitada");
+      recargar();
+    } catch (e) {
+      const apiError = showApiError(e);
+      if (shouldReloadAfter(apiError.code)) recargar();
+    } finally {
+      setRemovingId(null);
+    }
   }
 
   function cerrarDialogo() {
@@ -227,6 +265,16 @@ export default function Tarifas() {
                         <Typography variant="body2">
                           {`Desde ${formatDateOnly(proxima.vigenteDesde)}: ${formatMoney(proxima.precio)}`}
                         </Typography>
+                        {canEdit ? (
+                          <Button
+                            size="small"
+                            color="error"
+                            onClick={() => quitar(proxima.id)}
+                            disabled={removingId !== null}
+                          >
+                            Quitar
+                          </Button>
+                        ) : null}
                       </Stack>
                     ) : null}
                   </Stack>
@@ -280,6 +328,21 @@ export default function Tarifas() {
                             : " sin fecha de fin"}
                         </Typography>
                         <EstadoChip estado={tarifaEstado(t, hoy)} />
+                        {canEdit && tarifaEstado(t, hoy) === "programada" ? (
+                          <>
+                            <Button size="small" onClick={() => abrirEditar(t)}>
+                              Editar
+                            </Button>
+                            <Button
+                              size="small"
+                              color="error"
+                              onClick={() => quitar(t.id)}
+                              disabled={removingId !== null}
+                            >
+                              Quitar
+                            </Button>
+                          </>
+                        ) : null}
                       </Stack>
                     </Stack>
                   ))}
@@ -332,7 +395,13 @@ export default function Tarifas() {
                     value={dialog.fecha}
                     onChange={(e) => cambiarCampo("fecha", e.target.value)}
                     error={Boolean(dialog.errors.fecha)}
-                    helperText={dialog.errors.fecha ?? "Vacío: rige desde hoy"}
+                    helperText={
+                      dialog.errors.fecha ??
+                      (dialog.fechaFija
+                        ? "La fecha no se puede cambiar al editar"
+                        : "Vacío: rige desde hoy")
+                    }
+                    disabled={dialog.fechaFija}
                     inputProps={{ min: hoy }}
                     InputLabelProps={{ shrink: true }}
                     fullWidth
