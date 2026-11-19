@@ -7,11 +7,14 @@ vi.mock("../../../src/api/http.js", () => ({
 import { ApiError } from "../../../src/api/errors.js";
 import { http } from "../../../src/api/http.js";
 import {
+  adjustOcupacionPrecio,
+  adjustPreciosMensuales,
   cancelOcupacion,
   createOcupacion,
   finalizeOcupacion,
   getOcupacion,
   listOcupaciones,
+  setOcupacionFin,
 } from "../../../src/api/ocupacionApi.js";
 
 beforeEach(() => {
@@ -99,5 +102,70 @@ describe("finalizeOcupacion", () => {
     const boom = new Error("boom");
     http.post.mockRejectedValue(boom);
     await expect(finalizeOcupacion(7)).rejects.toBe(boom);
+  });
+});
+
+describe("adjustOcupacionPrecio", () => {
+  it("hace POST /Ocupacion/{id}/precio con el cuerpo sin tocar y devuelve data", async () => {
+    const data = { id: 1, ocupacionId: 7, vigenteDesde: "2026-12-01", precioAnterior: 1000, precioNuevo: 1500 };
+    http.post.mockResolvedValue({ data });
+    const body = { vigenteDesde: "2026-12-01", precioUnitario: 1500, motivo: "x" };
+    await expect(adjustOcupacionPrecio(7, body)).resolves.toBe(data);
+    expect(http.post).toHaveBeenCalledWith("/Ocupacion/7/precio", body);
+    expect(http.post.mock.calls[0][1]).toBe(body);
+  });
+
+  it("no captura errores", async () => {
+    const boom = new Error("boom");
+    http.post.mockRejectedValue(boom);
+    await expect(adjustOcupacionPrecio(7, {})).rejects.toBe(boom);
+  });
+});
+
+describe("setOcupacionFin", () => {
+  it("hace PUT /Ocupacion/{id}/fin con el instante y devuelve data", async () => {
+    const data = { ocupacionId: 7, fin: "2027-03-31T21:00:00.000Z" };
+    http.put.mockResolvedValue({ data });
+    await expect(setOcupacionFin(7, { fin: "2027-03-31T21:00:00.000Z" })).resolves.toBe(data);
+    expect(http.put).toHaveBeenCalledWith("/Ocupacion/7/fin", { fin: "2027-03-31T21:00:00.000Z" });
+  });
+
+  it("manda la clave fin con null para quitar la baja", async () => {
+    http.put.mockResolvedValue({ data: { ocupacionId: 7, fin: null } });
+    await setOcupacionFin(7, { fin: null });
+    const sent = http.put.mock.calls[0][1];
+    expect(sent).toEqual({ fin: null });
+    expect("fin" in sent).toBe(true);
+  });
+
+  it("no captura errores", async () => {
+    const boom = new Error("boom");
+    http.put.mockRejectedValue(boom);
+    await expect(setOcupacionFin(7, { fin: null })).rejects.toBe(boom);
+  });
+});
+
+describe("adjustPreciosMensuales", () => {
+  it("hace POST /Ocupacion/ajuste-precio y devuelve { cantidad, contratos }", async () => {
+    const data = { cantidad: 1, contratos: [{ id: 0, ocupacionId: 5, vigenteDesde: "2026-12-01", precioAnterior: 1000, precioNuevo: 1100 }] };
+    http.post.mockResolvedValue({ data });
+    const body = { vigenteDesde: "2026-12-01", porcentaje: 10, motivo: "x", excluir: [3] };
+    await expect(adjustPreciosMensuales(body)).resolves.toBe(data);
+    expect(http.post).toHaveBeenCalledWith("/Ocupacion/ajuste-precio", body);
+  });
+
+  it("una respuesta sin cantidad numérico o sin contratos arreglo lanza respuesta_invalida", async () => {
+    for (const data of [{ contratos: [] }, { cantidad: "1", contratos: [] }, { cantidad: 0 }, { cantidad: 0, contratos: {} }, null]) {
+      http.post.mockResolvedValue({ data });
+      const err = await adjustPreciosMensuales({}).catch((e) => e);
+      expect(err).toBeInstanceOf(ApiError);
+      expect(err.code).toBe("respuesta_invalida");
+    }
+  });
+
+  it("no captura errores", async () => {
+    const boom = new Error("boom");
+    http.post.mockRejectedValue(boom);
+    await expect(adjustPreciosMensuales({})).rejects.toBe(boom);
   });
 });
