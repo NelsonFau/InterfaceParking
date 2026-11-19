@@ -1,13 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
-import { http } from "../api/http";
-import { showApiError } from "../api/errors";
-import { usePermissions } from "../auth/usePermissions";
-import toast from "react-hot-toast";
+import { useEffect, useState } from "react";
 import {
+  Alert,
   Box,
   Button,
   Card,
   CardContent,
+  Chip,
   Dialog,
   DialogActions,
   DialogContent,
@@ -18,206 +16,269 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
+import toast from "react-hot-toast";
+import { showApiError } from "../api/errors";
+import {
+  listTarifaHistorial,
+  listTarifasVigentes,
+  removeTarifa,
+  updateTarifa,
+} from "../api/tarifaApi";
+import { usePermissions } from "../auth/usePermissions";
+import { TipoOcupacion, labelOf, optionsOf } from "../constants/enums";
+import { formatDateOnly } from "../utils/fechas";
+import { formatMoney } from "../utils/formato";
+import {
+  buildUpdateBody,
+  shouldReloadAfter,
+  summarizeChange,
+  tarifaEstado,
+  validateTarifaForm,
+} from "../utils/tarifas";
+import { useTenantDates } from "../utils/useTenantDates";
 
-/*
-  IMPORTANTE
-  Ajustá los IDs si tu enum en C# es distinto.
-  Ej:
-  enum TipoOcupacion { HORA = 1, DIA = 2, MES = 3 }
-*/
-const TIPOS = [
-  { id: 1, label: "HORA" },
-  { id: 2, label: "DIA" },
-  { id: 3, label: "MES" },
-];
+const TIPO_OPTIONS = optionsOf(TipoOcupacion);
 
+// Chip de cada estado (D-FC4).
+const ESTADO_CHIP = {
+  vigente: { label: "Vigente", color: "success" },
+  programada: { label: "Programada", color: "info" },
+  finalizada: { label: "Finalizada", color: "default" },
+};
 
-function money(n) {
-  try {
-    return new Intl.NumberFormat("es-UY", {
-      style: "currency",
-      currency: "UYU",
-      maximumFractionDigits: 2,
-    }).format(n ?? 0);
-  } catch {
-    return `$ ${n}`;
-  }
-}
-
-function fmtDate(dt) {
-  if (!dt) return "";
-  const d = new Date(dt);
-  if (Number.isNaN(d.getTime())) return String(dt);
-  return d.toLocaleString();
+function EstadoChip({ estado }) {
+  const { label, color } = ESTADO_CHIP[estado];
+  return <Chip size="small" label={label} color={color} />;
 }
 
 export default function Tarifas() {
+  const { today } = useTenantDates();
+  const hoy = today();
   const { can } = usePermissions();
-  // Actualizar precios: solo con tarifas.editar (D-FA10).
+  // Todo lo que escribe se oculta sin tarifas.editar (D-FC10); nunca se decide por rol.
   const canEdit = can("tarifas.editar");
+
+  // `null` = todavía no cargado (nunca se muestra como "sin tarifa").
+  const [vigentes, setVigentes] = useState(null);
   const [loading, setLoading] = useState(true);
-
-  const [activas, setActivas] = useState([]);
+  const [loadError, setLoadError] = useState(false);
   const [historial, setHistorial] = useState([]);
+  const [tipoHist, setTipoHist] = useState(TIPO_OPTIONS[0].value);
+  // Cada cambio de `reloadKey` recarga vigentes e historial en paralelo (D-FC12).
+  const [reloadKey, setReloadKey] = useState(0);
 
-  const [tipoHist, setTipoHist] = useState(TIPOS[0].id);
+  function recargar() {
+    setLoading(true);
+    setLoadError(false);
+    setReloadKey((k) => k + 1);
+  }
 
-  // dialog actualizar
-  const [open, setOpen] = useState(false);
-  const [tipoUpd, setTipoUpd] = useState(TIPOS[0].id);
-  const [precioUpd, setPrecioUpd] = useState("");
-  const [vigenteDesdeUpd, setVigenteDesdeUpd] = useState("");
+  // Diálogo "Cambiar precio" (D-FC7, D-FC8). `dialog` es null (cerrado) o el formulario;
+  // `resumen` no es null en el paso de confirmación.
+  const [dialog, setDialog] = useState(null);
+  const [resumen, setResumen] = useState(null);
   const [saving, setSaving] = useState(false);
 
-  // ======================
-  // MAPA DE TARIFAS ACTIVAS
-  // ======================
-  const activaPorTipo = useMemo(() => {
-    const map = new Map();
-    activas.forEach((t) => map.set(t.tipo, t));
-    return map;
-  }, [activas]);
-
-  // ======================
-  // CARGAS
-  // ======================
-  async function cargarActivas() {
-    const res = await http.get("/Tarifa/activas");
-    setActivas(Array.isArray(res.data) ? res.data : []);
+  function abrirCambiarPrecio(tipo) {
+    const vigente = vigentes?.find((v) => v.tipo === tipo)?.vigente;
+    // El resumen necesita las programadas del tipo: se posiciona el historial en él (D-FC5).
+    setTipoHist(tipo);
+    setResumen(null);
+    setDialog({
+      tipo,
+      precio: vigente ? String(vigente.precio) : "",
+      fecha: "",
+      fechaFija: false,
+      valores: null,
+      errors: {},
+    });
   }
 
-  async function cargarHistorial(tipoEnum) {
-    try {
-      const res = await http.get(`/Tarifa/historial?tipo=${tipoEnum}`);
-      setHistorial(Array.isArray(res.data) ? res.data : []);
-    } catch (e) {
-      setHistorial([]);
-      showApiError(e);
-    }
+  // "Editar" una programada (D-FC9): el mismo PUT, con la fecha bloqueada
+  // (cambiarla crearía otra tarifa en vez de editar).
+  function abrirEditar(tarifa) {
+    setTipoHist(tarifa.tipo);
+    setResumen(null);
+    setDialog({
+      tipo: tarifa.tipo,
+      precio: String(tarifa.precio),
+      fecha: tarifa.vigenteDesde,
+      fechaFija: true,
+      valores: null,
+      errors: {},
+    });
   }
 
-  async function cargarInicial() {
+  // "Quitar" una programada (D-FC6): sin confirmación, es reversible y no afecta cobros todavía.
+  const [removingId, setRemovingId] = useState(null);
+
+  async function quitar(id) {
     try {
-      setLoading(true);
-      await cargarActivas();
+      setRemovingId(id);
+      await removeTarifa(id);
+      toast.success("Programación quitada");
+      recargar();
     } catch (e) {
-      showApiError(e);
+      const apiError = showApiError(e);
+      if (shouldReloadAfter(apiError.code)) recargar();
     } finally {
-      setLoading(false);
+      setRemovingId(null);
     }
   }
 
-  // SOLO UNA VEZ
-  useEffect(() => {
-    cargarInicial();
-  }, []);
-
-  // HISTORIAL DEPENDE SOLO DEL TIPO
-  useEffect(() => {
-    cargarHistorial(tipoHist);
-  }, [tipoHist]);
-
-  // ======================
-  // ACTUALIZAR TARIFA
-  // ======================
-  function abrirActualizar(tipoEnum) {
-    setTipoUpd(tipoEnum);
-    const actual = activaPorTipo.get(tipoEnum);
-    setPrecioUpd(actual ? String(actual.precio) : "");
-    setVigenteDesdeUpd("");
-    setOpen(true);
+  function cerrarDialogo() {
+    if (saving) return;
+    setDialog(null);
+    setResumen(null);
   }
 
-  async function guardarNuevaTarifa() {
-    const precio = Number(precioUpd);
-    if (!precio || precio <= 0) {
-      return toast.error("El precio debe ser mayor a 0");
+  function cambiarCampo(campo, valor) {
+    setDialog((d) => ({ ...d, [campo]: valor, errors: { ...d.errors, [campo]: undefined } }));
+  }
+
+  function guardar() {
+    const r = validateTarifaForm({ precio: dialog.precio, fecha: dialog.fecha }, hoy);
+    if (!r.ok) {
+      setDialog((d) => ({ ...d, errors: r.errors }));
+      return;
     }
+    const valores = { nuevoPrecio: r.nuevoPrecio, vigenteDesde: r.vigenteDesde };
+    const vigente = vigentes?.find((v) => v.tipo === dialog.tipo)?.vigente ?? null;
+    setDialog((d) => ({ ...d, valores }));
+    setResumen(summarizeChange({ vigente, ...valores, historial, today: hoy }));
+  }
 
-    const vigenteDesde =
-      vigenteDesdeUpd && vigenteDesdeUpd.trim()
-        ? new Date(vigenteDesdeUpd).toISOString()
-        : null;
-
+  async function confirmar() {
     try {
       setSaving(true);
-
-      await http.put("/Tarifa", {
-        tipo: tipoUpd,
-        nuevoPrecio: precio,
-        vigenteDesde,
-      });
-
+      await updateTarifa(buildUpdateBody(dialog.tipo, dialog.valores));
       toast.success("Tarifa actualizada");
-      setOpen(false);
-
-      await cargarActivas();
-      await cargarHistorial(tipoHist);
+      setDialog(null);
+      setResumen(null);
+      recargar();
     } catch (e) {
-      showApiError(e);
+      const apiError = showApiError(e);
+      // El diálogo sigue abierto; si el estado quedó viejo se recarga (D-FC11). Reintento manual.
+      if (shouldReloadAfter(apiError.code)) recargar();
     } finally {
       setSaving(false);
     }
   }
 
-  // ======================
-  // RENDER
-  // ======================
+  // Vigentes. La bandera `ignore` descarta una respuesta que llegó tarde.
+  useEffect(() => {
+    let ignore = false;
+    (async () => {
+      try {
+        const data = await listTarifasVigentes();
+        if (ignore) return;
+        setVigentes(data);
+        setLoadError(false);
+      } catch (e) {
+        if (ignore) return;
+        setVigentes(null);
+        setLoadError(true);
+        showApiError(e);
+      } finally {
+        if (!ignore) setLoading(false);
+      }
+    })();
+    return () => {
+      ignore = true;
+    };
+  }, [reloadKey]);
+
+  // Historial del tipo elegido. Si el tipo cambia mientras llega la respuesta, se descarta.
+  useEffect(() => {
+    let ignore = false;
+    (async () => {
+      try {
+        const data = await listTarifaHistorial(tipoHist);
+        if (!ignore) setHistorial(data);
+      } catch (e) {
+        if (ignore) return;
+        setHistorial([]);
+        showApiError(e);
+      }
+    })();
+    return () => {
+      ignore = true;
+    };
+  }, [tipoHist, reloadKey]);
+
   return (
     <Box>
       <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
         <Typography variant="h5">Tarifas</Typography>
-        <Button variant="outlined" onClick={cargarInicial} disabled={loading}>
+        <Button variant="outlined" onClick={recargar} disabled={loading}>
           Refrescar
         </Button>
       </Stack>
 
       {loading ? (
         <div>Cargando...</div>
+      ) : loadError || !vigentes ? (
+        <Alert
+          severity="error"
+          action={
+            <Button color="inherit" size="small" onClick={recargar}>
+              Reintentar
+            </Button>
+          }
+        >
+          No pudimos cargar las tarifas
+        </Alert>
       ) : (
         <Stack spacing={2}>
-          {/* TARIFAS ACTIVAS */}
+          {/* TARIFAS POR TIPO: vigente y, debajo, la próxima programada */}
           <Card variant="outlined">
             <CardContent>
               <Typography fontWeight={800} sx={{ mb: 1 }}>
-                Tarifas activas
+                Tarifas vigentes
               </Typography>
 
-              <Stack spacing={1}>
-                {TIPOS.map((tipo) => {
-                  const t = activaPorTipo.get(tipo.id);
-                  return (
-                    <Stack
-                      key={tipo.id}
-                      direction="row"
-                      justifyContent="space-between"
-                      alignItems="center"
-                    >
+              <Stack spacing={2}>
+                {vigentes.map(({ tipo, vigente, proxima }) => (
+                  <Stack key={tipo} spacing={0.5}>
+                    <Stack direction="row" justifyContent="space-between" alignItems="center">
                       <Stack>
-                        <Typography fontWeight={700}>{tipo.label}</Typography>
+                        <Typography fontWeight={700}>{labelOf(TipoOcupacion, tipo)}</Typography>
                         <Typography variant="body2" color="text.secondary">
-                          {t
-                            ? `Vigente desde: ${fmtDate(t.vigenteDesde)}`
-                            : "Sin tarifa activa"}
+                          {vigente
+                            ? `Vigente desde ${formatDateOnly(vigente.vigenteDesde)}`
+                            : "Sin tarifa vigente"}
                         </Typography>
                       </Stack>
-
                       <Stack direction="row" spacing={2} alignItems="center">
-                        <Typography fontWeight={800}>
-                          {t ? money(t.precio) : "-"}
-                        </Typography>
+                        <Typography fontWeight={800}>{formatMoney(vigente?.precio)}</Typography>
                         {canEdit ? (
-                          <Button
-                            variant="contained"
-                            onClick={() => abrirActualizar(tipo.id)}
-                          >
-                            Actualizar
+                          <Button variant="contained" onClick={() => abrirCambiarPrecio(tipo)}>
+                            Cambiar precio
                           </Button>
                         ) : null}
                       </Stack>
                     </Stack>
-                  );
-                })}
+
+                    {proxima ? (
+                      <Stack direction="row" spacing={1} alignItems="center">
+                        <EstadoChip estado="programada" />
+                        <Typography variant="body2">
+                          {`Desde ${formatDateOnly(proxima.vigenteDesde)}: ${formatMoney(proxima.precio)}`}
+                        </Typography>
+                        {canEdit ? (
+                          <Button
+                            size="small"
+                            color="error"
+                            onClick={() => quitar(proxima.id)}
+                            disabled={removingId !== null}
+                          >
+                            Quitar
+                          </Button>
+                        ) : null}
+                      </Stack>
+                    ) : null}
+                  </Stack>
+                ))}
               </Stack>
             </CardContent>
           </Card>
@@ -236,9 +297,9 @@ export default function Tarifas() {
                   onChange={(e) => setTipoHist(Number(e.target.value))}
                   sx={{ width: 180 }}
                 >
-                  {TIPOS.map((t) => (
-                    <MenuItem key={t.id} value={t.id}>
-                      {t.label}
+                  {TIPO_OPTIONS.map((o) => (
+                    <MenuItem key={o.value} value={o.value}>
+                      {o.label}
                     </MenuItem>
                   ))}
                 </TextField>
@@ -247,9 +308,7 @@ export default function Tarifas() {
               <Divider sx={{ mb: 1 }} />
 
               {!historial.length ? (
-                <Typography color="text.secondary">
-                  No hay historial para este tipo.
-                </Typography>
+                <Typography color="text.secondary">No hay historial para este tipo.</Typography>
               ) : (
                 <Stack spacing={1}>
                   {historial.map((t) => (
@@ -257,14 +316,34 @@ export default function Tarifas() {
                       key={t.id}
                       direction="row"
                       justifyContent="space-between"
+                      alignItems="center"
+                      spacing={2}
                     >
-                      <Typography>{money(t.precio)}</Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {fmtDate(t.vigenteDesde)}
-                        {t.vigenteHasta
-                          ? ` → ${fmtDate(t.vigenteHasta)}`
-                          : " → (vigente)"}
-                      </Typography>
+                      <Typography>{formatMoney(t.precio)}</Typography>
+                      <Stack direction="row" spacing={1} alignItems="center">
+                        <Typography variant="body2" color="text.secondary">
+                          {`Desde ${formatDateOnly(t.vigenteDesde)}`}
+                          {t.vigenteHasta
+                            ? ` hasta ${formatDateOnly(t.vigenteHasta)}`
+                            : " sin fecha de fin"}
+                        </Typography>
+                        <EstadoChip estado={tarifaEstado(t, hoy)} />
+                        {canEdit && tarifaEstado(t, hoy) === "programada" ? (
+                          <>
+                            <Button size="small" onClick={() => abrirEditar(t)}>
+                              Editar
+                            </Button>
+                            <Button
+                              size="small"
+                              color="error"
+                              onClick={() => quitar(t.id)}
+                              disabled={removingId !== null}
+                            >
+                              Quitar
+                            </Button>
+                          </>
+                        ) : null}
+                      </Stack>
                     </Stack>
                   ))}
                 </Stack>
@@ -274,52 +353,84 @@ export default function Tarifas() {
         </Stack>
       )}
 
-      {/* DIALOG */}
-      <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth="sm">
-        <DialogTitle>Actualizar tarifa</DialogTitle>
+      {/* DIÁLOGO: cambiar precio (formulario y, después, confirmación) */}
+      <Dialog open={Boolean(dialog)} onClose={cerrarDialogo} fullWidth maxWidth="sm">
+        {dialog ? (
+          <>
+            <DialogTitle>{`Cambiar precio · ${labelOf(TipoOcupacion, dialog.tipo)}`}</DialogTitle>
 
-        <DialogContent dividers>
-          <Stack spacing={2}>
-            <TextField
-              select
-              label="Tipo"
-              value={tipoUpd}
-              onChange={(e) => setTipoUpd(Number(e.target.value))}
-              fullWidth
-            >
-              {TIPOS.map((t) => (
-                <MenuItem key={t.id} value={t.id}>
-                  {t.label}
-                </MenuItem>
-              ))}
-            </TextField>
+            {resumen ? (
+              <DialogContent dividers>
+                <Stack spacing={1}>
+                  <Typography>
+                    <strong>{labelOf(TipoOcupacion, dialog.tipo)}</strong>
+                    {` · de ${formatMoney(resumen.precioActual)} a ${formatMoney(resumen.precioNuevo)} · `}
+                    {resumen.fechaEfectiva === hoy
+                      ? "rige desde hoy"
+                      : `rige desde el ${formatDateOnly(resumen.fechaEfectiva)}`}
+                  </Typography>
+                  {resumen.reemplaza ? (
+                    <Typography color="text.secondary">
+                      {`Reemplaza la tarifa programada para esa fecha (${formatMoney(resumen.reemplaza.precio)}).`}
+                    </Typography>
+                  ) : null}
+                </Stack>
+              </DialogContent>
+            ) : (
+              <DialogContent dividers>
+                <Stack spacing={2} sx={{ pt: 1 }}>
+                  <TextField
+                    label="Nuevo precio"
+                    type="number"
+                    value={dialog.precio}
+                    onChange={(e) => cambiarCampo("precio", e.target.value)}
+                    error={Boolean(dialog.errors.precio)}
+                    helperText={dialog.errors.precio}
+                    inputProps={{ min: 0.01, step: 0.01 }}
+                    fullWidth
+                  />
+                  <TextField
+                    label="Vigente desde (opcional)"
+                    type="date"
+                    value={dialog.fecha}
+                    onChange={(e) => cambiarCampo("fecha", e.target.value)}
+                    error={Boolean(dialog.errors.fecha)}
+                    helperText={
+                      dialog.errors.fecha ??
+                      (dialog.fechaFija
+                        ? "La fecha no se puede cambiar al editar"
+                        : "Vacío: rige desde hoy")
+                    }
+                    disabled={dialog.fechaFija}
+                    inputProps={{ min: hoy }}
+                    InputLabelProps={{ shrink: true }}
+                    fullWidth
+                  />
+                </Stack>
+              </DialogContent>
+            )}
 
-            <TextField
-              label="Nuevo precio"
-              value={precioUpd}
-              onChange={(e) => setPrecioUpd(e.target.value)}
-              type="number"
-              inputProps={{ min: 0, step: "0.01" }}
-              fullWidth
-            />
-
-            <TextField
-              label="Vigente desde (opcional)"
-              type="datetime-local"
-              value={vigenteDesdeUpd}
-              onChange={(e) => setVigenteDesdeUpd(e.target.value)}
-              InputLabelProps={{ shrink: true }}
-              fullWidth
-            />
-          </Stack>
-        </DialogContent>
-
-        <DialogActions>
-          <Button onClick={() => setOpen(false)}>Cancelar</Button>
-          <Button variant="contained" onClick={guardarNuevaTarifa} disabled={saving}>
-            Guardar
-          </Button>
-        </DialogActions>
+            <DialogActions>
+              {resumen ? (
+                <>
+                  <Button onClick={() => setResumen(null)} disabled={saving}>
+                    Volver
+                  </Button>
+                  <Button variant="contained" onClick={confirmar} disabled={saving}>
+                    Confirmar
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button onClick={cerrarDialogo}>Cancelar</Button>
+                  <Button variant="contained" onClick={guardar}>
+                    Guardar
+                  </Button>
+                </>
+              )}
+            </DialogActions>
+          </>
+        ) : null}
       </Dialog>
     </Box>
   );

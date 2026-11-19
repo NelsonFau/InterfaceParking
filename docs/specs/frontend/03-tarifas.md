@@ -1,6 +1,6 @@
 # 03 — Tarifas con vigencia
 
-> Frontend · **Aprobada** (18/11/2026) · `feature/specs-etapa2` (esta spec, rama compartida con otros redactores) y `feature/front-tarifas` (ejecución, en el worktree `../parkingcontrol-front-tarifas`, a crear desde `develop` cuando la 02 esté implementada y mergeada) · Última actualización 18/11/2026
+> Frontend · **Terminada** (19/11/2026; se vuelve verdadera al mergear el PR a `develop`) · `feature/specs-etapa2` (esta spec, rama compartida con otros redactores) y `feature/front-tarifas` (ejecución, en el worktree `../parkingcontrol-front-tarifas`, a crear desde `develop` cuando la 02 esté implementada y mergeada) · Última actualización 18/11/2026
 >
 > Tercera spec del frontend. Reconecta la pantalla de Tarifas con la API de vigencia: hoy llama a `GET /Tarifa/activas`, que ya no existe, y manda `vigenteDesde` con un formato que el backend no acepta. Depende de la spec 02 (fechas con zona del tenant, enums, `formatMoney`, patrón de `src/api/`), que está aprobada pero todavía no implementada: acá se usan sus funciones por nombre.
 
@@ -253,14 +253,14 @@ Nada. (`Tarifas.jsx` queda con el mismo nombre y ruta.)
 
 ### Paso 0 — Precondiciones y worktree
 
-- [ ] **0.1** Confirmar que la 02 está mergeada en `develop` y resolver **P-FC-L1** (existen los archivos y la entrada de lint). Si no, frenar.
-- [ ] **0.2** Desde `parkingcontrol-front`: `git worktree add ../parkingcontrol-front-tarifas -b feature/front-tarifas develop`. En el worktree, copiar el `.env` (no está versionado) y correr `npm install`. Resolver P-FC-L2.
+- [x] **0.1** Confirmar que la 02 está mergeada en `develop` y resolver **P-FC-L1** (existen los archivos y la entrada de lint). Si no, frenar.
+- [x] **0.2** (Se ejecutó sin worktree: rama `feature/front-tarifas` directamente en `parkingcontrol-front`, por decisión del Orquestador.) Desde `parkingcontrol-front`: `git worktree add ../parkingcontrol-front-tarifas -b feature/front-tarifas develop`. En el worktree, copiar el `.env` (no está versionado) y correr `npm install`. Resolver P-FC-L2.
 
   *Aceptación:* en el worktree, `npm test`, `npm run lint` y `npm run build` pasan antes de cambiar nada.
 
 ### Paso 1 — Lógica pura
 
-- [ ] **1.1** Crear `src/utils/tarifas.js` con las funciones de D-FC13 y `test/unit/utils/tarifas.test.js`.
+- [x] **1.1** Crear `src/utils/tarifas.js` con las funciones de D-FC13 y `test/unit/utils/tarifas.test.js`.
 
   *Aceptación:* `npm test` pasa con estos casos (`today = "2026-11-18"` salvo que se indique):
 
@@ -288,39 +288,39 @@ Nada. (`Tarifas.jsx` queda con el mismo nombre y ruta.)
 
 ### Paso 2 — Módulo de API
 
-- [ ] **2.1** Crear `src/api/tarifaApi.js` (D-FC2) y `test/unit/api/tarifaApi.test.js` con `vi.mock` de `http`.
+- [x] **2.1** Crear `src/api/tarifaApi.js` (D-FC2) y `test/unit/api/tarifaApi.test.js` con `vi.mock` de `http`.
 
   *Aceptación:* `npm test` pasa con: `listTarifasVigentes` hace `GET /Tarifa/vigentes`; `listTarifaHistorial(2)` hace `GET /Tarifa/historial` con `params: { tipo: 2 }`; `updateTarifa` hace `PUT /Tarifa` con el cuerpo recibido, sin modificarlo; `removeTarifa(7)` hace `DELETE /Tarifa/7` y devuelve `undefined`; una respuesta que no es un arreglo en las dos lecturas lanza un `ApiError` con `code: "respuesta_invalida"`; ninguna función captura errores (un rechazo de `http` se propaga). `npm run lint` y `npm run build` pasan.
 
 ### Paso 3 — Vista de lectura: tarjetas e historial
 
-- [ ] **3.1** En `Tarifas.jsx`: cargar con `tarifaApi` en paralelo (D-FC12), retirar `fmtDate`, `TIPOS` y `money` (D-FC14), resolver **P-FC-L3**, y dibujar las tarjetas por tipo (vigente + línea "Programada", D-FC5) y el historial con chips de estado.
-- [ ] **3.2** Quitar el diálogo viejo y el botón "Actualizar": se reemplazan en el paso 4. La pantalla hoy está rota (404), así que no hay regresión. "Quitar" y "Editar" tampoco aparecen todavía.
-- [ ] **3.3** Estado de error de carga ("No pudimos cargar las tarifas" + "Reintentar") y "Refrescar" que recarga vigentes e historial; el efecto del historial descarta respuestas viejas.
+- [x] **3.1** En `Tarifas.jsx`: cargar con `tarifaApi` en paralelo (D-FC12), retirar `fmtDate`, `TIPOS` y `money` (D-FC14), resolver **P-FC-L3**, y dibujar las tarjetas por tipo (vigente + línea "Programada", D-FC5) y el historial con chips de estado.
+- [x] **3.2** Quitar el diálogo viejo y el botón "Actualizar": se reemplazan en el paso 4. La pantalla hoy está rota (404), así que no hay regresión. "Quitar" y "Editar" tampoco aparecen todavía.
+- [x] **3.3** Estado de error de carga ("No pudimos cargar las tarifas" + "Reintentar") y "Refrescar" que recarga vigentes e historial; el efecto del historial descarta respuestas viejas.
 
   *Aceptación (manual, con el backend de `develop` y un usuario cuyo tenant tenga `America/Montevideo`):* (1) en Network, la carga llama a `GET /Tarifa/vigentes` y a `GET /Tarifa/historial?tipo=1`, y responden 200; (2) con `dueno@demo.test`, cada tipo muestra su precio, "Vigente desde dd/mm/yyyy" y, si hay una programada, la línea con el chip "Programada"; un tipo sin tarifa muestra "Sin tarifa vigente" y "—"; (3) el historial muestra chips Vigente, Programada y Finalizada, y las fechas coinciden con las de la API (sin corrimiento de un día); (4) cambiar el tipo del historial rápido varias veces deja el último elegido; (5) con el backend apagado se ve "No pudimos cargar las tarifas" y no "Sin tarifa vigente"; (6) las etiquetas son "Hora / Día / Mes". `npm run lint` y `npm run build` pasan; una búsqueda de `fmtDate`, `money(` y `TIPOS` en `Tarifas.jsx` no da coincidencias.
 
 ### Paso 4 — Cambiar un precio
 
-- [ ] **4.1** Diálogo "Cambiar precio" (D-FC7): tipo fijo, precio, fecha opcional con `min` = hoy; el botón aparece solo con `can("tarifas.editar")` (D-FC10). Abrirlo posiciona el historial en ese tipo (D-FC5).
-- [ ] **4.2** Paso de confirmación dentro del diálogo (D-FC8) con `summarizeChange`; "Volver" conserva lo escrito.
-- [ ] **4.3** Envío con `buildUpdateBody` y `tarifaApi.updateTarifa`; en éxito: aviso "Tarifa actualizada", cierre y recarga. En error: `showApiError` y, si `shouldReloadAfter(e.code)`, recarga con el diálogo abierto (D-FC11). El botón de confirmar se deshabilita mientras envía.
+- [x] **4.1** (código incluido en el commit 3f8d03f, junto con el paso 3) Diálogo "Cambiar precio" (D-FC7): tipo fijo, precio, fecha opcional con `min` = hoy; el botón aparece solo con `can("tarifas.editar")` (D-FC10). Abrirlo posiciona el historial en ese tipo (D-FC5).
+- [x] **4.2** (código incluido en el commit 3f8d03f) Paso de confirmación dentro del diálogo (D-FC8) con `summarizeChange`; "Volver" conserva lo escrito.
+- [x] **4.3** (código incluido en el commit 3f8d03f) Envío con `buildUpdateBody` y `tarifaApi.updateTarifa`; en éxito: aviso "Tarifa actualizada", cierre y recarga. En error: `showApiError` y, si `shouldReloadAfter(e.code)`, recarga con el diálogo abierto (D-FC11). El botón de confirmar se deshabilita mientras envía.
 
   *Aceptación (manual, con `dueno@demo.test`):* (1) sin fecha, el `PUT` va con `{ tipo, nuevoPrecio }` y **sin** `vigenteDesde`; la respuesta es 200 y el precio vigente cambia; (2) con una fecha futura, el cuerpo lleva `vigenteDesde: "yyyy-MM-dd"` (nunca un instante con hora) y la tarjeta muestra la línea "Programada"; (3) repetir una fecha futura ya programada muestra en el resumen "Reemplaza la tarifa programada…" y, al confirmar, el historial tiene un precio nuevo para esa fecha y no un duplicado; (4) precio `0`, `12.345`, `10000001` y una fecha pasada no llegan a la red y muestran el mensaje de D-FC7; (5) cambiar el precio de un tipo que ya tiene una tarifa que empieza hoy muestra el aviso de `tarifa_ya_vigente` y el diálogo sigue abierto; (6) con `encargado@demo.test` y `operado@demo.test` no se ve "Cambiar precio"; (7) un `PUT` forzado con `operado@demo.test` desde DevTools muestra el `title` de `sin_permiso` y la pantalla sigue. `npm run lint`, `npm test` y `npm run build` pasan.
 
 ### Paso 5 — Quitar y editar programadas
 
-- [ ] **5.1** "Quitar" en la línea "Programada" de la tarjeta y en las filas `programada` del historial (D-FC6), solo con `tarifas.editar`. `tarifaApi.removeTarifa`, aviso "Programación quitada" y recarga; sin diálogo de confirmación.
-- [ ] **5.2** "Editar" en las filas `programada` del historial (D-FC9): abre el diálogo del paso 4 con tipo, precio y fecha de esa fila, fecha bloqueada.
-- [ ] **5.3** Errores de `DELETE` por `code` (D-FC11): `tarifa_ya_vigente`, `tarifa_no_encontrada` y `tarifa_modificada` recargan después del aviso.
+- [x] **5.1** "Quitar" en la línea "Programada" de la tarjeta y en las filas `programada` del historial (D-FC6), solo con `tarifas.editar`. `tarifaApi.removeTarifa`, aviso "Programación quitada" y recarga; sin diálogo de confirmación.
+- [x] **5.2** "Editar" en las filas `programada` del historial (D-FC9): abre el diálogo del paso 4 con tipo, precio y fecha de esa fila, fecha bloqueada.
+- [x] **5.3** Errores de `DELETE` por `code` (D-FC11): `tarifa_ya_vigente`, `tarifa_no_encontrada` y `tarifa_modificada` recargan después del aviso.
 
   *Aceptación (manual, con `dueno@demo.test`):* (1) programar dos fechas futuras para un tipo: la tarjeta muestra solo la más cercana y el historial muestra las dos como "Programada"; (2) "Quitar" en la de la tarjeta hace `DELETE /Tarifa/{id}` (204), la próxima pasa a ser la siguiente futura y el `vigenteHasta` de la fila anterior se actualiza; (3) "Quitar" en la otra fila del historial funciona igual; (4) las filas `Vigente` y `Finalizada` no tienen "Quitar" ni "Editar"; (5) "Editar" abre el diálogo con la fecha bloqueada y, al confirmar, el precio cambia sin crear una fila nueva; (6) quitar una programada que otro usuario ya quitó (segunda pestaña) muestra el `title` de `tarifa_no_encontrada` y la lista se recarga; (7) con `encargado@demo.test` no se ve ningún botón de escritura. `npm run lint`, `npm test` y `npm run build` pasan.
 
 ### Paso 6 — Lint, documentación y cierre
 
-- [ ] **6.1** Retirar la excepción de `Tarifas.jsx` de `eslint.config.js` (P-FC-L4). **No** tocar `CLAUDE.md`.
-- [ ] **6.2** Crear `docs/manual/frontend/03-tarifas.md`: cómo se calcula el estado de una tarifa, cómo se programa, se reemplaza y se quita, qué hace cada `code` de error y la tabla de permisos.
-- [ ] **6.3** Actualizar el estado de esta spec en `docs/specs/README.md` y en su cabecera: **Terminada** una vez mergeada a `develop`.
+- [x] **6.1** Retirar la excepción de `Tarifas.jsx` de `eslint.config.js` (P-FC-L4). **No** tocar `CLAUDE.md`.
+- [x] **6.2** Crear `docs/manual/frontend/03-tarifas.md`: cómo se calcula el estado de una tarifa, cómo se programa, se reemplaza y se quita, qué hace cada `code` de error y la tabla de permisos.
+- [x] **6.3** Actualizar el estado de esta spec en `docs/specs/README.md` y en su cabecera: **Terminada** una vez mergeada a `develop`.
 
   *Aceptación:* `npm run lint`, `npm test` y `npm run build` pasan; `Tarifas.jsx` no está en las excepciones de `eslint.config.js` y el lint falla si se le agrega un `toLocaleString()`; una búsqueda de `/activas` en `src/` no da coincidencias; `git diff develop -- CLAUDE.md` vacío.
 
