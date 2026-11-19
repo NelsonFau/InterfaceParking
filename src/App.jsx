@@ -7,6 +7,7 @@ import Clientes from "./pages/Clientes.jsx";
 import Ocupaciones from "./pages/Ocupaciones.jsx";
 import Tarifas from "./pages/Tarifas.jsx";
 import Trazabilidad from "./pages/Trazabilidad.jsx";
+import Usuarios from "./pages/Usuarios.jsx";
 import Login from "./pages/Login.jsx";
 import Splash from "./pages/Splash.jsx";
 import OperationalDashboard from "./pages/OperationalDashboard.jsx";
@@ -27,6 +28,7 @@ const PAGES = {
   "/trazabilidad": Trazabilidad,
   "/alertas-operativas": OperationalAlerts,
   "/caja-diaria": CajaDiaria,
+  "/usuarios": Usuarios,
 };
 
 function PrivatePage({ path }) {

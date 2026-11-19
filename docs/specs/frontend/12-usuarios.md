@@ -1,6 +1,6 @@
 # 12 — Usuarios: invitar, cambiar rol, desactivar y reactivar
 
-> Frontend · **Aprobada** (18/11/2026) · `feature/specs-etapa3` (esta spec, rama compartida con otros redactores) y `feature/front-usuarios` (ejecución, en el worktree `../parkingcontrol-front-usuarios`, a crear desde `develop` cuando la 02 y la 04 estén mergeadas) · Última actualización 18/11/2026
+> Frontend · **Terminada** (19/11/2026; se vuelve verdadera al mergear el PR a `develop`; aprobada el 18/11/2026) · `feature/specs-etapa3` (esta spec, rama compartida con otros redactores) y `feature/front-usuarios` (ejecución, en el worktree `../parkingcontrol-front-usuarios`, a crear desde `develop` cuando la 02 y la 04 estén mergeadas) · Última actualización 18/11/2026
 >
 > Doceava spec del frontend. Es una pantalla **nueva**: hoy el frontend no tiene ninguna forma de ver ni gestionar los usuarios del local (el backend ya expone `/Usuarios`). Depende de la 02 (enums, fechas, patrón de `src/api/`) y, por el enlace "Ver actividad", de la 04 (`buildTrazabilidadPath`). Las dudas del backend (B1 a B6) se relevaron y están en `docs/inventario/backend.md`, `/Usuarios`, "Comportamiento"; esta spec las incorpora.
 
@@ -192,6 +192,17 @@ Ninguno: es una pantalla nueva. (La spec 01 no preveía `/Usuarios`.)
 | P-FL-L3 | Que `rol` llegue como **entero** en `/Usuarios` y que `RolUsuario` tenga DUENO 1, ENCARGADO 3, OPERADOR 4, AUDITOR 5 | Si llega como texto, **frenar** (cambia `enums.js`) |
 | P-FL-L4 | Si `usuariosApi.js` ya tiene otras funciones o otro estilo | Seguir el estilo de lo que haya; no reescribir `listUsuarios` |
 
+**Resueltos al ejecutar (19/11/2026).**
+
+| Id | Resultado |
+|---|---|
+| P-FL-L1 | La 02 y la 04 están en la rama base: existen `enums.js` (con `RolUsuario`), `fechas.js`, `useTenantDates.js`, `trazabilidadLink.js` y `usuariosApi.js` con `listUsuarios`. |
+| P-FL-L2 | `useMe().me.usuarioId` existe (lo usa `PagoDetalleDialog.jsx`; el backend lo manda en `MeService.cs:36`). `useTenantDates()` expone `formatInstantDate`. |
+| P-FL-L3 | `RolUsuario` tiene DUENO 1, ENCARGADO 3, OPERADOR 4, AUDITOR 5 (y SUPERADMIN 6). El `rol` llega entero según el inventario; falta verificarlo con el backend en marcha (manual). |
+| P-FL-L4 | `usuariosApi.js` solo tenía `listUsuarios` con `ApiError`/`ERROR_CODES`; se siguió ese estilo. |
+
+**Decisiones menores del ejecutor (no cambian la spec).** (a) El aviso persistente de D-FL6 usa, al reenviar bien, el mismo toast que la fila (D-FL7): "Le enviamos de nuevo la invitación a {email}" (D-FL6 decía "Invitación enviada" y D-FL7 pedía el mismo toast; se tomó D-FL7). (b) Con 503 `proveedor_identidad_no_disponible` el diálogo sigue abierto (además de recargar) para que el reintento manual no pierda lo escrito. (c) Con los códigos que recargan, los diálogos de rol y desactivar se cierran. (d) El módulo `usuarios.js` evita `usuario.rol` en comparaciones por la regla ARQ-4 de ESLint (usa desestructuración). (e) El acceso a rol, email y alta se verificó solo con tests de lógica pura; los pasos manuales de aceptación (sección 6) quedan para quien tenga el backend y Auth0 en marcha.
+
 **Abiertos del proyecto que esta spec no toma:** P-19, P-29, P-33, P-2 y P-9 (heredados de la 01).
 
 ## 5. Inventario
@@ -238,14 +249,14 @@ Nada.
 
 ### Paso 0 — Precondiciones y worktree
 
-- [ ] **0.1** Confirmar que la 02 y la 04 están mergeadas en `develop` y resolver **P-FL-L1**. Si no, frenar.
-- [ ] **0.2** Desde `parkingcontrol-front`, pedir al Orquestador: `git worktree add ../parkingcontrol-front-usuarios -b feature/front-usuarios develop`. En el worktree, copiar el `.env` (no está versionado) y `npm install`. Resolver **P-FL-L2**, **P-FL-L3** y **P-FL-L4**.
+- [x] **0.1** Confirmar que la 02 y la 04 están mergeadas en `develop` y resolver **P-FL-L1**. Si no, frenar.
+- [x] **0.2** Desde `parkingcontrol-front`, pedir al Orquestador: `git worktree add ../parkingcontrol-front-usuarios -b feature/front-usuarios develop`. En el worktree, copiar el `.env` (no está versionado) y `npm install`. Resolver **P-FL-L2**, **P-FL-L3** y **P-FL-L4**.
 
   *Aceptación:* en el worktree, `npm test`, `npm run lint` y `npm run build` pasan antes de cambiar nada.
 
 ### Paso 1 — Lógica pura
 
-- [ ] **1.1** Crear `src/utils/usuarios.js` con las funciones de D-FL13 y `test/unit/utils/usuarios.test.js`.
+- [x] **1.1** Crear `src/utils/usuarios.js` con las funciones de D-FL13 y `test/unit/utils/usuarios.test.js`.
 
   *Aceptación:* `npm test` pasa con estos casos:
 
@@ -272,38 +283,38 @@ Nada.
 
 ### Paso 2 — Módulo de API
 
-- [ ] **2.1** Agregar a `src/api/usuariosApi.js` las funciones de D-FL2 (sin tocar `listUsuarios`) y crear `test/unit/api/usuariosApi.test.js` con `vi.mock` de `http`.
+- [x] **2.1** Agregar a `src/api/usuariosApi.js` las funciones de D-FL2 (sin tocar `listUsuarios`) y crear `test/unit/api/usuariosApi.test.js` con `vi.mock` de `http`.
 
   *Aceptación:* `npm test` pasa con: `createUsuario` hace `POST /Usuarios` con el cuerpo recibido y devuelve `{ usuario, invitacionEnviada }`; una respuesta sin `usuario` o con `invitacionEnviada` no booleano lanza `ApiError` con `code: "respuesta_invalida"`; `resendInvitacion(7)` hace `POST /Usuarios/7/reenviar-invitacion` y devuelve `undefined`; `updateUsuarioRol(7, 4)` hace `PUT /Usuarios/7/rol` con `{ rol: 4 }`; `deactivateUsuario(7)` y `reactivateUsuario(7)` hacen `POST /Usuarios/7/desactivar` y `/reactivar` y devuelven el `Usuario`; ninguna función captura errores (un rechazo de `http` se propaga). `npm run lint` y `npm run build` pasan.
 
 ### Paso 3 — Ruta, menú y lista de solo lectura
 
-- [ ] **3.1** Agregar la entrada `/usuarios` a `PRIVATE_ROUTES` (al final), la página a `PAGES` en `App.jsx` y los casos de `/usuarios` a `test/unit/auth/routes.test.js` (D-FL3).
-- [ ] **3.2** Crear `src/pages/Usuarios.jsx` con la carga (`listUsuarios`), la tabla, el orden, el filtro de texto, el switch y los estados de cargando, vacío y error con "Reintentar" (D-FL4). Sin acciones todavía.
+- [x] **3.1** Agregar la entrada `/usuarios` a `PRIVATE_ROUTES` (al final), la página a `PAGES` en `App.jsx` y los casos de `/usuarios` a `test/unit/auth/routes.test.js` (D-FL3).
+- [x] **3.2** Crear `src/pages/Usuarios.jsx` con la carga (`listUsuarios`), la tabla, el orden, el filtro de texto, el switch y los estados de cargando, vacío y error con "Reintentar" (D-FL4). Sin acciones todavía.
 
   *Aceptación (manual, con el backend de `develop`):* (1) con `dueno@demo.test`, `encargado@demo.test` y el usuario AUDITOR, el menú muestra "Usuarios" al final y la pantalla lista a todos con rol y alta correctos (sin corrimiento de día); (2) con `operado@demo.test` no hay ítem de menú y entrar a `/usuarios` muestra "No tenés permiso"; (3) los desactivados aparecen atenuados y el switch los oculta; (4) el filtro encuentra por nombre y por email sin distinguir tildes; (5) con el backend apagado se ve "No pudimos cargar los usuarios" y "Reintentar", no una lista vacía; (6) el rol se ve con `labelOf` (Dueño, Encargado, …). `npm run lint`, `npm test` y `npm run build` pasan.
 
 ### Paso 4 — Invitar y reenviar
 
-- [ ] **4.1** Diálogo "Invitar usuario" con `validateInvitacion` y rol sin preseleccionar; el botón solo con `can("usuarios.gestionar")` (D-FL5).
-- [ ] **4.2** Aviso persistente de `invitacionEnviada = false` con "Reenviar invitación" y toast en el caso `true` (D-FL6).
-- [ ] **4.3** Menú de la fila con "Reenviar invitación" para activos ajenos (D-FL7). Errores por `code` con `shouldReloadAfter` (D-FL12).
+- [x] **4.1** Diálogo "Invitar usuario" con `validateInvitacion` y rol sin preseleccionar; el botón solo con `can("usuarios.gestionar")` (D-FL5).
+- [x] **4.2** Aviso persistente de `invitacionEnviada = false` con "Reenviar invitación" y toast en el caso `true` (D-FL6).
+- [x] **4.3** Menú de la fila con "Reenviar invitación" para activos ajenos (D-FL7). Errores por `code` con `shouldReloadAfter` (D-FL12).
 
   *Aceptación (manual, con `dueno@demo.test`):* (1) invitar con datos válidos manda `POST /Usuarios` con `{ nombre, email, rol }` (rol entero, textos recortados), responde 201, el usuario aparece en la lista y hay un toast de éxito; (2) nombre vacío, email inválido y rol sin elegir no llegan a la red y muestran el mensaje de D-FL5; (3) el selector no ofrece SUPERADMIN; (4) invitar un email repetido muestra el `title` de `usuario_ya_existe` y el diálogo sigue abierto; (5) con `invitacionEnviada: false` (simularlo con una respuesta forzada en DevTools o con Auth0 sin configurar) se ve el aviso persistente y "Reenviar invitación" llama a `POST /Usuarios/{id}/reenviar-invitacion` (204); (6) invitar un email que está en **otro** local muestra el `title` de `usuario_ya_registrado` y el diálogo sigue abierto; "Reenviar" a un usuario que ya ingresó **no** da error (204) y muestra "Le enviamos de nuevo la invitación a {email}"; (7) con `encargado@demo.test` no se ve "Invitar usuario" ni menú de acciones; (8) un `POST /Usuarios` forzado con `encargado@demo.test` desde DevTools muestra el `title` de `sin_permiso` y la pantalla sigue. `npm run lint`, `npm test` y `npm run build` pasan.
 
 ### Paso 5 — Rol, desactivar, reactivar y "Ver actividad"
 
-- [ ] **5.1** "Cambiar rol" con resumen de confirmación (D-FL8).
-- [ ] **5.2** "Desactivar" con confirmación y "Reactivar" sin ella (D-FL9).
-- [ ] **5.3** Fila propia: chip "Vos" y sin acciones de escritura (D-FL10).
-- [ ] **5.4** "Ver actividad" con `buildTrazabilidadPath({ usuarioId })` y `can("auditoria.ver")` (D-FL11).
+- [x] **5.1** "Cambiar rol" con resumen de confirmación (D-FL8).
+- [x] **5.2** "Desactivar" con confirmación y "Reactivar" sin ella (D-FL9).
+- [x] **5.3** Fila propia: chip "Vos" y sin acciones de escritura (D-FL10).
+- [x] **5.4** "Ver actividad" con `buildTrazabilidadPath({ usuarioId })` y `can("auditoria.ver")` (D-FL11).
 
   *Aceptación (manual, con `dueno@demo.test`):* (1) "Cambiar rol" muestra "de X a Y", "Guardar" está deshabilitado si no cambió, y al confirmar hace `PUT /Usuarios/{id}/rol` con `{ rol }`, la lista refleja el nuevo rol y no hay doble clic posible; (2) "Desactivar" pide confirmación, hace `POST /Usuarios/{id}/desactivar` y la fila pasa a "Desactivado"; "Cancelar" no llama a la red; (3) "Reactivar" funciona sin confirmación y devuelve la fila a "Activo"; (4) la fila propia tiene el chip "Vos" y no ofrece cambiar rol, desactivar ni reenviar; (5) forzar un `PUT /rol` o `POST /desactivar` sobre uno mismo desde DevTools muestra el `title` de `operacion_sobre_uno_mismo`; (6) desactivar o bajar de rol al único dueño (si hay forma de armarlo en el entorno) muestra el `title` de `ultimo_dueno` y la lista no cambia; (7) desactivar a alguien que otra pestaña ya desactivó muestra el `title` de `usuario_ya_desactivado` y la lista se recarga; (8) "Ver actividad" lleva a `/trazabilidad?usuarioId=N` y la pantalla de Trazabilidad abre filtrada por ese usuario; el enlace **no** aparece con `encargado@demo.test` ni con un usuario sin `auditoria.ver`; (9) con el usuario AUDITOR la pantalla es de solo lectura pero **sí** muestra "Ver actividad". `npm run lint`, `npm test` y `npm run build` pasan.
 
 ### Paso 6 — Documentación y cierre
 
-- [ ] **6.1** Crear `docs/manual/frontend/12-usuarios.md`: qué hace cada acción, la tabla de permisos, qué hace cada `code` de error, el caso `invitacionEnviada = false` y cómo reenviar, y qué significa cada estado de la fila.
-- [ ] **6.2** Actualizar el estado de esta spec en `docs/specs/README.md` y en su cabecera: **Terminada** una vez mergeada a `develop`.
+- [x] **6.1** Crear `docs/manual/frontend/12-usuarios.md`: qué hace cada acción, la tabla de permisos, qué hace cada `code` de error, el caso `invitacionEnviada = false` y cómo reenviar, y qué significa cada estado de la fila.
+- [x] **6.2** Actualizar el estado de esta spec en `docs/specs/README.md` y en su cabecera: **Terminada** una vez mergeada a `develop`.
 
   *Aceptación:* `npm run lint`, `npm test` y `npm run build` pasan; `git diff develop -- CLAUDE.md` vacío; una búsqueda de `rol ===`, `rol ==` y `.rol` en `src/pages/Usuarios.jsx` y `src/utils/usuarios.js` no encuentra decisiones por rol (solo `labelOf`); una búsqueda de `localStorage` y `toLocale` en esos dos archivos no da coincidencias.
 
@@ -333,7 +344,7 @@ Con el backend en `develop` corriendo y `npm run dev` en `http://localhost:5173`
 
 ## 8. Cómo retomar
 
-**Estado:** Aprobada (18/11/2026). El desarrollador confirmó las cinco decisiones de producto (P1 a P5, vía Orquestador), la forma de la lista y D-FL7 ("Reenviar" en todas las filas activas, con el texto "Le enviamos de nuevo la invitación a {email}", porque el backend no rechaza a quien ya aceptó). El relevamiento del backend (B1 a B6) está incorporado (P-FL1 cerrado). Todas las decisiones D-FL están Confirmadas. Falta que la 02 y la 04 estén mergeadas para poder ejecutar.
+**Estado:** Terminada (19/11/2026; ejecutada en `feature/front-usuarios`, pasos manuales de la sección 6 pendientes de verificar con el backend). Fue aprobada el 18/11/2026. El desarrollador confirmó las cinco decisiones de producto (P1 a P5, vía Orquestador), la forma de la lista y D-FL7 ("Reenviar" en todas las filas activas, con el texto "Le enviamos de nuevo la invitación a {email}", porque el backend no rechaza a quien ya aceptó). El relevamiento del backend (B1 a B6) está incorporado (P-FL1 cerrado). Todas las decisiones D-FL están Confirmadas.
 
 **Ejecución en un worktree propio**, `C:\Users\Equipo\source\repos\FrontParking\parkingcontrol-front-usuarios` (rama `feature/front-usuarios`), creado desde `develop`. **Solo puede arrancar con la 02 y la 04 mergeadas** (P-FL-L1). Un chat para todos los pasos:
 

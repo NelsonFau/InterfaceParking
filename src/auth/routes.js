@@ -23,6 +23,8 @@ export const PRIVATE_ROUTES = [
   { path: TRAZABILIDAD_PATH, label: "Trazabilidad", permiso: "auditoria.ver" },
   { path: ALERTAS_PATH, label: "Alertas operativas", permiso: "alertas.ver" },
   { path: "/caja-diaria", label: "Caja diaria", permiso: "caja.ver" },
+  // Spec 12 (D-FL3): pantalla de administración, al final del menú.
+  { path: "/usuarios", label: "Usuarios", permiso: "usuarios.ver" },
 ];
 
 // Rutas a las que el usuario tiene acceso, en el orden del mapa. La primera es la ruta inicial.
