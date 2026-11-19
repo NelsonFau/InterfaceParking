@@ -4,10 +4,13 @@ import { getConfig } from "../config.js";
 import { TREATMENT, treatmentFor } from "../constants/errorCodes.js";
 import { accountBlocked, getToken, refreshToken, sessionLost } from "./authBridge.js";
 import { ApiError, normalizeError } from "./errors.js";
+import { PARAMS_SERIALIZER } from "./params.js";
 
 export const http = axios.create({
   baseURL: getConfig().apiBaseUrl,
   timeout: 20000,
+  // Un arreglo sale como `fuente=PAGO&fuente=CAJA`, no `fuente[]=PAGO` (D-FB15).
+  paramsSerializer: PARAMS_SERIALIZER,
   headers: {
     // P-FA5: se mantiene hasta confirmar que el backend ya no se expone por ngrok.
     "ngrok-skip-browser-warning": "true",

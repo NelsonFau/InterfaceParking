@@ -1,6 +1,6 @@
 # 02 — Base común: fechas con zona del tenant, enums, paginación y módulos de API
 
-> Frontend · **Aprobada** (18/11/2026) · `feature/spec-front-base` (esta spec) y `feature/front-base` (ejecución, en un worktree aparte, a crear desde `develop` una vez mergeada esta spec) · Última actualización 18/11/2026
+> Frontend · **Terminada** (18/11/2026; se vuelve verdadera al mergear el PR a `develop`) · `feature/spec-front-base` (esta spec) y `feature/front-base` (ejecución, en un worktree aparte, a crear desde `develop` una vez mergeada esta spec) · Última actualización 18/11/2026
 >
 > Segunda spec del frontend. Es la base que usan las specs 03 a 12: define cómo se manejan las fechas, dónde viven los enums, cómo se pagina y cómo se escribe un módulo de `src/api/`. Arregla además el 400 por fechas sin zona que hoy rompe el alta y los filtros de Ocupaciones.
 
@@ -302,6 +302,8 @@ export async function deactivateCliente(id) {
 |---|---|---|---|---|---|
 | DV-FB1 | `brechas-front.md`, sección 1 | El 400 por fechas sin zona está "roto hoy" en `Ocupaciones.jsx` | La spec lo describe como causado por los cambios sin commitear, no por `develop`; el arreglo mínimo (D-FB10) igual se hace, porque `develop` interpreta la hora en la zona del navegador | El código de `develop` manda `Z` (zona del navegador), y el 400 lo causaba el árbol de trabajo sin commitear, hoy en `wip/ocupaciones-reservas` | — |
 | DV-FB2 | D-FB2 (una sola zona) | Lo que se envía y lo que se muestra usan la zona del tenant | Entre la 02 y la 07, `Ocupaciones.jsx` **envía** en la zona del tenant (D-FB10) pero **muestra** con su `fmtDate` local, en la zona del navegador | El arreglo mínimo no toca la UI (D-FB8). Con el navegador en la misma zona que el tenant, que es el caso normal, no se nota | La 07 reemplaza `fmtDate` por `formatInstant` |
+| DV-FB3 | D-FB5 (no define estos casos) | Una zona inválida, un `DateOnly` inválido en `addDays`/`dayToInstantRange` y un instante sin zona no tienen comportamiento definido | `fechas.js` lanza `RangeError` con zona inválida (nunca cae a la del sistema) y con `DateOnly` inválido en `addDays`, `dayToInstantRange` y `dateRangeToInstants`. Un instante sin `Z` ni desplazamiento se trata como inválido (`""` en `instantToInput`, texto tal cual en `formatInstant`), porque `Date` lo leería en la zona del sistema | Aclaración de implementación, coherente con D-FB2 y D-FB7 (`MeProvider` valida la zona antes de que una pantalla use el módulo) | — |
+| DV-FB4 | D-FB7 (estado `error` de `MeProvider`) | Pide el estado `error` con el mensaje "No pudimos leer la zona horaria del local", sin decir con qué `code` | El `ApiError` lleva `code: "respuesta_invalida"` (ya existente) y ese mensaje explícito. No se agrega un código nuevo a `errorCodes.js`. `useTenantDates()` lanza un `Error` si se usa sin `/me` cargado o sin zona válida | `/me` respondió con un contenido incompleto, que es lo que describe `respuesta_invalida`; un código nuevo sería una decisión que la spec no prevé | — |
 
 ### 4.2 Pendientes
 
@@ -315,7 +317,7 @@ export async function deactivateCliente(id) {
 | P-FB4 | Regla de ESLint que prohíba importar `http` directo desde `src/pages` cuando ya no queden páginas que lo hagan | — |
 | P-FB5 | Revisar Temporal cuando Safari tenga una versión estable con soporte: reemplazaría a `@date-fns/tz` sin polyfill | — |
 | P-FB6 | `Clientes.jsx` tiene su paginación propia y ninguna spec 03 a 12 la toca. Migrarla a los helpers cuando se la modifique | — |
-| P-FB7 | `CLAUDE.md` está sin trackear (P-FA10). El paso 8 lo actualiza; el desarrollador decide si ese archivo se commitea en este PR | 8 |
+| P-FB7 | **Cerrado (paso 8).** `CLAUDE.md` ya está versionado en `develop` (commit `cae486f`, con la sección "Git: which repo, which branch"); la nota de que estaba sin trackear (P-FA10) quedó desactualizada. El paso 8.2 lo actualiza en este PR | 8 |
 | P-FB8 | `OperationalDashboard.jsx` mezcla alertas y cajas (P-FA4). Su copia de fechas y `todayISO` se retira en la 05 si queda como panel de alertas, o en la 09 si la parte de caja se mueve allí | — |
 
 **Locales, el ejecutor los resuelve y los informa.**
@@ -389,9 +391,9 @@ La 02 no modifica estas páginas (salvo Ocupaciones, D-FB10, y las dos de alerta
 
 ### Paso 1 — Módulo de fechas y su dependencia
 
-- [ ] **1.1** Con esta spec ya mergeada en `develop`, crear el worktree de ejecución: `git worktree add ../parkingcontrol-front-base -b feature/front-base develop` (desde `parkingcontrol-front`). En el worktree, copiar el `.env` (no está versionado) y correr `npm install`. Instalar `@date-fns/tz`. Resolver P-FB-L1.
-- [ ] **1.2** Crear `src/utils/fechas.js` con las funciones de D-FB5.
-- [ ] **1.3** Crear `test/unit/utils/fechas.test.js`.
+- [x] **1.1** Con esta spec ya mergeada en `develop`, crear el worktree de ejecución: `git worktree add ../parkingcontrol-front-base -b feature/front-base develop` (desde `parkingcontrol-front`). En el worktree, copiar el `.env` (no está versionado) y correr `npm install`. Instalar `@date-fns/tz`. Resolver P-FB-L1.
+- [x] **1.2** Crear `src/utils/fechas.js` con las funciones de D-FB5.
+- [x] **1.3** Crear `test/unit/utils/fechas.test.js`.
 
   *Aceptación:* `npm test` pasa con estos casos (las fechas de los cambios de horario se confirman con P-FB-L3):
 
@@ -419,47 +421,49 @@ La 02 no modifica estas páginas (salvo Ocupaciones, D-FB10, y las dos de alerta
 
 ### Paso 2 — Hook y validación de la zona
 
-- [ ] **2.1** Crear `src/utils/useTenantDates.js` (D-FB7).
-- [ ] **2.2** En `src/auth/MeProvider.jsx`, validar la zona de `/me` con `isValidTimeZone`; si es inválida o falta, estado `error` con el mensaje de D-FB7.
+- [x] **2.1** Crear `src/utils/useTenantDates.js` (D-FB7).
+- [x] **2.2** En `src/auth/MeProvider.jsx`, validar la zona de `/me` con `isValidTimeZone`; si es inválida o falta, estado `error` con el mensaje de D-FB7.
 
   *Aceptación (manual):* con el backend levantado, `useTenantDates()` devuelve la zona de `/me` (se ve al usarlo en el paso 7). Con una modificación temporal de `MeProvider` que ponga una zona inválida (sin commitear) se ve la pantalla de error de `/me` con "Reintentar". `npm run lint` y `npm run build` pasan.
 
+  *Verificación manual pendiente (decidido con el chat orquestador):* ambas pruebas de arriba (la zona que devuelve `useTenantDates()` y la pantalla de error con la zona inválida) se hacen junto con la prueba manual del paso 7, para levantar el backend una sola vez. Hasta entonces el paso 2 está verificado solo por `npm test`, `npm run lint` y `npm run build`.
+
 ### Paso 3 — Formato de moneda
 
-- [ ] **3.1** Crear `src/utils/formato.js` (D-FB12) y `test/unit/utils/formato.test.js`.
+- [x] **3.1** Crear `src/utils/formato.js` (D-FB12) y `test/unit/utils/formato.test.js`.
 
   *Aceptación:* `npm test` pasa con: `formatMoney(1234.5)` contiene `1.234,50` (los espacios, incluidos los no cortables, se normalizan antes de comparar); `null`, `undefined`, `""` y `"abc"` dan `—`; `0` da un importe de cero, no `—`. `formatNumber(1234)` da `1.234`, `formatNumber(0)` da `0` y `formatNumber(null)` da `—`. `npm run lint` y `npm run build` pasan.
 
 ### Paso 4 — Enums
 
-- [ ] **4.1** Crear `src/constants/enums.js` con `defineEnum`, los helpers y los 15 enums de D-FB11, y `test/unit/constants/enums.test.js`.
-- [ ] **4.2** Borrar `src/constants/operationalAlerts.js` y pasar `OperationalAlerts.jsx` y `OperationalDashboard.jsx` a `enums.js`.
+- [x] **4.1** Crear `src/constants/enums.js` con `defineEnum`, los helpers y los 15 enums de D-FB11, y `test/unit/constants/enums.test.js`.
+- [x] **4.2** Borrar `src/constants/operationalAlerts.js` y pasar `OperationalAlerts.jsx` y `OperationalDashboard.jsx` a `enums.js`.
 
   *Aceptación:* `npm test` pasa con: cada enum tiene exactamente los valores del inventario (sección 2), sin duplicados; `RolUsuario` no tiene el 2 y `TipoAlertaOperativa` no tiene el 4; `labelOf` devuelve `String(value)` para un valor desconocido y `""` para `null`; `colorOf` devuelve `"default"` sin color; `optionsOf(EstadoCochera, { only: ["DISPONIBLE", "BLOQUEADA"] })` tiene solo esas dos y `optionsOf(EstadoOcupacion, { excludeCalculated: true })` no trae `VENCIDA`; `optionsOf(…, { allLabel: "Todos" })` empieza con `{ value: "", label: "Todos" }`; `labelOfKey(RolUsuario, "DUENO")` da "Dueño"; las alertas con `dinero` son exactamente 5, 6, 7, 8, 9, 11 y 12. `npm run lint` y `npm run build` pasan. A mano: `/alertas-operativas` muestra bien el tipo y la severidad de cada alerta.
 
 ### Paso 5 — Paginación
 
-- [ ] **5.1** Crear `src/utils/paginacion.js` y `src/utils/usePagination.js` (D-FB13) y `test/unit/utils/paginacion.test.js`.
+- [x] **5.1** Crear `src/utils/paginacion.js` y `src/utils/usePagination.js` (D-FB13) y `test/unit/utils/paginacion.test.js`.
 
   *Aceptación:* `npm test` pasa con: `normalizePaged` acepta `{ items, total, page, pageSize }` y rechaza un arreglo, `null` y un objeto sin `items` con `respuesta_invalida`; `lastPage(0, 20)` es 1 y `lastPage(41, 20)` es 3; `toTablePaginationProps` convierte `page: 1` en `page: 0` y recorta una página fuera de rango; `paginationReducer`: `setPageSize` vuelve a la página 1, `reset` también, y `fit` con `total: 20`, `pageSize: 20` y `page: 2` baja a la 1. `npm run lint` y `npm run build` pasan.
 
 ### Paso 6 — Parámetros de API
 
-- [ ] **6.1** Crear `src/api/params.js` (`cleanParams`) y configurar `paramsSerializer` en `src/api/http.js` (D-FB15). Resolver P-FB-L2. Crear `test/unit/api/params.test.js`.
+- [x] **6.1** Crear `src/api/params.js` (`cleanParams`) y configurar `paramsSerializer` en `src/api/http.js` (D-FB15). Resolver P-FB-L2. Crear `test/unit/api/params.test.js`.
 
   *Aceptación:* `npm test` pasa con: `cleanParams` quita `undefined`, `null` y `""`, y conserva `false` y `0`; `http.getUri({ url: "/Trazabilidad", params: { fuente: ["PAGO", "CAJA"] } })` contiene `fuente=PAGO&fuente=CAJA` y no `fuente[]`. `npm run lint` y `npm run build` pasan. A mano: la pantalla de Clientes sigue cargando, filtrando y paginando como antes.
 
 ### Paso 7 — Arreglo mínimo de Ocupaciones
 
-- [ ] **7.1** Confirmar que `src/pages/Ocupaciones.jsx` no tiene cambios locales (`git status`). En `Ocupaciones.jsx`, reemplazar los 5 valores de D-FB10 por `localInputToInstant` de `useTenantDates()`. Una hora inexistente muestra el mensaje con `toast.error` y no envía.
+- [x] **7.1** Confirmar que `src/pages/Ocupaciones.jsx` no tiene cambios locales (`git status`). En `Ocupaciones.jsx`, reemplazar los 5 valores de D-FB10 por `localInputToInstant` de `useTenantDates()`. Una hora inexistente muestra el mensaje con `toast.error` y no envía.
 
   *Aceptación (manual, con un usuario cuyo tenant tenga `America/Montevideo`):* (1) en Network, el alta con inicio `22:30` del 10/11 manda `inicio: "2026-11-11T01:30:00.000Z"`; (2) filtrar por `desde` y `hasta` manda instantes con `Z` y la API responde 200; (3) cancelar con `finReal` manda un instante con `Z`; (4) con la zona del navegador cambiada, el valor enviado es el mismo; (5) un `git diff develop -- src/pages/Ocupaciones.jsx` muestra cambios solo en esos 5 valores, en la validación `Fin > Inicio` que usa los instantes convertidos, y en el hook y los imports que hagan falta. `npm run lint` y `npm run build` pasan.
 
 ### Paso 8 — Lint, documentación y cierre
 
-- [ ] **8.1** Agregar la regla de D-FB9 a `eslint.config.js`, con las 7 excepciones temporales y su comentario "se retira con la spec NN".
-- [ ] **8.2** Crear `docs/manual/frontend/02-base-comun.md` (cómo usar fechas, enums, paginación y el patrón de API; el caso de la hora repetida; la tabla de contrato de D-FB3) y actualizar `CLAUDE.md` (P-FB7).
-- [ ] **8.3** Actualizar el estado de esta spec en `docs/specs/README.md` y en su cabecera: **Terminada** una vez mergeada a `develop`.
+- [x] **8.1** Agregar la regla de D-FB9 a `eslint.config.js`, con las 7 excepciones temporales y su comentario "se retira con la spec NN".
+- [x] **8.2** Crear `docs/manual/frontend/02-base-comun.md` (cómo usar fechas, enums, paginación y el patrón de API; el caso de la hora repetida; la tabla de contrato de D-FB3) y actualizar `CLAUDE.md` (P-FB7).
+- [x] **8.3** Actualizar el estado de esta spec en `docs/specs/README.md` y en su cabecera: **Terminada** una vez mergeada a `develop`.
 
   *Aceptación:* `npm run lint`, `npm test` y `npm run build` pasan; el lint falla si se agrega un `toLocaleString()` a una página que no esté en la lista de excepciones; `CLAUDE.md` ya no menciona `operationalAlerts.js` como fuente de enums.
 
@@ -485,7 +489,7 @@ Con el backend en `develop` corriendo y `npm run dev` en `http://localhost:5173`
 
 ## 8. Cómo retomar
 
-**Estado:** Aprobada (18/11/2026). El desarrollador aprobó todas las decisiones. La revisión del chat orquestador agregó `dateRangeToInstants` (D-FB5), cerró P-FB1 y P-FB2, sumó `formatNumber` (D-FB9 y D-FB12) y el desvío DV-FB2.
+**Estado:** Terminada (18/11/2026), con el PR a `develop` (el estado vale desde que se mergea). El desarrollador aprobó todas las decisiones. La revisión del chat orquestador agregó `dateRangeToInstants` (D-FB5), cerró P-FB1 y P-FB2, sumó `formatNumber` (D-FB9 y D-FB12) y el desvío DV-FB2.
 
 **Ejecución en dos chats**, los dos en el worktree `C:\Users\Equipo\source\repos\FrontParking\parkingcontrol-front-base` (rama `feature/front-base`), uno después del otro:
 

@@ -4,6 +4,31 @@ import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
+// ARQ-1: sin localStorage ni sessionStorage (D-FA11).
+const ARQ1_PROPERTIES = [
+  { object: 'window', property: 'localStorage', message: 'ARQ-1: no se usa localStorage.' },
+  { object: 'window', property: 'sessionStorage', message: 'ARQ-1: no se usa sessionStorage.' },
+]
+
+// D-FB9: los toLocale* se bloquean en cualquier objeto, también en Number#toLocaleString, para que el
+// locale quede fijo en un solo lugar (fechas.js y formato.js).
+const TOLOCALE_MESSAGE =
+  'Las fechas se muestran con formatInstant de src/utils/fechas.js (zona del tenant); ' +
+  'los números y la moneda, con formatNumber y formatMoney de src/utils/formato.js.'
+const TOLOCALE_PROPERTIES = ['toLocaleString', 'toLocaleDateString', 'toLocaleTimeString'].map((property) => ({
+  property,
+  message: TOLOCALE_MESSAGE,
+}))
+
+// Una regla de flat config que se vuelve a definir REEMPLAZA a la anterior, no se fusiona: las
+// excepciones de abajo repiten ARQ-1 y solo sacan la restricción de toLocale*.
+const sinToLocale = (files) => ({
+  files,
+  rules: {
+    'no-restricted-properties': ['error', ...ARQ1_PROPERTIES],
+  },
+})
+
 export default defineConfig([
   globalIgnores(['dist']),
   {
@@ -35,11 +60,7 @@ export default defineConfig([
         { name: 'localStorage', message: 'ARQ-1: la sesión vive en memoria; no se usa localStorage.' },
         { name: 'sessionStorage', message: 'ARQ-1: la sesión vive en memoria; no se usa sessionStorage.' },
       ],
-      'no-restricted-properties': [
-        'error',
-        { object: 'window', property: 'localStorage', message: 'ARQ-1: no se usa localStorage.' },
-        { object: 'window', property: 'sessionStorage', message: 'ARQ-1: no se usa sessionStorage.' },
-      ],
+      'no-restricted-properties': ['error', ...ARQ1_PROPERTIES, ...TOLOCALE_PROPERTIES],
       'no-restricted-syntax': [
         'error',
         {
@@ -59,6 +80,24 @@ export default defineConfig([
       ],
     },
   },
+  // D-FB9: los módulos donde vive el formato quedan fuera de la regla de toLocale*.
+  sinToLocale(['src/utils/fechas.js', 'src/utils/formato.js']),
+  // D-FB9: excepciones TEMPORALES. Cada una se saca cuando la spec indicada reescribe la página
+  // (sección 5.4 de la spec frontend 02). Al sacarla, la página usa formatInstant / formatMoney.
+  // Tarifas.jsx: se retira con la spec 03.
+  sinToLocale(['src/pages/Tarifas.jsx']),
+  // Auditoria.jsx: se retira con la spec 04 (la reemplaza por Trazabilidad).
+  sinToLocale(['src/pages/Auditoria.jsx']),
+  // OperationalAlerts.jsx: se retira con la spec 05.
+  sinToLocale(['src/pages/OperationalAlerts.jsx']),
+  // OperationalDashboard.jsx: se retira con la spec 05 (o con la 09 si la parte de caja se mueve allí; P-FB8).
+  sinToLocale(['src/pages/OperationalDashboard.jsx']),
+  // Cocheras.jsx: se retira con la spec 06.
+  sinToLocale(['src/pages/Cocheras.jsx']),
+  // Ocupaciones.jsx: se retira con la spec 07.
+  sinToLocale(['src/pages/Ocupaciones.jsx']),
+  // CajaDiaria.jsx: se retira con la spec 09 (la reemplaza).
+  sinToLocale(['src/pages/CajaDiaria.jsx']),
   // P-FA12: error previo (variable `otros` sin uso) en un archivo que la spec frontend 01 no toca (DV-FA2).
   // Temporal: se retira con la spec de dinero, que reescribe CajaDiaria.jsx.
   {
