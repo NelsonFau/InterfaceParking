@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
+  AccionTrazabilidad,
   EstadoCajaSesion,
   EstadoCochera,
   EstadoOcupacion,
   EstadoPago,
   FraccionMes,
+  Fuente,
   MetodoPago,
   ModoCaja,
   ModoMes,
@@ -199,5 +201,43 @@ describe("defineEnum", () => {
     expect(() => defineEnum("X", { A: { value: null, label: "A" } })).toThrow(TypeError);
     expect(() => defineEnum("X", { A: { value: NaN, label: "A" } })).toThrow(TypeError);
     expect(() => defineEnum("X", { A: { value: 1 } })).toThrow(TypeError);
+  });
+});
+
+// Enums de string de Trazabilidad (spec 04, D-FD4). Tabla: docs/inventario/backend.md, sección 1 (`/Trazabilidad`).
+describe("enums de Trazabilidad", () => {
+  const acciones = [
+    "CREAR", "EDITAR", "CANCELAR", "FINALIZAR", "INVITAR", "CAMBIAR_ROL", "DESACTIVAR", "REACTIVAR",
+    "REENVIAR_INVITACION", "BORRAR", "AJUSTAR_PRECIO", "PROGRAMAR_BAJA", "PAGADO", "ANULADO", "DEVOLUCION",
+    "APERTURA", "CIERRE", "REAPERTURA", "RESOLUCION", "RESOLUCION_AUTOMATICA",
+  ];
+
+  it("Fuente tiene exactamente las 5 fuentes del inventario", () => {
+    expect(Object.values(Fuente)).toEqual(["AUDITORIA", "PAGO", "DEVOLUCION", "CAJA", "ALERTA"]);
+  });
+
+  it("AccionTrazabilidad tiene exactamente las 20 acciones, sin duplicados", () => {
+    const valores = entriesOf(AccionTrazabilidad).map((e) => e.value);
+    expect(valores).toHaveLength(20);
+    expect(new Set(valores).size).toBe(20);
+    expect([...valores].sort()).toEqual([...acciones].sort());
+    for (const e of entriesOf(AccionTrazabilidad)) expect(e.value).toBe(e.key);
+  });
+
+  it("etiqueta y color", () => {
+    expect(labelOf(AccionTrazabilidad, "FINALIZAR")).toBe("Finalizar");
+    expect(labelOf(Fuente, "PAGO")).toBe("Pago");
+    expect(colorOf(Fuente, "ALERTA")).toBe("error");
+  });
+
+  it("un valor desconocido da el texto recibido y color default", () => {
+    expect(labelOf(AccionTrazabilidad, "NUEVA_ACCION")).toBe("NUEVA_ACCION");
+    expect(colorOf(AccionTrazabilidad, "NUEVA_ACCION")).toBe("default");
+  });
+
+  it("optionsOf con allLabel empieza con la opción vacía", () => {
+    const opciones = optionsOf(Fuente, { allLabel: "Todas" });
+    expect(opciones[0]).toEqual({ value: "", label: "Todas" });
+    expect(opciones).toHaveLength(6);
   });
 });

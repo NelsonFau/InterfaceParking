@@ -167,3 +167,42 @@ export const TipoAlertaOperativa = defineEnum("TipoAlertaOperativa", {
   FONDO_DISTINTO: { value: 11, label: "Fondo distinto", dinero: true },
   MENSUAL_IMPAGO: { value: 12, label: "Mensual impago", dinero: true },
 });
+
+// Enums de string de Trazabilidad (spec 04, D-FD4). El `value` es el texto canónico en mayúsculas:
+// la pantalla normaliza lo que manda el backend con `canonicalKey` (trazabilidadEvento.js) antes de
+// llamar a `labelOf` / `colorOf` (el backend manda `Finalizar`, con F mayúscula y el resto en minúscula).
+export const Fuente = defineEnum("Fuente", {
+  AUDITORIA: { value: "AUDITORIA", label: "Auditoría", color: "info" },
+  PAGO: { value: "PAGO", label: "Pago", color: "success" },
+  DEVOLUCION: { value: "DEVOLUCION", label: "Devolución", color: "warning" },
+  CAJA: { value: "CAJA", label: "Caja", color: "secondary" },
+  ALERTA: { value: "ALERTA", label: "Alerta", color: "error" },
+});
+
+export const AccionTrazabilidad = defineEnum("AccionTrazabilidad", {
+  // AUDITORIA
+  CREAR: { value: "CREAR", label: "Crear", color: "success" },
+  EDITAR: { value: "EDITAR", label: "Editar", color: "info" },
+  CANCELAR: { value: "CANCELAR", label: "Cancelar", color: "warning" },
+  FINALIZAR: { value: "FINALIZAR", label: "Finalizar", color: "info" },
+  INVITAR: { value: "INVITAR", label: "Invitar usuario" },
+  CAMBIAR_ROL: { value: "CAMBIAR_ROL", label: "Cambio de rol" },
+  DESACTIVAR: { value: "DESACTIVAR", label: "Desactivar", color: "warning" },
+  REACTIVAR: { value: "REACTIVAR", label: "Reactivar", color: "success" },
+  REENVIAR_INVITACION: { value: "REENVIAR_INVITACION", label: "Reenvío de invitación" },
+  BORRAR: { value: "BORRAR", label: "Borrar", color: "error" },
+  AJUSTAR_PRECIO: { value: "AJUSTAR_PRECIO", label: "Ajuste de precio", color: "warning" },
+  PROGRAMAR_BAJA: { value: "PROGRAMAR_BAJA", label: "Baja programada", color: "warning" },
+  // PAGO
+  PAGADO: { value: "PAGADO", label: "Pago registrado", color: "success" },
+  ANULADO: { value: "ANULADO", label: "Pago anulado", color: "error" },
+  // DEVOLUCION
+  DEVOLUCION: { value: "DEVOLUCION", label: "Devolución", color: "warning" },
+  // CAJA
+  APERTURA: { value: "APERTURA", label: "Apertura de caja" },
+  CIERRE: { value: "CIERRE", label: "Cierre de caja" },
+  REAPERTURA: { value: "REAPERTURA", label: "Reapertura de caja" },
+  // ALERTA
+  RESOLUCION: { value: "RESOLUCION", label: "Alerta resuelta", color: "success" },
+  RESOLUCION_AUTOMATICA: { value: "RESOLUCION_AUTOMATICA", label: "Alerta resuelta automáticamente" },
+});

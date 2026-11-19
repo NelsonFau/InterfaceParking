@@ -6,7 +6,7 @@ import Cocheras from "./pages/Cocheras.jsx";
 import Clientes from "./pages/Clientes.jsx";
 import Ocupaciones from "./pages/Ocupaciones.jsx";
 import Tarifas from "./pages/Tarifas.jsx";
-import Auditoria from "./pages/Auditoria.jsx";
+import Trazabilidad from "./pages/Trazabilidad.jsx";
 import Login from "./pages/Login.jsx";
 import Splash from "./pages/Splash.jsx";
 import OperationalDashboard from "./pages/OperationalDashboard.jsx";
@@ -24,7 +24,7 @@ const PAGES = {
   "/ocupaciones": Ocupaciones,
   "/clientes": Clientes,
   "/tarifas": Tarifas,
-  "/auditoria": Auditoria,
+  "/trazabilidad": Trazabilidad,
   "/alertas-operativas": OperationalAlerts,
   "/caja-diaria": CajaDiaria,
 };
@@ -64,6 +64,9 @@ export default function App() {
           />
         ))}
       </Route>
+
+      {/* ruta vieja de Auditoría: redirige sin query y fuera del mapa, para no duplicar el ítem de menú (D-FD3) */}
+      <Route path="/auditoria" element={<Navigate to="/trazabilidad" replace />} />
 
       {/* fallback */}
       <Route path="*" element={<Navigate to="/" replace />} />
