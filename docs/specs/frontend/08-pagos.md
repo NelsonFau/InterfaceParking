@@ -1,6 +1,6 @@
 # 08 — Pagos: lista de la ocupación, detalle, anulación y devoluciones
 
-> Frontend · **Aprobada** (18/11/2026) · `feature/specs-etapa5` (esta spec) y `feature/front-pagos` (ejecución, en el worktree `../parkingcontrol-front-pagos`, a crear desde `develop` cuando estén mergeadas la 02, la 04, la 05 y la 07) · Última actualización 18/11/2026
+> Frontend · **Terminada** (19/11/2026; se vuelve verdadera al mergear el PR a `develop`) · `feature/specs-etapa5` (esta spec) y `feature/front-pagos` (ejecución, en el worktree `../parkingcontrol-front-pagos`, a crear desde `develop` cuando estén mergeadas la 02, la 04, la 05 y la 07) · Última actualización 19/11/2026
 >
 > Octava spec del frontend. La 07 deja en el detalle de la ocupación una sección "Pagos" vacía, un `RegistrarPagoDialog` y una función `createPago` aditiva. Esta spec **llena esa sección** con la lista de pagos de la ocupación, agrega el detalle de un pago (con historial y devoluciones), la anulación y las devoluciones, y le da a la "devolución pendiente" un camino para resolverse. También **migra `pagosApi.js` al estilo de funciones** (D-FB14). **Depende de la 02** (fechas con zona del tenant, enums, `formatMoney`, patrón de módulos de API), de la **04** (`buildTrazabilidadPath`, con `pagoId`), de la **05** (alertas: el camino desde `DEVOLUCION_PENDIENTE`) y de la **07** (el detalle de la ocupación y su sección "Pagos"); no puede arrancar hasta que las cuatro estén mergeadas en `develop`.
 >
@@ -250,6 +250,8 @@ Los enums viajan como enteros (`MetodoPago`, `EstadoPago`). El tope de 250 del `
 |---|---|---|---|---|---|
 | DV-FH1 | Spec 07, D-FG4 | "La 08 migra el archivo entero al estilo de funciones" | Se migra todo salvo `getCajaDiaria` y `anular`, que quedan en un export `pagosApi` `@deprecated` con su forma actual; `crear` se retira | `CajaDiaria.jsx` no se toca (es de la 09) y la 08 no puede romperla. Tampoco se arregla que esa página no mande el motivo al anular | La 09 reemplaza la pantalla y retira el export |
 | DV-FH2 | Spec 07, D-FG13 y D-FG19 | La 07 muestra "se registra desde Pagos" y deja la sección "Pagos" vacía | La 08 edita ese punto de `OcupacionDetalleDialog` para sumar el botón de devolución y montar la lista | Es el contrato aprobado el 18/11/2026: la 08 llena la sección | — |
+| DV-FH3 | Spec 08, 5.4 y D-FH15 | `Ocupaciones.jsx` no se toca | Se agrega **una línea** en `Ocupaciones.jsx`: `onChanged={reloadAll}` en el `OcupacionDetalleDialog` | `OcupacionDetalleDialog` no tenía un `onChanged` (P-FH-L1) y el listado vive en la página: sin esa línea, las tarjetas (pagado y saldo) quedan viejas después de anular o devolver hasta "Refrescar". El detalle y la lista de pagos se recargan solos aunque la página no lo pase | Si el Orquestador prefiere no tocar la página: sacar la línea (el diálogo sigue funcionando) |
+| DV-FH4 | Spec 08, 5.2 y D-FH3 | El botón "Registrar devolución" se suma "al aviso de saldo a favor" (`CuentaOcupacion`) | El botón y el `DevolucionDialog` van en `OcupacionDetalleDialog`, **debajo** de la sección "Cuenta" (donde está el aviso), sin tocar `CuentaOcupacion.jsx` | El aviso vive en `CuentaOcupacion.jsx` (07), que la spec no lista como archivo a modificar; así el cambio queda en un solo archivo de la 07 | — |
 
 ### 4.2 Pendientes
 
@@ -265,6 +267,17 @@ Los enums viajan como enteros (`MetodoPago`, `EstadoPago`). El tope de 250 del `
 | P-FH6 | Después de finalizar con `DEVOLVER` o de cancelar una reserva con pagos, ofrecer "Registrar devolución" en el mismo diálogo de éxito de la 07. Hoy la 07 solo avisa; el botón vive en el detalle (D-FH6). Sin pedido | — |
 | P-FH7 | **Datos de prueba** para verificar: una ocupación con saldo a favor (un mensual finalizado con `DEVOLVER` o una reserva cancelada con pagos), un pago de otra sesión de caja, un pago ya anulado y uno parcialmente devuelto. Con `dueno@demo.test` se prueba todo; con `encargado@demo.test`, anular y que no se ofrezca devolver; con `operado@demo.test`, que no se ofrezca ni anular ni devolver | 3 a 5 |
 | P-FH8 | Moneda por tenant (P-FB3): `formatMoney` fija `UYU` | — |
+
+**Resueltos al ejecutar (19/11/2026).**
+
+| Id | Resultado |
+|---|---|
+| P-FH-L1 | La 02, la 04, la 05 y la 07 están en la rama (apilada). Piezas: `useTenantDates().formatInstant`, `enums.js` (`MetodoPago`, `EstadoPago`), `formatMoney`, `buildTrazabilidadPath` con `pagoId`, `createPago`, `fieldErrorsFromApi`, `getOcupacion`. **`OcupacionDetalleDialog` difiere del contrato de D-FH3**: recibe `can` y `onLoaded`/`reloadKey`, pero **no tenía `onChanged`** y la sección "Pagos" era un `<Box data-section="pagos" />` (el aviso de saldo a favor está en `CuentaOcupacion.jsx`). Se adaptó sin rehacerlo: se sumó la prop opcional `onChanged` (DV-FH3), una clave interna que recarga el detalle y la lista de pagos, y el botón debajo de "Cuenta" (DV-FH4). `shouldReloadAfter` no se reutiliza (los códigos de pagos tienen sus funciones propias) |
+| P-FH-L2 | Búsqueda de `pagosApi` en `src/`: solo `CajaDiaria.jsx` (`getCajaDiaria` y `anular`); `OperationalDashboard.jsx` **ya no lo usa** (la 05 lo sacó) y nadie usa `crear`. El export `@deprecated` conserva `getCajaDiaria` y `anular`; `crear` se retiró |
+| P-FH-L3 | **Leído en el código del backend; confirmar en marcha.** `metodo` y `estado` salen enteros (no hay conversor de enums a texto, `Program.cs:72-77`; los DTOs los tienen como `MetodoPago` y `EstadoPago`, `Models/Dtos/Pagos/`) y `montoDevuelto` es `decimal` (número JSON) |
+| P-FH-L4 | Releído en el código: policy y orden de anular (`PagosController.cs:46-66`; `PagoService.cs:125`, `:129`, `:144`), `devolucion_supera_pago` (`PagoService.cs:242`), orden por fecha (`:328`), historial y devoluciones ascendentes (`:292`, `:302`), resolución de la alerta (`AlertaDevolucionPendiente.cs:46-58`). Coinciden con C1 a C9 |
+| P-FH-L5 | `RolPermisos.cs`: DUENO tiene `pagos.ver/registrar/anular/devolver` (`:39-42`); ENCARGADO, `ver/registrar/anular` sin `devolver` (`:73-75`); OPERADOR y AUDITOR, solo `ver` y (el operador) `registrar` (`:97`, `:113`). Como dice la spec |
+| P-FH-L6 | `/me` trae `usuarioId` (`Models/Dtos/Me/MeResponse.cs:6`) y `MeProvider` guarda la respuesta entera: `useMe().me.usuarioId` existe. Se usa para el "Vos" |
 
 **Locales, el ejecutor los resuelve y los informa.**
 
@@ -324,15 +337,15 @@ Nada. (`crear` sale del objeto `pagosApi`, pero el archivo y su ruta se conserva
 
 ### Paso 0 — Precondiciones y worktree
 
-- [ ] **0.1** Confirmar que la 02, la 04, la 05 y la 07 están mergeadas en `develop` y resolver **P-FH-L1**. Si no, frenar.
-- [ ] **0.2** Pedir al Orquestador el comando, desde `parkingcontrol-front`: `git worktree add ../parkingcontrol-front-pagos -b feature/front-pagos develop`. En el worktree, copiar el `.env` (no está versionado) y `npm install`. Resolver P-FH-L2, P-FH-L3 y P-FH-L5.
-- [ ] **0.3** Leer la sección 2.2 con las respuestas C1 a C9 y comprobar con el Orquestador que siguen vigentes (P-FH-L4): si el backend cambió, se pide un relevamiento nuevo **antes** del paso 1.
+- [x] **0.1** Confirmar que la 02, la 04, la 05 y la 07 están mergeadas en `develop` y resolver **P-FH-L1**. Si no, frenar.
+- [x] **0.2** Pedir al Orquestador el comando, desde `parkingcontrol-front`: `git worktree add ../parkingcontrol-front-pagos -b feature/front-pagos develop`. En el worktree, copiar el `.env` (no está versionado) y `npm install`. Resolver P-FH-L2, P-FH-L3 y P-FH-L5.
+- [x] **0.3** Leer la sección 2.2 con las respuestas C1 a C9 y comprobar con el Orquestador que siguen vigentes (P-FH-L4): si el backend cambió, se pide un relevamiento nuevo **antes** del paso 1.
 
   *Aceptación:* en el worktree, `npm test`, `npm run lint` y `npm run build` pasan antes de cambiar nada.
 
 ### Paso 1 — Lógica pura
 
-- [ ] **1.1** Crear `src/utils/pagos.js` con las funciones de D-FH14 y `test/unit/utils/pagos.test.js`.
+- [x] **1.1** Crear `src/utils/pagos.js` con las funciones de D-FH14 y `test/unit/utils/pagos.test.js`.
 
   *Aceptación:* `npm test` pasa con estos casos (`PAGADO = 1`, `ANULADO = 2`; `EFECTIVO = 1`, `TRANSFERENCIA = 2`; `can` es una función sobre un conjunto de permisos; un pago de ejemplo es `{ id, monto, montoDevuelto, metodo, estado, fechaPago }`; `EstadoOcupacion`: ACTIVA 1, VENCIDA 2, CANCELADA 3, FINALIZADA 4):
 
@@ -380,38 +393,38 @@ Nada. (`crear` sale del objeto `pagosApi`, pero el archivo y su ruta se conserva
 
 ### Paso 2 — Módulo de API
 
-- [ ] **2.1** Migrar `src/api/pagosApi.js` (D-FH2): `createPago` (la de la 07, sin cambios de firma), `listPagosByOcupacion`, `getPago`, `anularPago` y `createDevolucion`; el export `pagosApi` `@deprecated` con `getCajaDiaria` y `anular` (resolver **P-FH-L2** sobre `crear`).
-- [ ] **2.2** Ampliar `test/unit/api/pagosApi.test.js` con `vi.mock` de `http`.
+- [x] **2.1** Migrar `src/api/pagosApi.js` (D-FH2): `createPago` (la de la 07, sin cambios de firma), `listPagosByOcupacion`, `getPago`, `anularPago` y `createDevolucion`; el export `pagosApi` `@deprecated` con `getCajaDiaria` y `anular` (resolver **P-FH-L2** sobre `crear`).
+- [x] **2.2** Ampliar `test/unit/api/pagosApi.test.js` con `vi.mock` de `http`.
 
   *Aceptación:* `npm test` pasa con: `listPagosByOcupacion(7)` hace `GET /Pagos/ocupacion/7` y devuelve el arreglo; una respuesta que no es un arreglo lanza `ApiError` con `code: "respuesta_invalida"`; `getPago(40)` hace `GET /Pagos/40` y devuelve `data`; `anularPago(40, { motivo })` hace `PATCH /Pagos/40/anular` con `{ motivo }` y devuelve `undefined`; `createDevolucion(40, { monto, metodo, motivo })` hace `POST /Pagos/40/devoluciones` con el cuerpo sin modificarlo y devuelve `data`; `createPago(body)` sigue haciendo `POST /Pagos` y devolviendo `data`; ninguna función captura errores (un rechazo de `http` se propaga); el objeto `pagosApi` exporta `getCajaDiaria` (devuelve la respuesta de axios entera) y `anular`, que delega en `anularPago` (`anular(40, "motivo")` hace `PATCH /Pagos/40/anular` con `{ motivo: "motivo" }`). `git diff develop -- src/pages/CajaDiaria.jsx src/pages/OperationalDashboard.jsx` vacío. `npm run lint` y `npm run build` pasan.
 
 ### Paso 3 — Lista y detalle (lectura)
 
-- [ ] **3.1** Crear `src/componentes/pagos/PagosSeccion.jsx` (D-FH4) y montarla en la sección "Pagos" de `OcupacionDetalleDialog.jsx` (D-FH3), con `pagos.ver`.
-- [ ] **3.2** Crear `src/componentes/pagos/PagoDetalleDialog.jsx` (D-FH5), con el enlace "Ver trazabilidad" por `buildTrazabilidadPath({ pagoId })` y `auditoria.ver`. Las acciones quedan **sin cablear** hasta los pasos 4 y 5.
+- [x] **3.1** Crear `src/componentes/pagos/PagosSeccion.jsx` (D-FH4) y montarla en la sección "Pagos" de `OcupacionDetalleDialog.jsx` (D-FH3), con `pagos.ver`.
+- [x] **3.2** Crear `src/componentes/pagos/PagoDetalleDialog.jsx` (D-FH5), con el enlace "Ver trazabilidad" por `buildTrazabilidadPath({ pagoId })` y `auditoria.ver`. Las acciones quedan **sin cablear** hasta los pasos 4 y 5.
 
   *Aceptación (manual, con el backend de `develop`, `America/Montevideo` y `dueno@demo.test`):* (1) al abrir el detalle de una ocupación con pagos, Network muestra `GET /Pagos/ocupacion/{id}` con 200 y la tabla lista los pagos con Fecha (en la zona del local), Método, Monto, Devuelto, Estado y Referencia; (2) un pago anulado se ve atenuado con chip "Anulado" y no aparece en ningún total (la lista no suma nada); un pago con devoluciones muestra la columna "Devuelto"; (3) sin pagos dice "Todavía no hay pagos"; (4) con el backend apagado se ve "No pudimos cargar los pagos" con "Reintentar", sin vaciar el resto del detalle; (5) un clic en una fila abre el detalle del pago con `GET /Pagos/{id}`, el historial y las devoluciones, con el usuario como "Usuario #id" o el nombre si el backend lo manda; (6) "Ver trazabilidad" aparece con `dueno@demo.test` y abre `/trazabilidad?pagoId=N`, y no aparece con `encargado@demo.test` ni `operado@demo.test`; (7) con un usuario sin `pagos.ver` la sección no se monta; (8) una búsqueda de `toLocale`, `toISOString` y `http` en `src/componentes/pagos/` no da coincidencias. `npm run lint`, `npm test` y `npm run build` pasan.
 
 ### Paso 4 — Anulación
 
-- [ ] **4.1** Crear `src/componentes/pagos/AnularPagoDialog.jsx` (D-FH7): motivo, nota de "sesión de caja anterior", `anularPago` y `buildAnularBody`.
-- [ ] **4.2** Cablear "Anular pago" en `PagoDetalleDialog` con `accionesDePago` y errores por `code` (`shouldReloadAfterPago`, `shouldCloseActionAfterPago`, D-FH10), con `showApiError`.
+- [x] **4.1** Crear `src/componentes/pagos/AnularPagoDialog.jsx` (D-FH7): motivo, nota de "sesión de caja anterior", `anularPago` y `buildAnularBody`.
+- [x] **4.2** Cablear "Anular pago" en `PagoDetalleDialog` con `accionesDePago` y errores por `code` (`shouldReloadAfterPago`, `shouldCloseActionAfterPago`, D-FH10), con `showApiError`.
 
   *Aceptación (manual, con `dueno@demo.test`, `encargado@demo.test` y `operado@demo.test`):* (1) "Anular pago" solo se ve con `pagos.anular` y en un pago PAGADO (con el DUENO y el ENCARGADO sí; con el OPERADOR y el AUDITOR no; en un pago anulado, no); (2) anular sin motivo o con 251 caracteres no llega a la red; con motivo, `PATCH /Pagos/{id}/anular` va con `{ motivo }`, el pago queda "Anulado" en la lista y el detalle, y el `pagado` y el `saldo` de la ocupación se actualizan; (3) la nota de "sesión de caja anterior" está visible antes de confirmar; (4) con el ENCARGADO, anular un pago de **otra sesión de caja** (o sin caja abierta) muestra el `title` de `sin_permiso` (403) y el diálogo queda abierto con el motivo escrito; con el DUENO se anula (en modo DIARIA, un pago de un día anterior con la caja de ese día abierta da `caja_dia_anterior_abierta` para todos) **(C1, C3, P-FH7)**; la nota fija "Si el pago es de otra sesión de caja (o no hay caja abierta), solo puede anularlo un dueño" se ve antes de confirmar; (5) anular un pago ya anulado desde dos pestañas muestra, con el DUENO, el `title` de `pago_anulado`, cierra el diálogo y recarga; **con un no dueño y un pago de otra sesión, el 403 `sin_permiso` tapa a `pago_anulado`** y no se recarga **(C1)**; en una ocupación FINALIZADA el diálogo suma el aviso de saldo pendiente de cobro y la ocupación queda con saldo después de anular **(C4)**; (6) con la caja en un estado que no lo permite se ve el `title` de `caja_cerrada` o `caja_dia_anterior_abierta` y nada más; (7) con un pago con devoluciones (`montoDevuelto > 0`), "Anular" no se ve y el detalle explica "Tiene devoluciones; no se puede anular" **(C7)**. `npm run lint`, `npm test` y `npm run build` pasan.
 
 ### Paso 5 — Devoluciones
 
-- [ ] **5.1** Crear `src/componentes/pagos/DevolucionDialog.jsx` (D-FH6): selector de pago (solo desde la ocupación), precarga con `elegirPagoParaDevolver` y `montoInicialDevolucion`, monto, método (por defecto el del pago) y motivo, con `validateDevolucion` y `createDevolucion`.
-- [ ] **5.2** Cablear las dos entradas: "Devolver" en `PagoDetalleDialog` y "Registrar devolución" junto al aviso de saldo a favor de `OcupacionDetalleDialog` (D-FH3, D-FH6), con `accionesDePago` y `pagos.devolver`.
-- [ ] **5.3** Errores por `code` (D-FH10, `devolucion_supera_pago` deja el diálogo abierto con datos frescos) y "Registrar otra devolución" cuando queda saldo a favor.
+- [x] **5.1** Crear `src/componentes/pagos/DevolucionDialog.jsx` (D-FH6): selector de pago (solo desde la ocupación), precarga con `elegirPagoParaDevolver` y `montoInicialDevolucion`, monto, método (por defecto el del pago) y motivo, con `validateDevolucion` y `createDevolucion`.
+- [x] **5.2** Cablear las dos entradas: "Devolver" en `PagoDetalleDialog` y "Registrar devolución" junto al aviso de saldo a favor de `OcupacionDetalleDialog` (D-FH3, D-FH6), con `accionesDePago` y `pagos.devolver`.
+- [x] **5.3** Errores por `code` (D-FH10, `devolucion_supera_pago` deja el diálogo abierto con datos frescos) y "Registrar otra devolución" cuando queda saldo a favor.
 
   *Aceptación (manual, con `dueno@demo.test`, `encargado@demo.test` y `operado@demo.test`; hace falta una ocupación con saldo a favor, P-FH7):* (1) en una ocupación FINALIZADA o CANCELADA con `saldoAFavor > 0`, el detalle muestra el chip de saldo a favor y el botón "Registrar devolución" **solo con `pagos.devolver`** (el ENCARGADO, el OPERADOR y el AUDITOR no lo ven); (2) el diálogo lista los pagos PAGADOS con algo devolvible (sin los anulados ni los ya devueltos del todo) y preselecciona el más reciente que cubre el saldo; el monto viene precargado con el menor entre el saldo a favor y lo devolvible, y el método con el del pago; (3) devolver sin motivo, con un monto `0`, `12.345` o `10000001`, o sin método, no llega a la red; (4) con datos válidos, `POST /Pagos/{id}/devoluciones` va con `{ monto, metodo, motivo }` y devuelve 201: aparece "Devolución registrada", la lista muestra "Devuelto", el detalle del pago muestra la devolución y el saldo a favor de la ocupación baja **(C4)**; (5) un monto mayor a lo devolvible muestra el `title` de `devolucion_supera_pago`, recarga los datos y deja el diálogo abierto con el monto marcado **(C2)**; (6) si el saldo a favor supera lo devolvible de un pago, tras la primera devolución se ofrece "Registrar otra devolución" con el pago siguiente; (7) "Devolver" en el detalle de un pago PAGADO con algo devolvible abre el diálogo con ese pago elegido y sin selector; en un pago anulado o ya devuelto del todo no se ve; (8) desde una alerta `DEVOLUCION_PENDIENTE`, "Ver ocupación" abre el detalle y desde ahí se llega a la devolución; tras una devolución que deja el saldo a favor en 0, la alerta se ve resuelta sola (`resolucionAutomatica`); tras una parcial sigue abierta y el aviso dice "Queda $ X de saldo a favor por devolver" **(C5)**; (9) un pago ya anulado desde otra pestaña muestra el `title` de `pago_anulado`, cierra el diálogo y recarga **(C2)**; (10) devolver con saldo a favor 0 (desde el detalle de un pago) o con un monto mayor al saldo a favor muestra el aviso "No hay saldo a favor (o el monto lo supera): al devolver, la ocupación va a quedar debiendo" y **no bloquea el envío**; el límite lo pone el pago (`devolucion_supera_pago`) **(C2, C4)**; (11) desde el detalle de un pago se puede devolver sobre una ocupación finalizada o cancelada, con o sin saldo a favor **(C2)**. `npm run lint`, `npm test` y `npm run build` pasan.
 
 ### Paso 6 — Documentación y cierre
 
-- [ ] **6.1** Corregir en `CLAUDE.md` **solo** la frase que dice que `pagosApi.js` sigue con su manejo de errores propio; **no** tocar la línea "Backend endpoints used".
-- [ ] **6.2** Crear `docs/manual/frontend/08-pagos.md`: la lista de pagos, el detalle y su historial, anular (y qué pasa con otra sesión de caja), devolver (el flujo de la devolución pendiente y cómo se elige el pago), la tabla de permisos, qué hace cada `code` de error, el export `pagosApi` temporal y lo que le queda a la 09.
-- [ ] **6.3** Actualizar el estado de esta spec en `docs/specs/README.md` y en su cabecera: **Terminada** una vez mergeada a `develop`.
+- [x] **6.1** Corregir en `CLAUDE.md` **solo** la frase que dice que `pagosApi.js` sigue con su manejo de errores propio; **no** tocar la línea "Backend endpoints used".
+- [x] **6.2** Crear `docs/manual/frontend/08-pagos.md`: la lista de pagos, el detalle y su historial, anular (y qué pasa con otra sesión de caja), devolver (el flujo de la devolución pendiente y cómo se elige el pago), la tabla de permisos, qué hace cada `code` de error, el export `pagosApi` temporal y lo que le queda a la 09.
+- [x] **6.3** Actualizar el estado de esta spec en `docs/specs/README.md` y en su cabecera: **Terminada** una vez mergeada a `develop`.
 
   *Aceptación:* `npm run lint`, `npm test` y `npm run build` pasan; una búsqueda de `e.response.data.error`, `toLocale` y `http.` en `src/componentes/pagos/` no da coincidencias; `git diff develop -- src/pages/CajaDiaria.jsx src/pages/OperationalDashboard.jsx src/pages/Ocupaciones.jsx eslint.config.js` vacío; `git diff develop -- src/componentes/ocupaciones/OcupacionDetalleDialog.jsx` solo toca la sección "Pagos" y el aviso de saldo a favor; `git diff develop -- CLAUDE.md` solo cambia la frase de `pagosApi.js`.
 
