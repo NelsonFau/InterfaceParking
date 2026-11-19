@@ -1,6 +1,6 @@
 # 03 — Tarifas con vigencia
 
-> Frontend · **Aprobada** (18/11/2026) · `feature/specs-etapa2` (esta spec, rama compartida con otros redactores) y `feature/front-tarifas` (ejecución, en el worktree `../parkingcontrol-front-tarifas`, a crear desde `develop` cuando la 02 esté implementada y mergeada) · Última actualización 18/11/2026
+> Frontend · **Terminada** (19/11/2026; se vuelve verdadera al mergear el PR a `develop`) · `feature/specs-etapa2` (esta spec, rama compartida con otros redactores) y `feature/front-tarifas` (ejecución, en el worktree `../parkingcontrol-front-tarifas`, a crear desde `develop` cuando la 02 esté implementada y mergeada) · Última actualización 18/11/2026
 >
 > Tercera spec del frontend. Reconecta la pantalla de Tarifas con la API de vigencia: hoy llama a `GET /Tarifa/activas`, que ya no existe, y manda `vigenteDesde` con un formato que el backend no acepta. Depende de la spec 02 (fechas con zona del tenant, enums, `formatMoney`, patrón de `src/api/`), que está aprobada pero todavía no implementada: acá se usan sus funciones por nombre.
 
@@ -318,9 +318,9 @@ Nada. (`Tarifas.jsx` queda con el mismo nombre y ruta.)
 
 ### Paso 6 — Lint, documentación y cierre
 
-- [ ] **6.1** Retirar la excepción de `Tarifas.jsx` de `eslint.config.js` (P-FC-L4). **No** tocar `CLAUDE.md`.
-- [ ] **6.2** Crear `docs/manual/frontend/03-tarifas.md`: cómo se calcula el estado de una tarifa, cómo se programa, se reemplaza y se quita, qué hace cada `code` de error y la tabla de permisos.
-- [ ] **6.3** Actualizar el estado de esta spec en `docs/specs/README.md` y en su cabecera: **Terminada** una vez mergeada a `develop`.
+- [x] **6.1** Retirar la excepción de `Tarifas.jsx` de `eslint.config.js` (P-FC-L4). **No** tocar `CLAUDE.md`.
+- [x] **6.2** Crear `docs/manual/frontend/03-tarifas.md`: cómo se calcula el estado de una tarifa, cómo se programa, se reemplaza y se quita, qué hace cada `code` de error y la tabla de permisos.
+- [x] **6.3** Actualizar el estado de esta spec en `docs/specs/README.md` y en su cabecera: **Terminada** una vez mergeada a `develop`.
 
   *Aceptación:* `npm run lint`, `npm test` y `npm run build` pasan; `Tarifas.jsx` no está en las excepciones de `eslint.config.js` y el lint falla si se le agrega un `toLocaleString()`; una búsqueda de `/activas` en `src/` no da coincidencias; `git diff develop -- CLAUDE.md` vacío.
 

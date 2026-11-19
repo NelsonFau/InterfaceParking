@@ -1,6 +1,25 @@
 # Manual — 03 Tarifas con vigencia
 
-> Se completa paso a paso; la versión final se cierra en el paso 6 de la spec (`docs/specs/frontend/03-tarifas.md`).
+> Cómo funciona la pantalla de Tarifas con vigencia. Spec: `docs/specs/frontend/03-tarifas.md`. Backend: `docs/inventario/backend.md`, sección `/Tarifa`.
+
+## Resumen
+
+El dueño ve qué precio rige hoy para cada tipo (Hora, Día, Mes), cuáles están programadas hacia adelante, cambia un precio con fecha de vigencia opcional y quita o edita una programación. Los demás roles ven lo mismo sin poder escribir.
+
+- **Estado de una tarifa.** Lo calcula `tarifaEstado`: `vigente` (lo dice el servidor), `programada` (`vigenteDesde` posterior a hoy en la zona del tenant) o `finalizada`. Ver "Lógica pura".
+- **Programar.** "Cambiar precio" con una fecha futura crea una tarifa programada; sin fecha rige desde hoy. El backend guarda una tarifa por `(tipo, vigenteDesde)` y puede haber varias futuras por tipo; la tarjeta muestra solo la más cercana y el historial muestra todas.
+- **Reemplazar.** Repetir una fecha futura (o "Editar" una programada) reemplaza esa tarifa, no la duplica; el resumen de confirmación lo avisa.
+- **Quitar.** Solo programadas, sin confirmación.
+- **Recarga.** Toda escritura recarga vigentes e historial: `vigenteHasta` y `proxima` se calculan al leer.
+
+## Permisos
+
+| Permiso | Qué habilita | Quién lo tiene (inventario, sección 3) |
+|---|---|---|
+| `tarifas.ver` | Entrar a `/tarifas` y ver tarjetas, programadas e historial | Dueño, Encargado, Operador, Auditor |
+| `tarifas.editar` | "Cambiar precio", "Editar" y "Quitar" (se ocultan sin el permiso; no se deshabilitan) | Solo Dueño |
+
+La pantalla decide siempre con `can(...)`, nunca por rol (ARQ-4). El backend vuelve a validar: un `PUT` o `DELETE` sin permiso da `sin_permiso` y la pantalla solo muestra el aviso.
 
 ## Módulo de API (`src/api/tarifaApi.js`)
 
