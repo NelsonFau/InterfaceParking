@@ -23,6 +23,15 @@ Las dos lecturas lanzan `ApiError` con `code: "respuesta_invalida"` si la respue
 - **Historial.** Selector de tipo, filas en el orden de la API (`vigenteDesde` descendente) con precio, "Desde … hasta …" o "sin fecha de fin" y el chip de estado de `tarifaEstado(t, today)`. "Hoy" sale de `useTenantDates().today()` (zona del tenant).
 - **Fechas y dinero.** `DateOnly` se muestra con `formatDateOnly` (nunca por `Date`); el dinero con `formatMoney`. Las etiquetas de tipo son las del enum ("Hora / Día / Mes"), no las de las copias locales retiradas.
 
+## Cambiar un precio (diálogo de `Tarifas.jsx`)
+
+- **Quién lo ve.** El botón "Cambiar precio" (en cada tarjeta) se oculta sin `can("tarifas.editar")`; nunca se decide por rol. Abrirlo posiciona el historial en ese tipo, para que el resumen conozca las programadas del tipo.
+- **Formulario.** El tipo es fijo (va en el título, no es un `select`). Precio (`type="number"`, `min` 0,01, `step` 0,01; sugerido: el vigente del tipo) y "Vigente desde" (`type="date"`, opcional, `min` = hoy, ayuda "Vacío: rige desde hoy"). "Guardar" valida con `validateTarifaForm`; los errores salen debajo de cada campo y no se envía nada a la red.
+- **Confirmación.** Pasada la validación, el diálogo muestra el resumen de `summarizeChange`: "Tipo · de $ actual a $ nuevo · rige desde hoy / desde el dd/mm/yyyy" y, si la fecha futura ya tiene una programada, "Reemplaza la tarifa programada para esa fecha ($ X)". "Volver" conserva lo escrito; "Confirmar" envía.
+- **Envío.** `buildUpdateBody` + `updateTarifa`. Sin fecha el cuerpo **no lleva** `vigenteDesde`. Con fecha, `vigenteDesde` es `yyyy-MM-dd` (nunca un instante). Éxito: aviso "Tarifa actualizada", cierre y recarga de vigentes e historial. "Confirmar" queda deshabilitado mientras envía.
+- **Errores.** `showApiError` muestra el `title` del backend. Si `shouldReloadAfter(code)` (`tarifa_ya_vigente`, `tarifa_no_encontrada`, `tarifa_modificada`) se recarga con el diálogo abierto; el reintento es manual. `datos_invalidos` y `sin_permiso` no recargan.
+- **Repetir una fecha futura** ya programada **reemplaza** esa tarifa (comportamiento del backend); por eso el resumen lo avisa. Repetir **hoy** cuando ya hay una tarifa que empieza hoy da 409 `tarifa_ya_vigente`: el cliente no lo bloquea, el backend es la autoridad.
+
 ## Lógica pura (`src/utils/tarifas.js`)
 
 Sin React ni estado. "Hoy" entra siempre como parámetro (un `DateOnly` en la zona del tenant); ningún test depende de la fecha del sistema.

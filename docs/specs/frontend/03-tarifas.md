@@ -302,9 +302,9 @@ Nada. (`Tarifas.jsx` queda con el mismo nombre y ruta.)
 
 ### Paso 4 — Cambiar un precio
 
-- [ ] **4.1** Diálogo "Cambiar precio" (D-FC7): tipo fijo, precio, fecha opcional con `min` = hoy; el botón aparece solo con `can("tarifas.editar")` (D-FC10). Abrirlo posiciona el historial en ese tipo (D-FC5).
-- [ ] **4.2** Paso de confirmación dentro del diálogo (D-FC8) con `summarizeChange`; "Volver" conserva lo escrito.
-- [ ] **4.3** Envío con `buildUpdateBody` y `tarifaApi.updateTarifa`; en éxito: aviso "Tarifa actualizada", cierre y recarga. En error: `showApiError` y, si `shouldReloadAfter(e.code)`, recarga con el diálogo abierto (D-FC11). El botón de confirmar se deshabilita mientras envía.
+- [x] **4.1** (código incluido en el commit 3f8d03f, junto con el paso 3) Diálogo "Cambiar precio" (D-FC7): tipo fijo, precio, fecha opcional con `min` = hoy; el botón aparece solo con `can("tarifas.editar")` (D-FC10). Abrirlo posiciona el historial en ese tipo (D-FC5).
+- [x] **4.2** (código incluido en el commit 3f8d03f) Paso de confirmación dentro del diálogo (D-FC8) con `summarizeChange`; "Volver" conserva lo escrito.
+- [x] **4.3** (código incluido en el commit 3f8d03f) Envío con `buildUpdateBody` y `tarifaApi.updateTarifa`; en éxito: aviso "Tarifa actualizada", cierre y recarga. En error: `showApiError` y, si `shouldReloadAfter(e.code)`, recarga con el diálogo abierto (D-FC11). El botón de confirmar se deshabilita mientras envía.
 
   *Aceptación (manual, con `dueno@demo.test`):* (1) sin fecha, el `PUT` va con `{ tipo, nuevoPrecio }` y **sin** `vigenteDesde`; la respuesta es 200 y el precio vigente cambia; (2) con una fecha futura, el cuerpo lleva `vigenteDesde: "yyyy-MM-dd"` (nunca un instante con hora) y la tarjeta muestra la línea "Programada"; (3) repetir una fecha futura ya programada muestra en el resumen "Reemplaza la tarifa programada…" y, al confirmar, el historial tiene un precio nuevo para esa fecha y no un duplicado; (4) precio `0`, `12.345`, `10000001` y una fecha pasada no llegan a la red y muestran el mensaje de D-FC7; (5) cambiar el precio de un tipo que ya tiene una tarifa que empieza hoy muestra el aviso de `tarifa_ya_vigente` y el diálogo sigue abierto; (6) con `encargado@demo.test` y `operado@demo.test` no se ve "Cambiar precio"; (7) un `PUT` forzado con `operado@demo.test` desde DevTools muestra el `title` de `sin_permiso` y la pantalla sigue. `npm run lint`, `npm test` y `npm run build` pasan.
 
