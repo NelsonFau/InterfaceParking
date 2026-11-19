@@ -19,7 +19,7 @@ import {
 } from "@mui/material";
 import { showApiError } from "../../api/errors";
 import { getOcupacion } from "../../api/ocupacionApi";
-import { FraccionMes, ModoMes, TipoOcupacion, labelOf } from "../../constants/enums";
+import { TipoOcupacion, labelOf } from "../../constants/enums";
 import { FASE, accionesDeOcupacion, faseChip, ocupacionFase } from "../../utils/ocupaciones";
 import { buildAlertasDeOcupacionPath } from "../../utils/ocupacionLink";
 import { formatMoney } from "../../utils/formato";
@@ -27,6 +27,7 @@ import { buildTrazabilidadPath } from "../../utils/trazabilidadLink";
 import { useTenantDates } from "../../utils/useTenantDates";
 import DevolucionDialog from "../pagos/DevolucionDialog";
 import PagosSeccion from "../pagos/PagosSeccion";
+import ContratoMensualSeccion from "./ContratoMensualSeccion";
 import CuentaOcupacion from "./CuentaOcupacion";
 
 function Section({ titulo, children }) {
@@ -154,14 +155,9 @@ export default function OcupacionDetalleDialog({ id, reloadKey, now, can, onClos
         </Section>
 
         {detalleMes ? (
-          // La spec 10 agrega acá el ajuste de precio y la baja programada.
+          // Spec 10: modo, fracción, precio de partida, fin y las acciones sobre el contrato.
           <Section titulo="Contrato mensual">
-            <Typography variant="body2">
-              Modo de mes: {labelOf(ModoMes, d.modoMes)} · Fracción: {labelOf(FraccionMes, d.fraccionMes)}
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              Congelados al crear
-            </Typography>
+            <ContratoMensualSeccion ocupacion={d} fase={fase} can={can} now={now} onChanged={alCambiarPagos} />
           </Section>
         ) : null}
 

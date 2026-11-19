@@ -1,6 +1,6 @@
 // /api/v1/Ocupacion (spec 07, D-FG2). Patrón D-FB14: funciones nombradas que devuelven `data`, sin
 // capturar errores (la pantalla llama a `showApiError`) y sin convertir fechas ni enums: reciben
-// `UtcInstant` y enteros ya listos. La spec 10 suma acá el ajuste de precio y la baja programada.
+// `UtcInstant` y enteros ya listos. La spec 10 sumó acá el ajuste de precio, la baja programada y el ajuste masivo.
 import { ApiError } from "./errors.js";
 import { http } from "./http.js";
 import { cleanParams } from "./params.js";
@@ -136,4 +136,51 @@ export async function cancelOcupacion(id, body) {
 export async function finalizeOcupacion(id, body) {
   if (body === undefined) await http.post(`/Ocupacion/${id}/finalizar`);
   else await http.post(`/Ocupacion/${id}/finalizar`, body);
+}
+
+/**
+ * @typedef {Object} AjustePrecioResponse
+ * @property {number} id `0` en la respuesta del lote
+ * @property {number} ocupacionId
+ * @property {string} vigenteDesde DateOnly
+ * @property {number} precioAnterior el vigente en esa fecha
+ * @property {number} precioNuevo
+ */
+
+/**
+ * POST /Ocupacion/{id}/precio (`tarifas.editar`): nuevo precio de un contrato mensual desde `vigenteDesde`
+ * (DateOnly, posterior a hoy; se manda tal cual). No edita el precio de partida.
+ * @param {number} id
+ * @param {{ vigenteDesde: string, precioUnitario: number, motivo: string }} body
+ * @returns {Promise<AjustePrecioResponse>}
+ */
+export async function adjustOcupacionPrecio(id, body) {
+  const { data } = await http.post(`/Ocupacion/${id}/precio`, body);
+  return data;
+}
+
+/**
+ * PUT /Ocupacion/{id}/fin (`ocupaciones.finalizar`): programa, mueve o quita (con `null`) la baja de un
+ * contrato mensual. La clave `fin` se manda siempre, también con `null`.
+ * @param {number} id
+ * @param {{ fin: string | null }} body `fin` es un UtcInstant
+ * @returns {Promise<{ ocupacionId: number, fin: string | null }>}
+ */
+export async function setOcupacionFin(id, body) {
+  const { data } = await http.put(`/Ocupacion/${id}/fin`, body);
+  return data;
+}
+
+/**
+ * POST /Ocupacion/ajuste-precio (`tarifas.editar`): ajuste por porcentaje (de -50 a 100) de todos los
+ * mensuales activos, menos los de `excluir`. Todo o nada.
+ * @param {{ vigenteDesde: string, porcentaje: number, motivo: string, excluir?: number[] }} body
+ * @returns {Promise<{ cantidad: number, contratos: AjustePrecioResponse[] }>}
+ */
+export async function adjustPreciosMensuales(body) {
+  const { data } = await http.post("/Ocupacion/ajuste-precio", body);
+  if (typeof data?.cantidad !== "number" || !Array.isArray(data?.contratos)) {
+    throw new ApiError({ code: "respuesta_invalida", message: ERROR_CODES.respuesta_invalida.message });
+  }
+  return data;
 }

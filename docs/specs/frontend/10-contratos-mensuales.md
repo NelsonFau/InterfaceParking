@@ -1,6 +1,6 @@
 # 10 — Contratos mensuales: ajuste de precio, baja programada y ajuste masivo
 
-> Frontend · **Aprobada** (19/11/2026) · `feature/specs-etapa6` (esta spec) y `feature/front-contratos` (ejecución, en el repo principal sin worktree, a crear desde `develop`) · Última actualización 19/11/2026
+> Frontend · **Terminada** (19/11/2026; se vuelve verdadera al mergear el PR a `develop`) · `feature/specs-etapa6` (esta spec) y `feature/front-contratos` (ejecución, en el repo principal sin worktree, a crear desde `develop`) · Última actualización 19/11/2026
 >
 > Décima spec del frontend. La 07 dejó en el detalle de la ocupación una sección **"Contrato mensual"** (solo para ocupaciones de tipo MES) con `modoMes` y `fraccionMes` de solo lectura. Esta spec **monta ahí las acciones sobre un contrato**: el **ajuste de precio individual** (`POST /Ocupacion/{id}/precio`) y la **baja programada** (`PUT /Ocupacion/{id}/fin`, con `null` para quitarla), y suma el **ajuste masivo** por porcentaje (`POST /Ocupacion/ajuste-precio`, con exclusiones) como un diálogo en el encabezado de Ocupaciones. Las funciones de API se **suman** a `ocupacionApi.js`, sin recrearlo. Programar una baja puede dejar saldo a favor y crear la alerta `DEVOLUCION_PENDIENTE`, que se resuelve con la devolución de la 08. **Depende de la 02** (fechas con zona del tenant, enums, `formatMoney`, patrón de módulos de API) y de la **07** (el detalle de la ocupación y su sección "Contrato mensual"); además se apoya en la **08** (la devolución) para el camino del saldo a favor. Las tres están ejecutadas en `develop`.
 >
@@ -292,11 +292,11 @@ Nada.
 
 ### Paso 0 — Precondiciones
 
-- [ ] **0.1** Resolver **P-FJ-L1** a **P-FJ-L4** (lectura y búsquedas, sin cambios). Si falta algo, frenar.
+- [x] **0.1** Resolver **P-FJ-L1** a **P-FJ-L4** (lectura y búsquedas, sin cambios). Si falta algo, frenar.
 
 ### Paso 1 — Lógica pura
 
-- [ ] **1.1** Crear `src/utils/contratos.js` (D-FJ14) y `test/unit/utils/contratos.test.js`.
+- [x] **1.1** Crear `src/utils/contratos.js` (D-FJ14) y `test/unit/utils/contratos.test.js`.
 
   *Aceptación:* los tests cubren estos casos (`TipoOcupacion`: HORA 1, DIA 2, MES 3; `EstadoOcupacion`: ACTIVA 1, VENCIDA 2, CANCELADA 3, FINALIZADA 4; `can` es una función sobre un conjunto de permisos; fechas como `DateOnly`; `now` es un parámetro):
 
@@ -341,28 +341,28 @@ Nada.
 
 ### Paso 2 — Módulo de API
 
-- [ ] **2.1** Sumar `adjustOcupacionPrecio`, `setOcupacionFin` y `adjustPreciosMensuales` a `src/api/ocupacionApi.js` (D-FJ2), sin tocar lo existente, y ampliar `test/unit/api/ocupacionApi.test.js` con `vi.mock` de `http`.
+- [x] **2.1** Sumar `adjustOcupacionPrecio`, `setOcupacionFin` y `adjustPreciosMensuales` a `src/api/ocupacionApi.js` (D-FJ2), sin tocar lo existente, y ampliar `test/unit/api/ocupacionApi.test.js` con `vi.mock` de `http`.
 
   *Aceptación:* los tests cubren: `adjustOcupacionPrecio(7, { vigenteDesde: "2026-12-01", precioUnitario: 1500, motivo: "x" })` hace `POST /Ocupacion/7/precio` con el cuerpo sin modificarlo (el `DateOnly` sin convertir) y devuelve `data`; `setOcupacionFin(7, { fin: "2027-03-31T21:00:00.000Z" })` hace `PUT /Ocupacion/7/fin` con el cuerpo y devuelve `data`; `setOcupacionFin(7, { fin: null })` manda `{ fin: null }` (la clave presente); `adjustPreciosMensuales(body)` hace `POST /Ocupacion/ajuste-precio` con el cuerpo y devuelve `{ cantidad, contratos }`; una respuesta sin `cantidad` numérico o sin `contratos` arreglo lanza `ApiError` con `code: "respuesta_invalida"`; ninguna captura errores (un rechazo de `http` se propaga); **las cinco funciones existentes siguen igual** (los tests actuales no cambian).
 
 ### Paso 3 — Sección "Contrato mensual" y acciones individuales
 
-- [ ] **3.1** Crear `AjustePrecioDialog.jsx`, `ProgramarBajaDialog.jsx` y `QuitarBajaDialog.jsx` (D-FJ5, D-FJ6, D-FJ7, D-FJ9 a D-FJ12), con `showApiError`, `contratoFieldErrors` y los avisos de las decisiones.
-- [ ] **3.2** Crear `ContratoMensualSeccion.jsx` (D-FJ4) y montarlo en `OcupacionDetalleDialog.jsx` en lugar del cuerpo actual de la sección (D-FJ3), con `can`, `now`, `fase` y el `onChanged` que ya recarga el detalle y el listado.
+- [x] **3.1** Crear `AjustePrecioDialog.jsx`, `ProgramarBajaDialog.jsx` y `QuitarBajaDialog.jsx` (D-FJ5, D-FJ6, D-FJ7, D-FJ9 a D-FJ12), con `showApiError`, `contratoFieldErrors` y los avisos de las decisiones.
+- [x] **3.2** Crear `ContratoMensualSeccion.jsx` (D-FJ4) y montarlo en `OcupacionDetalleDialog.jsx` en lugar del cuerpo actual de la sección (D-FJ3), con `can`, `now`, `fase` y el `onChanged` que ya recarga el detalle y el listado.
 
   *Aceptación (manual, al final del paso 5):* la sección 7, casos 3 a 18.
 
 ### Paso 4 — Ajuste masivo
 
-- [ ] **4.1** Crear `AjusteMasivoDialog.jsx` (D-FJ8) con sus tres pasos y montarlo con el botón "Ajustar precios mensuales" en el encabezado de `Ocupaciones.jsx`, solo con `can("tarifas.editar")`.
+- [x] **4.1** Crear `AjusteMasivoDialog.jsx` (D-FJ8) con sus tres pasos y montarlo con el botón "Ajustar precios mensuales" en el encabezado de `Ocupaciones.jsx`, solo con `can("tarifas.editar")`.
 
   *Aceptación (manual, al final del paso 5):* la sección 7, casos 19 a 27.
 
 ### Paso 5 — Documentación y cierre
 
-- [ ] **5.1** Agregar a `CLAUDE.md` **una línea** sobre los contratos mensuales (dónde vive la sección y el ajuste masivo) con enlace al manual; no tocar nada más.
-- [ ] **5.2** Crear `docs/manual/frontend/10-contratos-mensuales.md`: la sección "Contrato mensual" y qué muestra (precio de partida, fin), el ajuste individual (y por qué no se ve el precio vigente), la baja programada y quitar la baja, el aviso de saldo a favor y la alerta, el ajuste masivo (pasos, exclusiones, qué hace el backend con ellas), la tabla de permisos, qué hace cada `code` de error y lo que le queda al backend (PB-18 a PB-23).
-- [ ] **5.3** Actualizar el estado de esta spec en `docs/specs/README.md` y en su cabecera: **Terminada** una vez mergeada a `develop`.
+- [x] **5.1** Agregar a `CLAUDE.md` **una línea** sobre los contratos mensuales (dónde vive la sección y el ajuste masivo) con enlace al manual; no tocar nada más.
+- [x] **5.2** Crear `docs/manual/frontend/10-contratos-mensuales.md`: la sección "Contrato mensual" y qué muestra (precio de partida, fin), el ajuste individual (y por qué no se ve el precio vigente), la baja programada y quitar la baja, el aviso de saldo a favor y la alerta, el ajuste masivo (pasos, exclusiones, qué hace el backend con ellas), la tabla de permisos, qué hace cada `code` de error y lo que le queda al backend (PB-18 a PB-23).
+- [x] **5.3** Actualizar el estado de esta spec en `docs/specs/README.md` y en su cabecera: **Terminada** una vez mergeada a `develop`.
 - [ ] **5.4** **Verificación final** (única): `npm test`, `npm run lint` y `npm run build`, en PowerShell, sin errores.
 
   *Aceptación:* las tres pasan; una búsqueda de `e.response.data.error`, `toLocale`, `toISOString` y `http.` en `src/componentes/ocupaciones/{ContratoMensualSeccion,AjustePrecioDialog,ProgramarBajaDialog,QuitarBajaDialog,AjusteMasivoDialog}.jsx` y `src/utils/contratos.js` no da coincidencias; `git diff develop -- src/componentes/pagos src/constants/enums.js src/auth/routes.js eslint.config.js` vacío; `git diff develop -- src/componentes/ocupaciones/OcupacionDetalleDialog.jsx` solo toca la sección "Contrato mensual" y el import; `git diff develop -- src/pages/Ocupaciones.jsx` solo suma el botón del encabezado, su estado y el diálogo (lo verifica el Orquestador).

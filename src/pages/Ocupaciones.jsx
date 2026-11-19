@@ -12,6 +12,7 @@ import { showApiError } from "../api/errors";
 import { listOcupaciones } from "../api/ocupacionApi";
 import { usePermissions } from "../auth/usePermissions";
 import ClienteAutocomplete from "../componentes/ClienteAutocomplete";
+import AjusteMasivoDialog from "../componentes/ocupaciones/AjusteMasivoDialog";
 import AltaOcupacionDialog from "../componentes/ocupaciones/AltaOcupacionDialog";
 import CancelarReservaDialog from "../componentes/ocupaciones/CancelarReservaDialog";
 import FinalizarOcupacionDialog from "../componentes/ocupaciones/FinalizarOcupacionDialog";
@@ -166,6 +167,8 @@ export default function Ocupaciones() {
   const [pagoSnapshot, setPagoSnapshot] = useState(null);
   // Detalle abierto, para que el diálogo de pago desde el detalle use sus cifras frescas.
   const [openDetail, setOpenDetail] = useState(null);
+  // Spec 10 (D-FJ8): ajuste masivo de precios de los contratos mensuales.
+  const [ajusteMasivo, setAjusteMasivo] = useState(false);
 
   const detailId = parseOcupacionId(searchParams);
 
@@ -394,6 +397,12 @@ export default function Ocupaciones() {
           </Button>
         ) : null}
 
+        {can("tarifas.editar") ? (
+          <Button variant="outlined" onClick={() => setAjusteMasivo(true)} sx={{ borderRadius: 2, fontWeight: 800 }}>
+            Ajustar precios mensuales
+          </Button>
+        ) : null}
+
         <Button variant="outlined" onClick={reloadList} disabled={loading} sx={{ borderRadius: 2, fontWeight: 800 }}>
           Refrescar
         </Button>
@@ -574,6 +583,10 @@ export default function Ocupaciones() {
           onDone={terminarEscritura}
           onError={manejarError}
         />
+      ) : null}
+
+      {ajusteMasivo && can("tarifas.editar") ? (
+        <AjusteMasivoDialog onClose={() => setAjusteMasivo(false)} onApplied={reloadAll} />
       ) : null}
 
       {dialog?.type === "pago" && pagoOcupacion && pagoPermitido ? (
