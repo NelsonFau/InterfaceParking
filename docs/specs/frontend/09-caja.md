@@ -1,6 +1,6 @@
 # 09 — Caja con sesiones: abrir, cerrar con arqueo, reabrir, historial y widget del Monitor
 
-> Frontend · **Aprobada** (19/11/2026) · `feature/specs-etapa6` (esta spec) y `feature/front-caja` (ejecución, en el repo principal sin worktree, a crear desde `develop`) · Última actualización 19/11/2026
+> Frontend · **Terminada** (19/11/2026; se vuelve verdadera al mergear el PR a `develop`) · `feature/specs-etapa6` (esta spec) y `feature/front-caja` (ejecución, en el repo principal sin worktree, a crear desde `develop`) · Última actualización 19/11/2026
 >
 > Novena spec del frontend. **Reemplaza `CajaDiaria.jsx`**, que hoy da 404 porque `GET /Pagos/caja-diaria` ya no existe, por una pantalla de **Caja con sesiones** sobre `/Caja`: la sesión actual (abrir y cerrar con arqueo), el historial paginado, el detalle de una sesión con sus eventos y movimientos, y la reapertura. **Repone el widget de caja en el Monitor operativo**, que la 05 sacó para que el 404 no lo tirara abajo, y **retira** el export `@deprecated` `pagosApi` y las excepciones de lint de `CajaDiaria.jsx`. **Depende de la 02** (fechas con zona del tenant, enums, `formatMoney`, paginación, patrón de módulos de API), de la **04** (`buildTrazabilidadPath` con `cajaSesionId`), de la **05** (el Monitor sin caja y `getAlertLinks`) y de la **08** (`PagoDetalleDialog` con solo un `pagoId`, `usuarioLabel`, `moneyToCents`); todas ya están ejecutadas en `develop`.
 >
@@ -288,6 +288,22 @@ Con la matriz del backend: el DUENO hace todo; el ENCARGADO y el OPERADOR abren 
 | P-FI-L4 | Que el comentario de `routes.js` y el de `alertas.js` sigan diciendo lo que la sección 2.1 transcribe | Si cambiaron, ajustar el texto y anotarlo |
 | P-FI-L5 | Que `OperationalDashboard.jsx` conserve `reloadKey` y que `OperationalAlerts.jsx` llame a `getAlertLinks` en un solo lugar | Si no, adaptar el montaje y anotarlo; si obliga a rehacer la pantalla, **frenar** |
 
+**Resultado de los locales (ejecución, 19/11/2026).**
+
+| Id | Resultado |
+|---|---|
+| P-FI-L1 | Todo existe en la rama: `PagoDetalleDialog({ pagoId, onClose, onChanged, ocupacion? })`, `usuarioLabel` y `moneyToCents`, `buildTrazabilidadPath` con `cajaSesionId`, `isPositiveId`, los cuatro enums de caja, `useTenantDates` (`today`, `instantToDateOnly`, `formatInstant`), `addDays`, `normalizePaged` y `usePagination` |
+| P-FI-L2 | `pagosApi`/`getCajaDiaria`/`CajaDiaria` solo aparecían en `App.jsx`, `routes.js`, `pagosApi.js`, `CajaDiaria.jsx`, `eslint.config.js` y los tests de `pagosApi` y `routes`. Nada más |
+| P-FI-L3 | Por lectura del backend: los enums salen como entero (`Program.cs` solo registra los conversores de instante, sin `JsonStringEnumConverter`) y los DTOs coinciden con 2.2 (`CajaDtos.cs`). Falta confirmarlo contra el backend en marcha (sección 7) |
+| P-FI-L4 | Los comentarios de `routes.js` y `alertas.js` decían lo transcripto; se reemplazaron |
+| P-FI-L5 | `OperationalDashboard.jsx` conserva `reloadKey` y `OperationalAlerts.jsx` llama a `getAlertLinks` en un solo lugar: sin adaptaciones |
+
+**Pendiente de la ejecución.**
+
+| Id | Pendiente |
+|---|---|
+| P-FI8 | **Verificación manual** de la sección 7 (casos 2 a 27) con el backend en marcha: no se pudo hacer en la ejecución (sin backend ni Auth0). Lo cubren los tests de `caja.js`, `cajaLink.js`, `cajaApi.js`, `getAlertLinks` y `routes` |
+
 **Abiertos del proyecto que esta spec no toma:** P-19, P-29, P-33, P-2 y P-9 (heredados de la 01), P-FB3 (moneda por tenant).
 
 ## 5. Inventario
@@ -342,11 +358,11 @@ Rutas relativas a la raíz del repo del frontend. Los nombres de archivo son los
 
 ### Paso 0 — Precondiciones
 
-- [ ] **0.1** Resolver **P-FI-L1** a **P-FI-L5** (lectura y búsquedas, sin cambios). Si falta algo, frenar.
+- [x] **0.1** Resolver **P-FI-L1** a **P-FI-L5** (lectura y búsquedas, sin cambios). Si falta algo, frenar.
 
 ### Paso 1 — Lógica pura
 
-- [ ] **1.1** Crear `src/utils/caja.js` y `src/utils/cajaLink.js` (D-FI19) y sus tests `test/unit/utils/caja.test.js` y `cajaLink.test.js`.
+- [x] **1.1** Crear `src/utils/caja.js` y `src/utils/cajaLink.js` (D-FI19) y sus tests `test/unit/utils/caja.test.js` y `cajaLink.test.js`.
 
   *Aceptación:* los tests cubren estos casos (`ABIERTA = 1`, `CERRADA = 2`; `APERTURA = 1`, `CIERRE = 2`, `REAPERTURA = 3`; `DIARIA = 1`, `TURNO = 2`; fechas como `DateOnly`; `can` es una función sobre un conjunto de permisos):
 
@@ -396,46 +412,46 @@ Rutas relativas a la raíz del repo del frontend. Los nombres de archivo son los
 
 ### Paso 2 — Módulo de API y retiro de lo viejo del módulo de pagos
 
-- [ ] **2.1** Crear `src/api/cajaApi.js` (D-FI2) y `test/unit/api/cajaApi.test.js` con `vi.mock` de `http`.
-- [ ] **2.2** Retirar el export `pagosApi` de `src/api/pagosApi.js` y su bloque de tests en `test/unit/api/pagosApi.test.js` (D-FI18). **No** borrar todavía `CajaDiaria.jsx` (se hace en el paso 7, junto con su import).
+- [x] **2.1** Crear `src/api/cajaApi.js` (D-FI2) y `test/unit/api/cajaApi.test.js` con `vi.mock` de `http`.
+- [x] **2.2** Retirar el export `pagosApi` de `src/api/pagosApi.js` y su bloque de tests en `test/unit/api/pagosApi.test.js` (D-FI18). **No** borrar todavía `CajaDiaria.jsx` (se hace en el paso 7, junto con su import).
 
   *Aceptación:* los tests cubren: `getCajaActual()` hace `GET /Caja/actual` y devuelve `data`; una respuesta sin `modo` lanza `ApiError` con `code: "respuesta_invalida"`; `listCajaSesiones({ desde: "2026-11-01", hasta: "2026-11-19", page: 1, pageSize: 20 })` hace `GET /Caja/sesiones` con esos `params` (los `DateOnly` sin convertir), filtra `""`/`undefined` con `cleanParams` y devuelve `{ items, total, page, pageSize }`; una respuesta que no es paginada lanza `respuesta_invalida`; `getCajaSesion(12)` hace `GET /Caja/sesiones/12` y acepta `movimientos: null`; una respuesta sin `historial` arreglo lanza `respuesta_invalida`; `getCajaEsperado(12)` hace `GET /Caja/sesiones/12/esperado`; `openCaja(body)` hace `POST /Caja/abrir` con el cuerpo sin modificarlo; `closeCaja(12, body)` hace `POST /Caja/sesiones/12/cerrar`; `reopenCaja(12, { motivo })` hace `POST /Caja/sesiones/12/reabrir`; ninguna función captura errores (un rechazo de `http` se propaga). `pagosApi.test.js` ya no importa `pagosApi` y sigue verde con las funciones de la 08.
 
 ### Paso 3 — Caja actual: abrir y cerrar
 
-- [ ] **3.1** Crear `src/componentes/caja/TotalesPorMetodo.jsx`, `AbrirCajaDialog.jsx`, `CerrarCajaDialog.jsx` y `CajaActualPanel.jsx` (D-FI5, D-FI6, D-FI7, D-FI14 a D-FI17), con `showApiError`, `cajaFieldErrors` y los avisos de las decisiones.
-- [ ] **3.2** Crear `src/pages/Caja.jsx` con las dos pestañas; la de "Historial" queda con un marcador hasta el paso 4.
+- [x] **3.1** Crear `src/componentes/caja/TotalesPorMetodo.jsx`, `AbrirCajaDialog.jsx`, `CerrarCajaDialog.jsx` y `CajaActualPanel.jsx` (D-FI5, D-FI6, D-FI7, D-FI14 a D-FI17), con `showApiError`, `cajaFieldErrors` y los avisos de las decisiones.
+- [x] **3.2** Crear `src/pages/Caja.jsx` con las dos pestañas; la de "Historial" queda con un marcador hasta el paso 4.
 
   *Aceptación (manual, al final del paso 7):* la sección 7 de esta spec, casos 3 a 11.
 
 ### Paso 4 — Historial, detalle y reabrir
 
-- [ ] **4.1** Crear `CajaHistorialPanel.jsx` (D-FI9) con el filtro, la tabla paginada y la apertura del detalle.
-- [ ] **4.2** Crear `SesionDetalleDialog.jsx` (D-FI10, D-FI11) y `ReabrirCajaDialog.jsx` (D-FI8), con el enlace "Ver trazabilidad" y el `PagoDetalleDialog` de la 08.
-- [ ] **4.3** Cablear en `Caja.jsx` el parámetro `?sesion=N` (`parseCajaSesionId`, `buildCajaPath`) y el `onChanged` que recarga la caja actual.
+- [x] **4.1** Crear `CajaHistorialPanel.jsx` (D-FI9) con el filtro, la tabla paginada y la apertura del detalle.
+- [x] **4.2** Crear `SesionDetalleDialog.jsx` (D-FI10, D-FI11) y `ReabrirCajaDialog.jsx` (D-FI8), con el enlace "Ver trazabilidad" y el `PagoDetalleDialog` de la 08.
+- [x] **4.3** Cablear en `Caja.jsx` el parámetro `?sesion=N` (`parseCajaSesionId`, `buildCajaPath`) y el `onChanged` que recarga la caja actual.
 
   *Aceptación (manual, al final del paso 7):* la sección 7, casos 12 a 22.
 
 ### Paso 5 — Ruta, menú, redirección y enlace desde alertas
 
-- [ ] **5.1** `src/auth/routes.js` (`CAJA_PATH`, entrada "Caja", comentario de P-FA4), `src/App.jsx` (`PAGES["/caja"]` y la redirección de `/caja-diaria`) y `test/unit/auth/routes.test.js` (D-FI3, D-FI12).
-- [ ] **5.2** `getAlertLinks` con "Ver caja" (`canCaja`), el cambio de una línea en `OperationalAlerts.jsx` y la ampliación del test de `getAlertLinks` (D-FI13).
+- [x] **5.1** `src/auth/routes.js` (`CAJA_PATH`, entrada "Caja", comentario de P-FA4), `src/App.jsx` (`PAGES["/caja"]` y la redirección de `/caja-diaria`) y `test/unit/auth/routes.test.js` (D-FI3, D-FI12).
+- [x] **5.2** `getAlertLinks` con "Ver caja" (`canCaja`), el cambio de una línea en `OperationalAlerts.jsx` y la ampliación del test de `getAlertLinks` (D-FI13).
 
   *Aceptación:* el test de rutas compara el mapa completo con `/caja` en lugar de `/caja-diaria`; el test de `getAlertLinks` cubre: con `canCaja` y `cajaSesionId` positivo aparece `Ver caja` con `to` `"/caja?sesion=N"` (después de "Ver ocupación" y antes de "Ver trazabilidad"); sin `canCaja` no aparece; con `cajaSesionId` ausente, `0` o `null` no aparece; los enlaces de ocupación y trazabilidad no cambian.
 
 ### Paso 6 — Widget del Monitor
 
-- [ ] **6.1** Crear `src/componentes/caja/CajaWidget.jsx` y montarlo en `OperationalDashboard.jsx` con `can("caja.ver")` y `reloadKey` (D-FI12).
+- [x] **6.1** Crear `src/componentes/caja/CajaWidget.jsx` y montarlo en `OperationalDashboard.jsx` con `can("caja.ver")` y `reloadKey` (D-FI12).
 
   *Aceptación (manual):* la sección 7, casos 23 a 26.
 
 ### Paso 7 — Retiro, documentación y cierre
 
-- [ ] **7.1** Borrar `src/pages/CajaDiaria.jsx` y su import en `App.jsx`; retirar las dos excepciones de `CajaDiaria.jsx` de `eslint.config.js` (D-FI18).
-- [ ] **7.2** Corregir en `CLAUDE.md` **solo** las frases de D-FI18 y agregar la línea de la Caja.
-- [ ] **7.3** Crear `docs/manual/frontend/09-caja.md`: los dos modos y qué ve el usuario en cada estado, abrir, cerrar con arqueo (esperado, diferencia informativa, qué rechaza el backend), reabrir (y el aviso de DIARIA), el historial y el detalle, el enlace `/caja?sesion=N`, el contrato con `PagoDetalleDialog`, el widget, la tabla de permisos, qué hace cada `code` de error y lo que le queda al backend (PB-15 a PB-17).
-- [ ] **7.4** Actualizar el estado de esta spec en `docs/specs/README.md` y en su cabecera: **Terminada** una vez mergeada a `develop`.
-- [ ] **7.5** **Verificación final** (única): `npm test`, `npm run lint` y `npm run build`, en PowerShell, sin errores.
+- [x] **7.1** Borrar `src/pages/CajaDiaria.jsx` y su import en `App.jsx`; retirar las dos excepciones de `CajaDiaria.jsx` de `eslint.config.js` (D-FI18).
+- [x] **7.2** Corregir en `CLAUDE.md` **solo** las frases de D-FI18 y agregar la línea de la Caja.
+- [x] **7.3** Crear `docs/manual/frontend/09-caja.md`: los dos modos y qué ve el usuario en cada estado, abrir, cerrar con arqueo (esperado, diferencia informativa, qué rechaza el backend), reabrir (y el aviso de DIARIA), el historial y el detalle, el enlace `/caja?sesion=N`, el contrato con `PagoDetalleDialog`, el widget, la tabla de permisos, qué hace cada `code` de error y lo que le queda al backend (PB-15 a PB-17).
+- [x] **7.4** Actualizar el estado de esta spec en `docs/specs/README.md` y en su cabecera: **Terminada** una vez mergeada a `develop`.
+- [x] **7.5** **Verificación final** (única): `npm test`, `npm run lint` y `npm run build`, en PowerShell, sin errores.
 
   *Aceptación:* las tres pasan; una búsqueda de `e.response.data.error`, `toLocale`, `toISOString` y `http.` en `src/componentes/caja/`, `src/pages/Caja.jsx`, `src/utils/caja.js` y `src/utils/cajaLink.js` no da coincidencias; una búsqueda de `pagosApi`, `getCajaDiaria` y `CajaDiaria` en `src/`, `test/` y `eslint.config.js` no da coincidencias (salvo el nombre del archivo del manual); `git diff develop -- src/componentes/pagos src/pages/Ocupaciones.jsx src/constants/enums.js src/utils/pagos.js` vacío (lo verifica el Orquestador).
 

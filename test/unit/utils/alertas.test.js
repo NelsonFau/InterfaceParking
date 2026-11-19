@@ -186,6 +186,32 @@ describe("getAlertLinks", () => {
   });
 });
 
+describe("getAlertLinks: Ver caja (spec 09)", () => {
+  it("con canCaja y cajaSesionId positivo aparece entre ocupación y trazabilidad", () => {
+    const alerta = { ocupacionId: 12, cajaSesionId: 7 };
+    const links = getAlertLinks(alerta, { canTrazabilidad: true, canOcupaciones: true, canCaja: true });
+    expect(links.map((l) => l.key)).toEqual(["ocupacion", "caja", "trazabilidad"]);
+    expect(links[1]).toEqual({ key: "caja", label: "Ver caja", to: "/caja?sesion=7" });
+    expect(links[0].to).toBe("/ocupaciones?id=12");
+    expect(links[2].to).toBe("/trazabilidad?ocupacionId=12&cajaSesionId=7");
+  });
+
+  it("sin canCaja no aparece", () => {
+    expect(getAlertLinks({ cajaSesionId: 7 }, { canCaja: false })).toEqual([]);
+    expect(getAlertLinks({ cajaSesionId: 7 })).toEqual([]);
+  });
+
+  it("con cajaSesionId ausente, 0 o null no aparece", () => {
+    expect(getAlertLinks({}, { canCaja: true })).toEqual([]);
+    expect(getAlertLinks({ cajaSesionId: 0 }, { canCaja: true })).toEqual([]);
+    expect(getAlertLinks({ cajaSesionId: null }, { canCaja: true })).toEqual([]);
+  });
+
+  it("solo caja, sin los otros permisos", () => {
+    expect(getAlertLinks({ cajaSesionId: 7 }, { canCaja: true }).map((l) => l.key)).toEqual(["caja"]);
+  });
+});
+
 describe("sumCounts", () => {
   const ok = (value) => ({ status: "fulfilled", value });
   it("suma los conteos; si alguno falló, null", () => {

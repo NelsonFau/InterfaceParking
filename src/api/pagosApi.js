@@ -99,13 +99,3 @@ export async function createDevolucion(pagoId, body) {
   const { data } = await http.post(`/Pagos/${pagoId}/devoluciones`, body);
   return data;
 }
-
-/**
- * @deprecated Solo para `CajaDiaria.jsx` hasta la spec 09, que lo retira. No usar en código nuevo.
- * Conserva la forma vieja: devuelve la respuesta de axios entera. `GET /Pagos/caja-diaria` ya no existe en
- * el backend. `anular` delega en `anularPago` (la página no le pasa el motivo: DV-FH1).
- */
-export const pagosApi = {
-  getCajaDiaria: (fecha) => http.get("/Pagos/caja-diaria", { params: { fecha } }),
-  anular: (pagoId, motivo) => anularPago(pagoId, { motivo }),
-};

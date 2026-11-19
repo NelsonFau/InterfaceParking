@@ -4,6 +4,7 @@
 import { SeveridadAlerta, TipoAlertaOperativa } from "../constants/enums.js";
 import { dateRangeToInstants, inputToDateOnly } from "./fechas.js";
 import { ALERTAS_PATH } from "../auth/routes.js";
+import { buildCajaPath } from "./cajaLink.js";
 import { buildOcupacionPath } from "./ocupacionLink.js";
 import { buildTrazabilidadPath, isPositiveId } from "./trazabilidadLink.js";
 
@@ -194,18 +195,21 @@ export function resolutionSummary(alerta, formatDate = String) {
 }
 
 /**
- * Enlaces de una fila: el único lugar que los decide (D-FE10). La 07 sumó el de Ocupación (D-FG14);
- * la 09 suma acá el suyo (P-FE1).
+ * Enlaces de una fila: el único lugar que los decide (D-FE10). La 07 sumó el de Ocupación (D-FG14) y la 09
+ * el de Caja (D-FI13, cierra P-FE1 en lo de Caja). Orden: ocupación, caja, trazabilidad.
  * @param {{ ocupacionId?: number | null, cajaSesionId?: number | null }} alerta
- * @param {{ canTrazabilidad?: boolean, canOcupaciones?: boolean }} [permisos]
+ * @param {{ canTrazabilidad?: boolean, canOcupaciones?: boolean, canCaja?: boolean }} [permisos]
  * @returns {{ key: string, label: string, to: string }[]}
  */
-export function getAlertLinks(alerta, { canTrazabilidad = false, canOcupaciones = false } = {}) {
+export function getAlertLinks(alerta, { canTrazabilidad = false, canOcupaciones = false, canCaja = false } = {}) {
   const links = [];
   const ocupacionId = alerta?.ocupacionId ?? undefined;
   const cajaSesionId = alerta?.cajaSesionId ?? undefined;
   if (canOcupaciones && isPositiveId(ocupacionId)) {
     links.push({ key: "ocupacion", label: "Ver ocupación", to: buildOcupacionPath(ocupacionId) });
+  }
+  if (canCaja && isPositiveId(cajaSesionId)) {
+    links.push({ key: "caja", label: "Ver caja", to: buildCajaPath(cajaSesionId) });
   }
   if (canTrazabilidad && (isPositiveId(ocupacionId) || isPositiveId(cajaSesionId))) {
     links.push({

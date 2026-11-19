@@ -11,10 +11,13 @@ export const OCUPACIONES_PATH = "/ocupaciones";
 // Alertas operativas: la ruta la comparten el mapa, alertas.js y los enlaces de Ocupaciones (D-FG15).
 export const ALERTAS_PATH = "/alertas-operativas";
 
+// Caja con sesiones (spec 09, D-FI3): una constante para el mapa y para el contrato de enlace `/caja?sesion=N`.
+export const CAJA_PATH = "/caja";
+
 export const PRIVATE_ROUTES = [
   { path: "/dashboard", label: "Dashboard", permiso: "panel.ver" },
-  // P-FA4 cerrado (spec 05): el Monitor ya no mezcla caja, así que alertas.ver alcanza. Si la 09 repone un
-  // widget de caja, revisa si esta ruta debe exigir además caja.ver.
+  // P-FA4 cerrado (spec 09, D-FI12): alertas.ver alcanza. Todo rol con alertas.ver tiene caja.ver, y el widget
+  // de caja del Monitor se oculta por su cuenta con can("caja.ver"), así que no hace falta exigir los dos.
   { path: "/operaciones", label: "Monitor operativo", permiso: "alertas.ver" },
   { path: "/cocheras", label: "Cocheras", permiso: "cocheras.ver" },
   { path: OCUPACIONES_PATH, label: "Ocupaciones", permiso: "ocupaciones.ver" },
@@ -22,7 +25,7 @@ export const PRIVATE_ROUTES = [
   { path: "/tarifas", label: "Tarifas", permiso: "tarifas.ver" },
   { path: TRAZABILIDAD_PATH, label: "Trazabilidad", permiso: "auditoria.ver" },
   { path: ALERTAS_PATH, label: "Alertas operativas", permiso: "alertas.ver" },
-  { path: "/caja-diaria", label: "Caja diaria", permiso: "caja.ver" },
+  { path: CAJA_PATH, label: "Caja", permiso: "caja.ver" },
   // Specs 11 y 12: pantallas de administración, al final del menú (contrato de rutas de brechas-front.md).
   { path: "/configuracion", label: "Configuración", permiso: "configuracion.ver" },
   // Spec 12 (D-FL3).

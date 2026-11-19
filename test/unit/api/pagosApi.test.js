@@ -12,7 +12,6 @@ import {
   createPago,
   getPago,
   listPagosByOcupacion,
-  pagosApi,
 } from "../../../src/api/pagosApi.js";
 
 beforeEach(() => {
@@ -108,21 +107,3 @@ describe("createDevolucion", () => {
   });
 });
 
-describe("pagosApi (export de compatibilidad @deprecated, se retira con la spec 09)", () => {
-  it("solo exporta getCajaDiaria y anular (crear se retiró)", () => {
-    expect(Object.keys(pagosApi).sort()).toEqual(["anular", "getCajaDiaria"]);
-  });
-
-  it("getCajaDiaria devuelve la respuesta de axios entera", async () => {
-    const respuesta = { data: [], status: 200 };
-    http.get.mockResolvedValue(respuesta);
-    await expect(pagosApi.getCajaDiaria("2026-11-18")).resolves.toBe(respuesta);
-    expect(http.get).toHaveBeenCalledWith("/Pagos/caja-diaria", { params: { fecha: "2026-11-18" } });
-  });
-
-  it("anular delega en anularPago", async () => {
-    http.patch.mockResolvedValue({ status: 204 });
-    await pagosApi.anular(40, "motivo");
-    expect(http.patch).toHaveBeenCalledWith("/Pagos/40/anular", { motivo: "motivo" });
-  });
-});

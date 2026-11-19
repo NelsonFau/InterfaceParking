@@ -12,7 +12,7 @@ import Usuarios from "./pages/Usuarios.jsx";
 import Login from "./pages/Login.jsx";
 import Splash from "./pages/Splash.jsx";
 import OperationalDashboard from "./pages/OperationalDashboard.jsx";
-import CajaDiaria from "./pages/CajaDiaria.jsx";
+import Caja from "./pages/Caja.jsx";
 import Callback from "./pages/Callback.jsx";
 import RequireAuth from "./auth/RequireAuth.jsx";
 import RequirePermission from "./auth/RequirePermission.jsx";
@@ -28,7 +28,7 @@ const PAGES = {
   "/tarifas": Tarifas,
   "/trazabilidad": Trazabilidad,
   "/alertas-operativas": OperationalAlerts,
-  "/caja-diaria": CajaDiaria,
+  "/caja": Caja,
   "/configuracion": Configuracion,
   "/usuarios": Usuarios,
 };
@@ -71,6 +71,9 @@ export default function App() {
 
       {/* ruta vieja de Auditoría: redirige sin query y fuera del mapa, para no duplicar el ítem de menú (D-FD3) */}
       <Route path="/auditoria" element={<Navigate to="/trazabilidad" replace />} />
+
+      {/* ruta vieja de Caja diaria: redirige sin query y fuera del mapa, para no duplicar el ítem de menú (D-FI3) */}
+      <Route path="/caja-diaria" element={<Navigate to="/caja" replace />} />
 
       {/* fallback */}
       <Route path="*" element={<Navigate to="/" replace />} />
