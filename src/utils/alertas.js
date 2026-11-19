@@ -3,6 +3,8 @@
 // resolución (D-FE8), el resumen de resolución (D-FE9) y los enlaces de cada fila (D-FE10).
 import { SeveridadAlerta, TipoAlertaOperativa } from "../constants/enums.js";
 import { dateRangeToInstants, inputToDateOnly } from "./fechas.js";
+import { ALERTAS_PATH } from "../auth/routes.js";
+import { buildOcupacionPath } from "./ocupacionLink.js";
 import { buildTrazabilidadPath, isPositiveId } from "./trazabilidadLink.js";
 
 /** Cada cuánto se recarga sola una pantalla de alertas: coincide con la frecuencia del job del servidor (D-FE12). */
@@ -11,7 +13,7 @@ export const ALERTS_REFRESH_MS = 300000;
 /** Tope del comentario de resolución; el backend rechaza más de 500. */
 export const MAX_COMENTARIO = 500;
 
-export const ALERTAS_PATH = "/alertas-operativas";
+export { ALERTAS_PATH };
 
 export const MSG_RANGO_INVERTIDO = "La fecha 'Desde' no puede ser posterior a 'Hasta'";
 export const MSG_FECHA_INVALIDA = "La fecha no es válida.";
@@ -192,15 +194,19 @@ export function resolutionSummary(alerta, formatDate = String) {
 }
 
 /**
- * Enlaces de una fila: el único lugar que los decide (D-FE10). La 07 y la 09 suman acá los suyos (P-FE1).
+ * Enlaces de una fila: el único lugar que los decide (D-FE10). La 07 sumó el de Ocupación (D-FG14);
+ * la 09 suma acá el suyo (P-FE1).
  * @param {{ ocupacionId?: number | null, cajaSesionId?: number | null }} alerta
- * @param {{ canTrazabilidad?: boolean }} [permisos]
+ * @param {{ canTrazabilidad?: boolean, canOcupaciones?: boolean }} [permisos]
  * @returns {{ key: string, label: string, to: string }[]}
  */
-export function getAlertLinks(alerta, { canTrazabilidad = false } = {}) {
+export function getAlertLinks(alerta, { canTrazabilidad = false, canOcupaciones = false } = {}) {
   const links = [];
   const ocupacionId = alerta?.ocupacionId ?? undefined;
   const cajaSesionId = alerta?.cajaSesionId ?? undefined;
+  if (canOcupaciones && isPositiveId(ocupacionId)) {
+    links.push({ key: "ocupacion", label: "Ver ocupación", to: buildOcupacionPath(ocupacionId) });
+  }
   if (canTrazabilidad && (isPositiveId(ocupacionId) || isPositiveId(cajaSesionId))) {
     links.push({
       key: "trazabilidad",

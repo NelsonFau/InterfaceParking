@@ -1,6 +1,6 @@
 # 07 — Ocupaciones: alta abierta, retroactiva y futura; detalle con saldo; finalizar y cancelar
 
-> Frontend · **Aprobada** (18/11/2026) · `feature/specs-etapa4` (esta spec) y `feature/front-ocupaciones` (ejecución, en el worktree `../parkingcontrol-front-ocupaciones`, a crear desde `develop` cuando estén mergeadas la 02, la 04, la 05 y la 06) · Última actualización 18/11/2026
+> Frontend · **Terminada** (19/11/2026; se vuelve verdadera al mergear el PR a `develop`) · `feature/specs-etapa4` (esta spec) y `feature/front-ocupaciones` (ejecución, en el worktree `../parkingcontrol-front-ocupaciones`, a crear desde `develop` cuando estén mergeadas la 02, la 04, la 05 y la 06) · Última actualización 19/11/2026
 >
 > Séptima spec del frontend y la pantalla central del sistema. Hoy `Ocupaciones.jsx` carga, pero obliga a cargar un `fin`, pide el id interno de la cochera a mano, muestra todas las acciones a todos los roles, finaliza sin confirmar ni resolver el excedente de un mensual, no distingue una reserva de una ocupación en curso y descarta el `title` de los errores de la API. Esta spec la reescribe sobre la API actual. **Depende de la 02** (fechas con zona del tenant, enums, `formatMoney`, patrón de `src/api/`), de la **04** (`buildTrazabilidadPath`), de la **05** (`getAlertLinks`) y de la **06** (`cocheraApi.js`); no puede arrancar hasta que las cuatro estén mergeadas en `develop`.
 
@@ -296,6 +296,7 @@ El cuerpo lleva `cocheraId`, `clienteId`, `tipo`, `inicio` y `usarTarifaExcepcio
 |---|---|---|---|---|---|
 | DV-FG1 | Spec 02, D-FB10 y DV-FB2 | `Ocupaciones.jsx` envía en la zona del tenant pero muestra en la del navegador hasta la 07 | La 07 muestra y envía en la zona del tenant | Es la spec que reescribe la página | — |
 | DV-FG2 | Spec 05, D-FE10 | `getAlertLinks(alerta, { canTrazabilidad })` | La 07 suma `canOcupaciones` y la línea de Ocupación | P-FE1 lo reserva a la 07 | — |
+| DV-FG4 | D-FG18 | El paso "Resolver el excedente" muestra el `title` del backend tal cual, que trae los montos | Muestra `errors.ResolucionExcedente[0]` (con el `title` de respaldo) | El backend lanza `ReglaInvalidaException` con campo: el `title` es el genérico "Hay datos inválidos en el pedido." y el mensaje con los montos va en `errors.ResolucionExcedente` (`Middlewares/ExceptionMiddleware.cs:84-96`, `Service/OcupacionService.cs:455-459`). No se parsea el texto (`resolutionMessage`, pura) | Cuando PB-7 traiga los montos en un campo propio |
 | DV-FG3 | Rama `wip/ocupaciones-reservas` | Cancelar sin `finReal`, `puedeCancelar` y `puedeFinalizar` | Se retoma la idea con `accionesDeOcupacion` y `buildCancelBody` (D-FG8, D-FG17) | El código de la rama no se reutiliza: se rediseña sobre `develop` | — |
 
 ### 4.2 Pendientes
@@ -321,6 +322,18 @@ El cuerpo lleva `cocheraId`, `clienteId`, `tipo`, `inicio` y `usarTarifaExcepcio
 | P-FG6 | Abrir el alta con la cochera ya elegida desde Cocheras (`/ocupaciones?nueva=1&cocheraId=N`). Sin pedido | — |
 | P-FG7 | **Datos de prueba** para verificar: una reserva futura, una ocupación vencida, un mensual con pagos mayores a lo que corresponde, una retroactiva y una con tarifa excepcional. Con `encargado@demo.test` se prueban la retroactiva y la excepcional; con `operado@demo.test`, que no se ofrecen | 3 a 6 |
 | P-FG8 | Moneda por tenant (P-FB3): `formatMoney` fija `UYU` | — |
+
+**Resueltos al ejecutar (19/11/2026).**
+
+| Id | Resultado |
+|---|---|
+| P-FG-L1 | La 02, la 04, la 05 y la 06 están en la rama (apilada): `useTenantDates`, `cleanParams`, `normalizePaged`, enums, `formatMoney`/`formatNumber`, `buildTrazabilidadPath`, `getAlertLinks` y `cocheraApi.js` con `listCocheras` y `listCocherasDisponibles` |
+| P-FG-L2 | `useTenantDates()` expone `today(now)`; `ApiError` es `{ status, code, message, errors, traceId, response }`. Sin ajustes |
+| P-FG-L3 | Verificado en el código del backend: `tipo`, `estado` y `estadoCalculado` salen como enteros (`Program.cs:72-77`, sin conversor de enums a texto) y `OcupacionDetalleResponse` trae `EstadoCalculado` (`Models/Dtos/Ocupacion/OcupacionResponse.cs:92`) |
+| P-FG-L4 | La excepción de `Ocupaciones.jsx` tenía el formato `sinToLocale([...])`; retirada |
+| P-FG-L5 | `getAlertLinks` devuelve `{ key, label, to }[]`; se sumó `{ key: "ocupacion", label: "Ver ocupación" }` con `canOcupaciones`. `ALERTAS_PATH` pasó a `routes.js` (`alertas.js` lo reexporta) para que `ocupacionLink.js` no importe `alertas.js` (evita un ciclo) |
+| P-FG-L6 | **Leído en el código; la verificación real contra el backend en marcha queda MANUAL.** `GET /Cochera/disponibles` solo rechaza `hasta <= desde` (400 `errors.Hasta`), sin tope superior: `inicio + 3650 días` no da error (`Service/DisponibilidadService.cs:64-86`) |
+| P-FG-L7 | **Leído en el código; la verificación real queda MANUAL.** Sin resolución: 400 `datos_invalidos` con `errors.ResolucionExcedente` (`OcupacionService.cs:455-459`); `COBRAR_COMPLETO` sin motivo: `errors.Motivo` (`:463-466`). Ojo: el texto con los montos está en `errors.ResolucionExcedente[0]`, no en el `title` (DV-FG4) |
 
 **Locales, el ejecutor los resuelve y los informa.**
 
@@ -388,16 +401,16 @@ Nada. (`Ocupaciones.jsx` queda con el mismo nombre y ruta.)
 
 ### Paso 0 — Precondiciones y worktree
 
-- [ ] **0.1** Confirmar que la 02, la 04, la 05 y la 06 están mergeadas en `develop` y resolver **P-FG-L1**. Si no, frenar.
-- [ ] **0.2** Pedir al Orquestador el comando, desde `parkingcontrol-front`: `git worktree add ../parkingcontrol-front-ocupaciones -b feature/front-ocupaciones develop`. En el worktree, copiar el `.env` (no está versionado) y `npm install`. Resolver P-FG-L2 a P-FG-L6.
-- [ ] **0.3** Leer la sección 2.2 (relevamiento del backend) y comprobar con el Orquestador que sigue vigente: si el backend cambió desde el 18/11/2026, se pide un relevamiento nuevo **antes** del paso 1.
+- [x] **0.1** Confirmar que la 02, la 04, la 05 y la 06 están mergeadas en `develop` y resolver **P-FG-L1**. Si no, frenar.
+- [x] **0.2** (Ejecutado sin worktree: rama `feature/front-ocupaciones` apilada sobre las ramas de las specs 02 a 06; el `.env` ya existía.) Pedir al Orquestador el comando, desde `parkingcontrol-front`: `git worktree add ../parkingcontrol-front-ocupaciones -b feature/front-ocupaciones develop`. En el worktree, copiar el `.env` (no está versionado) y `npm install`. Resolver P-FG-L2 a P-FG-L6.
+- [x] **0.3** Leer la sección 2.2 (relevamiento del backend) y comprobar con el Orquestador que sigue vigente: si el backend cambió desde el 18/11/2026, se pide un relevamiento nuevo **antes** del paso 1.
 
   *Aceptación:* en el worktree, `npm test`, `npm run lint` y `npm run build` pasan antes de cambiar nada.
 
 ### Paso 1 — Lógica pura
 
-- [ ] **1.1** Crear `src/utils/ocupaciones.js` con las funciones de D-FG20 y `test/unit/utils/ocupaciones.test.js`.
-- [ ] **1.2** Crear `src/utils/ocupacionLink.js` y `test/unit/utils/ocupacionLink.test.js`.
+- [x] **1.1** Crear `src/utils/ocupaciones.js` con las funciones de D-FG20 y `test/unit/utils/ocupaciones.test.js`.
+- [x] **1.2** Crear `src/utils/ocupacionLink.js` y `test/unit/utils/ocupacionLink.test.js`.
 
   *Aceptación:* `npm test` pasa con estos casos (`tz = America/Montevideo`, UTC−3, y `now = 2026-11-18T15:00:00.000Z`, o sea las 12:00 locales del 18/11; `can` es una función sobre un conjunto de permisos):
 
@@ -468,48 +481,48 @@ Nada. (`Ocupaciones.jsx` queda con el mismo nombre y ruta.)
 
 ### Paso 2 — Módulos de API
 
-- [ ] **2.1** Crear `src/api/ocupacionApi.js` (D-FG2) y `test/unit/api/ocupacionApi.test.js` con `vi.mock` de `http`.
-- [ ] **2.2** Crear `src/api/clienteApi.js` (D-FG3) y su test.
-- [ ] **2.3** Sumar `createPago` a `src/api/pagosApi.js` (D-FG4), sin tocar el resto, y `test/unit/api/pagosApi.test.js`.
+- [x] **2.1** Crear `src/api/ocupacionApi.js` (D-FG2) y `test/unit/api/ocupacionApi.test.js` con `vi.mock` de `http`.
+- [x] **2.2** Crear `src/api/clienteApi.js` (D-FG3) y su test.
+- [x] **2.3** Sumar `createPago` a `src/api/pagosApi.js` (D-FG4), sin tocar el resto, y `test/unit/api/pagosApi.test.js`.
 
   *Aceptación:* `npm test` pasa con: `listOcupaciones({ estado: 1, take: 200 })` hace `GET /Ocupacion` con esos `params` y **sin** claves vacías; una respuesta que no es un arreglo lanza `ApiError` con `code: "respuesta_invalida"`; `getOcupacion(7)` hace `GET /Ocupacion/7`; `createOcupacion(body)` hace `POST /Ocupacion` con el cuerpo sin modificarlo y devuelve la respuesta; `cancelOcupacion(7, { motivo })` hace `POST /Ocupacion/7/cancelar` y devuelve `undefined`; `finalizeOcupacion(7)` hace `POST /Ocupacion/7/finalizar` **sin cuerpo** y `finalizeOcupacion(7, { resolucionExcedente: 2 })` lo manda; `listClientes({ q: "ana", activos: true, page: 1, pageSize: 20 })` hace `GET /Cliente` y pasa por `normalizePaged`; `createPago(body)` hace `POST /Pagos` y devuelve `data`; el objeto `pagosApi` sigue exportando `crear`, `getCajaDiaria` y `anular`; ninguna función captura errores (un rechazo de `http` se propaga). `npm run lint` y `npm run build` pasan.
 
 ### Paso 3 — Listado y detalle (lectura)
 
-- [ ] **3.1** Crear `src/componentes/ClienteAutocomplete.jsx` con `clienteApi` (temporizador de 300 ms y descarte de respuestas viejas).
-- [ ] **3.2** En `Ocupaciones.jsx`: cargar con `ocupacionApi` (D-FG11), filtros, tarjeta con fase (D-FG10, D-FG12), aviso de truncado y estado de error de carga. Retirar `fmtDate`, `ESTADOS`, `TIPOS`, `money`, `estadoLabel`, `tipoLabel` y el `EstadoChip` local (D-FG21). Resolver **P-FG-L3**.
-- [ ] **3.3** Crear `OcupacionDetalleDialog.jsx` (D-FG13) y el query `?id=` con `ocupacionLink.js` (D-FG14). Los botones de acción de la tarjeta y del detalle quedan **como están hoy** hasta los pasos 4 a 6.
+- [x] **3.1** Crear `src/componentes/ClienteAutocomplete.jsx` con `clienteApi` (temporizador de 300 ms y descarte de respuestas viejas).
+- [x] **3.2** En `Ocupaciones.jsx`: cargar con `ocupacionApi` (D-FG11), filtros, tarjeta con fase (D-FG10, D-FG12), aviso de truncado y estado de error de carga. Retirar `fmtDate`, `ESTADOS`, `TIPOS`, `money`, `estadoLabel`, `tipoLabel` y el `EstadoChip` local (D-FG21). Resolver **P-FG-L3**.
+- [x] **3.3** Crear `OcupacionDetalleDialog.jsx` (D-FG13) y el query `?id=` con `ocupacionLink.js` (D-FG14). Los botones de acción de la tarjeta y del detalle quedan **como están hoy** hasta los pasos 4 a 6.
 
   *Aceptación (manual, con el backend de `develop`, `America/Montevideo` y `dueno@demo.test`):* (1) en Network, la carga por defecto llama en paralelo a `GET /Ocupacion?estado=1&take=200` y `GET /Ocupacion?estado=2&take=200`, responden 200 y la lista unida sale ordenada por inicio descendente; (2) una reserva futura muestra el chip "Reserva" y "Empieza dd/mm/yyyy HH:mm"; una en curso, "En curso"; una vencida, "Vencida"; las horas coinciden con las de la API en la zona del local; (3) un total nulo muestra "—", no `$ 0,00`; (4) "Estado" ofrece Activas, Reservas, Vencidas, Finalizadas, Canceladas y Todas, y "Finalizadas" lista ocupaciones finalizadas; (5) el filtro de cochera es un `select` por número y manda el `cocheraId` correcto; (6) "Fin hasta" manda un instante con `Z` terminado en `…:59.999Z` y la ayuda avisa que excluye las abiertas; (7) con `take` igual a la cantidad de filas, aparece "Puede haber más"; (8) "Ver" abre el detalle y la URL pasa a `/ocupaciones?id=N`; recargar con esa URL lo abre; `?id=abc` se ignora; "atrás" no reabre el detalle cerrado; (9) el detalle muestra la cuenta, la tarifa (con el chip si es excepcional) y, en un MES, `modoMes` y `fraccionMes`; (10) con el backend apagado se ve "No pudimos cargar las ocupaciones" y no una lista vacía; (11) una búsqueda de `fmtDate`, `toLocale`, `money(`, `ESTADOS`, `TIPOS` y `http` en `Ocupaciones.jsx` no da coincidencias. `npm run lint`, `npm test` y `npm run build` pasan.
 
 ### Paso 4 — Alta
 
-- [ ] **4.1** Crear `AltaOcupacionDialog.jsx` (D-FG16) con `listCocherasDisponibles`, `validateAltaForm` y el botón "Nueva ocupación" (solo con `ocupaciones.crear`).
-- [ ] **4.2** Envío con `ocupacionApi.createOcupacion`; en error: `showApiError`, marca de campos (`fieldErrorsFromApi`, `altaErrorField`) y recarga según `shouldReloadAfter` (D-FG7). Resolver **P-FG-L6**.
+- [x] **4.1** Crear `AltaOcupacionDialog.jsx` (D-FG16) con `listCocherasDisponibles`, `validateAltaForm` y el botón "Nueva ocupación" (solo con `ocupaciones.crear`).
+- [x] **4.2** Envío con `ocupacionApi.createOcupacion`; en error: `showApiError`, marca de campos (`fieldErrorsFromApi`, `altaErrorField`) y recarga según `shouldReloadAfter` (D-FG7). Resolver **P-FG-L6**.
 
   *Aceptación (manual, con `encargado@demo.test`, `dueno@demo.test` y `operado@demo.test`):* (1) en un tipo Hora, la casilla "Sin hora de fin" viene tildada y el `POST /Ocupacion` va **sin** la clave `fin`; destildada, va con `fin` como instante con `Z`; (2) el selector de cochera solo muestra las que devuelve `GET /Cochera/disponibles` con `desde` y `hasta` con `Z`, se vuelve a pedir al cambiar inicio o fin, y limpia la elegida si deja de estar disponible; (3) con un inicio futuro, la etiqueta dice "Reserva: empieza el …" y la ocupación aparece en el listado con el chip "Reserva"; (4) un inicio retroactivo con `encargado@demo.test` muestra "Motivo del inicio retroactivo" y manda `motivoRetroactivo`; con `operado@demo.test` el campo no aparece, el backend rechaza y el `title` queda marcado en "Inicio" (403 `sin_permiso`, B1); (5) el interruptor de tarifa excepcional aparece con `dueno@demo.test` y `encargado@demo.test` y no con `operado@demo.test`; activo, un precio `0`, `12.345` o `10000001` y un motivo vacío no llegan a la red; (6) un inicio de hace un año, o un fin de diez años, **sí llegan** y el backend contesta con su `title` y el campo marcado; (7) un tipo sin tarifa vigente para ese día muestra el `title` de `tarifa_no_configurada` bajo "Tipo", con el enlace "Ver tarifas"; (8) dos pestañas: ocupar la misma cochera en las dos muestra el `title` de `cochera_no_disponible` en la segunda y vuelve a pedir las disponibles; (9) un cliente dado de baja muestra el `title` de `cliente_inactivo`; (10) una hora inexistente (con la zona de un tenant con horario de verano, si hubiera) no se envía; (11) con `auditor` o un rol sin `ocupaciones.crear` no se ve "Nueva ocupación". `npm run lint`, `npm test` y `npm run build` pasan.
 
 ### Paso 5 — Finalizar y cancelar reserva
 
-- [ ] **5.1** Crear `CancelarReservaDialog.jsx` (D-FG17): "Cancelar reserva" solo en fase `reserva` y con `ocupaciones.cancelar`, motivo obligatorio, sin `finReal`.
-- [ ] **5.2** Crear `FinalizarOcupacionDialog.jsx` (D-FG18): carga el detalle, muestra la cuenta, confirma, y resuelve el excedente de un MES por los dos caminos. "Finalizar" solo en fase `en_curso` o `vencida` y con `ocupaciones.finalizar`.
-- [ ] **5.3** Errores por `code` (`shouldReloadAfter`, `shouldCloseDetailAfter`) en los dos diálogos.
+- [x] **5.1** Crear `CancelarReservaDialog.jsx` (D-FG17): "Cancelar reserva" solo en fase `reserva` y con `ocupaciones.cancelar`, motivo obligatorio, sin `finReal`.
+- [x] **5.2** Crear `FinalizarOcupacionDialog.jsx` (D-FG18): carga el detalle, muestra la cuenta, confirma, y resuelve el excedente de un MES por los dos caminos. "Finalizar" solo en fase `en_curso` o `vencida` y con `ocupaciones.finalizar`.
+- [x] **5.3** Errores por `code` (`shouldReloadAfter`, `shouldCloseDetailAfter`) en los dos diálogos.
 
   *Aceptación (manual, con `dueno@demo.test` y `operado@demo.test`):* (1) en una reserva solo se ve "Cancelar reserva" (no "Finalizar"); en una en curso o vencida solo "Finalizar"; en finalizada y cancelada, ninguno; (2) cancelar sin motivo no llega a la red; con motivo, `POST …/cancelar` va con `{ motivo }` y **sin** `finReal`, y la reserva queda cancelada; (3) finalizar una Hora o un Día muestra la confirmación con la cuenta y manda `POST …/finalizar` sin cuerpo; (4) finalizar un MES con pagos mayores a lo que corresponde manda primero `POST …/finalizar` sin cuerpo, recibe el 400 con `errors.ResolucionExcedente`, **no muestra toast** y pasa al paso "Resolver el excedente" (con el `title` del backend visible) con ninguna opción preseleccionada: "Cobrar completo" sin motivo no se deja enviar y manda `{ resolucionExcedente: 1, motivo }`; "Devolver" manda `{ resolucionExcedente: 2 }`; (5) finalizar un MES sin excedente no muestra el paso; (6) finalizar la misma ocupación desde dos pestañas: la segunda muestra el `title` de `ocupacion_finalizada` (o `ocupacion_no_activa`), cierra el diálogo y recarga; (7) finalizar una reserva forzada desde DevTools muestra el `title` de `ocupacion_no_iniciada`; (8) con un usuario sin `ocupaciones.finalizar` ni `ocupaciones.cancelar` no se ve ningún botón, y un pedido forzado muestra el `title` de `sin_permiso`; (9) tras finalizar con saldo pendiente, el detalle ofrece "Registrar pago". `npm run lint`, `npm test` y `npm run build` pasan.
 
 ### Paso 6 — Registrar pago y enlaces
 
-- [ ] **6.1** Crear `RegistrarPagoDialog.jsx` (D-FG19) con `createPago` y `validatePago`; reemplaza el diálogo inline de hoy. Visible con `pagos.registrar`, `saldo > 0` y no cancelada.
-- [ ] **6.2** Enlaces del detalle (D-FG15): "Ver trazabilidad" (con `auditoria.ver`, por `buildTrazabilidadPath`) y "Ver alertas" (con `alertas.ver`).
-- [ ] **6.3** En `src/utils/alertas.js`: la línea de Ocupación de `getAlertLinks` con `canOcupaciones` y su test; `OperationalAlerts.jsx` pasa el flag (D-FG14). Exportar `OCUPACIONES_PATH` desde `routes.js`. Resolver **P-FG-L5**.
+- [x] **6.1** Crear `RegistrarPagoDialog.jsx` (D-FG19) con `createPago` y `validatePago`; reemplaza el diálogo inline de hoy. Visible con `pagos.registrar`, `saldo > 0` y no cancelada.
+- [x] **6.2** Enlaces del detalle (D-FG15): "Ver trazabilidad" (con `auditoria.ver`, por `buildTrazabilidadPath`) y "Ver alertas" (con `alertas.ver`).
+- [x] **6.3** En `src/utils/alertas.js`: la línea de Ocupación de `getAlertLinks` con `canOcupaciones` y su test; `OperationalAlerts.jsx` pasa el flag (D-FG14). Exportar `OCUPACIONES_PATH` desde `routes.js`. Resolver **P-FG-L5**.
 
   *Aceptación (manual):* (1) "Registrar pago" propone el saldo, valida los dos decimales y manda `POST /Pagos` con `{ ocupacionId, monto, metodo }` (con `referencia` solo si se escribió); (2) un monto mayor al saldo muestra el `title` de `pago_supera_saldo`, recarga y deja el diálogo abierto; (3) con la caja cerrada (modo TURNO) muestra el `title` de `caja_cerrada` sin más lógica; (4) tras el pago, el saldo y "Pagado" se actualizan en el listado y en el detalle; (5) con `operado@demo.test` se ve "Registrar pago" (el OPERADOR tiene `pagos.registrar`); (6) "Ver trazabilidad" aparece con `dueno@demo.test` y abre `/trazabilidad?ocupacionId=N`, y no aparece con `encargado@demo.test` ni `operado@demo.test`; (7) "Ver alertas" abre `/alertas-operativas?ocupacionId=N`; (8) en `/alertas-operativas`, una alerta con `ocupacionId` muestra "Ver ocupación" con `ocupaciones.ver` y abre `/ocupaciones?id=N` con el detalle abierto; (9) `git diff develop -- src/api/pagosApi.js` solo agrega `createPago`. `npm run lint`, `npm test` y `npm run build` pasan.
 
 ### Paso 7 — Lint, documentación y cierre
 
-- [ ] **7.1** Retirar la excepción de `Ocupaciones.jsx` de `eslint.config.js` (P-FG-L4). Corregir en `CLAUDE.md` **solo** la frase sobre Ocupaciones; **no** tocar la línea "Backend endpoints used".
-- [ ] **7.2** Crear `docs/manual/frontend/07-ocupaciones.md`: la fase de una ocupación, el listado y sus filtros (con el significado de `desde` y `hasta`), el alta (abierta, retroactiva, futura, excepcional), finalizar y el excedente, cancelar reserva, registrar pago, la tabla de permisos, qué hace cada `code` de error, el contrato `/ocupaciones?id=N` y lo que le queda a la 08 y a la 10.
-- [ ] **7.3** Actualizar el estado de esta spec en `docs/specs/README.md` y en su cabecera: **Terminada** una vez mergeada a `develop`.
+- [x] **7.1** Retirar la excepción de `Ocupaciones.jsx` de `eslint.config.js` (P-FG-L4). Corregir en `CLAUDE.md` **solo** la frase sobre Ocupaciones; **no** tocar la línea "Backend endpoints used".
+- [x] **7.2** Crear `docs/manual/frontend/07-ocupaciones.md`: la fase de una ocupación, el listado y sus filtros (con el significado de `desde` y `hasta`), el alta (abierta, retroactiva, futura, excepcional), finalizar y el excedente, cancelar reserva, registrar pago, la tabla de permisos, qué hace cada `code` de error, el contrato `/ocupaciones?id=N` y lo que le queda a la 08 y a la 10.
+- [x] **7.3** Actualizar el estado de esta spec en `docs/specs/README.md` y en su cabecera: **Terminada** una vez mergeada a `develop`.
 
   *Aceptación:* `npm run lint`, `npm test` y `npm run build` pasan; `Ocupaciones.jsx` no está en las excepciones de `eslint.config.js` y el lint falla si se le agrega un `toLocaleString()`; una búsqueda de `fmtDate`, `ESTADOS`, `TIPOS`, `METODOS_PAGO`, `money(` y `e.response.data.error` en `Ocupaciones.jsx` y en `src/componentes/ocupaciones/` no da coincidencias; `git diff develop -- src/pages/CajaDiaria.jsx src/pages/Clientes.jsx src/pages/Cocheras.jsx` vacío; el `git diff develop -- CLAUDE.md` solo cambia la frase de Ocupaciones.
 
