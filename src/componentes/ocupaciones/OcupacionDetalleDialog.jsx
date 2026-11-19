@@ -25,6 +25,8 @@ import { buildAlertasDeOcupacionPath } from "../../utils/ocupacionLink";
 import { formatMoney } from "../../utils/formato";
 import { buildTrazabilidadPath } from "../../utils/trazabilidadLink";
 import { useTenantDates } from "../../utils/useTenantDates";
+import DevolucionDialog from "../pagos/DevolucionDialog";
+import PagosSeccion from "../pagos/PagosSeccion";
 import CuentaOcupacion from "./CuentaOcupacion";
 
 function Section({ titulo, children }) {
@@ -41,17 +43,22 @@ function Section({ titulo, children }) {
 /**
  * @param {{ id: number, reloadKey: number, now: Date, can: (permiso: string) => boolean,
  *   onClose: () => void, onError: (apiError: import("../../api/errors").ApiError) => void,
- *   onLoaded?: (detalle: object) => void,
+ *   onLoaded?: (detalle: object) => void, onChanged?: () => void,
  *   onAction: (accion: "pago" | "finalizar" | "cancelar", detalle: object) => void }} props
  *   `reloadKey` cambia cada vez que hay que volver a pedir el detalle (después de una escritura).
+ *   `onChanged` (spec 08): lo llama la sección "Pagos" después de anular o devolver, para que la página
+ *   recargue también el listado; el detalle y la lista de pagos se recargan solos.
  */
-export default function OcupacionDetalleDialog({ id, reloadKey, now, can, onClose, onError, onLoaded, onAction }) {
+export default function OcupacionDetalleDialog({ id, reloadKey, now, can, onClose, onError, onLoaded, onChanged, onAction }) {
   const { formatInstant } = useTenantDates();
   // `{ key, status: "ok" | "error", data }`: `key` es el pedido que lo trajo. Mientras no coincida con
   // el actual, se muestran esqueletos (o los datos viejos, si hay, para no parpadear al recargar).
   const [result, setResult] = useState(null);
   const [retryKey, setRetryKey] = useState(0);
-  const requestKey = `${id}|${reloadKey}|${retryKey}`;
+  // Spec 08: cambia después de anular o devolver un pago, para volver a pedir el detalle y la lista de pagos.
+  const [changeKey, setChangeKey] = useState(0);
+  const [devolviendo, setDevolviendo] = useState(false);
+  const requestKey = `${id}|${reloadKey}|${retryKey}|${changeKey}`;
 
   useEffect(() => {
     let ignore = false;
@@ -82,6 +89,11 @@ export default function OcupacionDetalleDialog({ id, reloadKey, now, can, onClos
   const chip = fase ? faseChip(fase) : null;
   const acciones = d ? accionesDeOcupacion(d, now, can) : null;
   const esReserva = fase === FASE.RESERVA;
+
+  function alCambiarPagos() {
+    setChangeKey((k) => k + 1);
+    onChanged?.();
+  }
 
   let cuerpo;
   if (d) {
@@ -128,6 +140,17 @@ export default function OcupacionDetalleDialog({ id, reloadKey, now, can, onClos
 
         <Section titulo="Cuenta">
           <CuentaOcupacion ocupacion={d} fase={fase} />
+          {/* Spec 08 (D-FH6): primera entrada de la devolución, con el saldo a favor de la ocupación. */}
+          {can("pagos.devolver") && Number(d.saldoAFavor ?? 0) > 0 ? (
+            <Box sx={{ mt: 1 }}>
+              <Button size="small" variant="outlined" color="warning" onClick={() => setDevolviendo(true)} sx={{ fontWeight: 800 }}>
+                Registrar devolución
+              </Button>
+            </Box>
+          ) : null}
+          {devolviendo ? (
+            <DevolucionDialog ocupacionId={id} onClose={() => setDevolviendo(false)} onChanged={alCambiarPagos} />
+          ) : null}
         </Section>
 
         {detalleMes ? (
@@ -142,10 +165,12 @@ export default function OcupacionDetalleDialog({ id, reloadKey, now, can, onClos
           </Section>
         ) : null}
 
-        {/* Punto de montaje de la spec 08: acá va PagosSeccion (lista de pagos, detalle, devoluciones). */}
-        <Section titulo="Pagos">
-          <Box data-section="pagos" />
-        </Section>
+        {/* Spec 08 (D-FH4): la lista de pagos, el detalle de cada uno, la anulación y las devoluciones. */}
+        {can("pagos.ver") ? (
+          <Section titulo="Pagos">
+            <PagosSeccion ocupacion={d} reloadKey={requestKey} onChanged={alCambiarPagos} />
+          </Section>
+        ) : null}
 
         {can("auditoria.ver") || can("alertas.ver") ? (
           <Stack direction="row" gap={1} flexWrap="wrap" useFlexGap>

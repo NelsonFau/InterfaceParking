@@ -541,6 +541,7 @@ export default function Ocupaciones() {
           onClose={cerrarDetalle}
           onError={errorDeDetalle}
           onLoaded={setOpenDetail}
+          onChanged={reloadAll}
           onAction={abrirAccion}
         />
       ) : null}
