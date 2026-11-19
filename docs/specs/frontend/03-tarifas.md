@@ -294,9 +294,9 @@ Nada. (`Tarifas.jsx` queda con el mismo nombre y ruta.)
 
 ### Paso 3 — Vista de lectura: tarjetas e historial
 
-- [ ] **3.1** En `Tarifas.jsx`: cargar con `tarifaApi` en paralelo (D-FC12), retirar `fmtDate`, `TIPOS` y `money` (D-FC14), resolver **P-FC-L3**, y dibujar las tarjetas por tipo (vigente + línea "Programada", D-FC5) y el historial con chips de estado.
-- [ ] **3.2** Quitar el diálogo viejo y el botón "Actualizar": se reemplazan en el paso 4. La pantalla hoy está rota (404), así que no hay regresión. "Quitar" y "Editar" tampoco aparecen todavía.
-- [ ] **3.3** Estado de error de carga ("No pudimos cargar las tarifas" + "Reintentar") y "Refrescar" que recarga vigentes e historial; el efecto del historial descarta respuestas viejas.
+- [x] **3.1** En `Tarifas.jsx`: cargar con `tarifaApi` en paralelo (D-FC12), retirar `fmtDate`, `TIPOS` y `money` (D-FC14), resolver **P-FC-L3**, y dibujar las tarjetas por tipo (vigente + línea "Programada", D-FC5) y el historial con chips de estado.
+- [x] **3.2** Quitar el diálogo viejo y el botón "Actualizar": se reemplazan en el paso 4. La pantalla hoy está rota (404), así que no hay regresión. "Quitar" y "Editar" tampoco aparecen todavía.
+- [x] **3.3** Estado de error de carga ("No pudimos cargar las tarifas" + "Reintentar") y "Refrescar" que recarga vigentes e historial; el efecto del historial descarta respuestas viejas.
 
   *Aceptación (manual, con el backend de `develop` y un usuario cuyo tenant tenga `America/Montevideo`):* (1) en Network, la carga llama a `GET /Tarifa/vigentes` y a `GET /Tarifa/historial?tipo=1`, y responden 200; (2) con `dueno@demo.test`, cada tipo muestra su precio, "Vigente desde dd/mm/yyyy" y, si hay una programada, la línea con el chip "Programada"; un tipo sin tarifa muestra "Sin tarifa vigente" y "—"; (3) el historial muestra chips Vigente, Programada y Finalizada, y las fechas coinciden con las de la API (sin corrimiento de un día); (4) cambiar el tipo del historial rápido varias veces deja el último elegido; (5) con el backend apagado se ve "No pudimos cargar las tarifas" y no "Sin tarifa vigente"; (6) las etiquetas son "Hora / Día / Mes". `npm run lint` y `npm run build` pasan; una búsqueda de `fmtDate`, `money(` y `TIPOS` en `Tarifas.jsx` no da coincidencias.
 

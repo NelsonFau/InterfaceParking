@@ -15,6 +15,14 @@ Patrón de la 02 (D-FB14): funciones `async` que devuelven `data`, sin capturar 
 
 Las dos lecturas lanzan `ApiError` con `code: "respuesta_invalida"` si la respuesta no es un arreglo: una respuesta rara no se disfraza de "no hay tarifas".
 
+## Pantalla de lectura (`src/pages/Tarifas.jsx`)
+
+- **Carga.** Al entrar y en "Refrescar"/"Reintentar" se piden `listTarifasVigentes` y `listTarifaHistorial(tipo)` en paralelo. Un contador `reloadKey` dispara las dos cargas; cualquier escritura futura lo incrementa para recargar (`vigenteHasta` y `proxima` se calculan al leer, así que no se actualiza el estado a mano). Cada efecto lleva una bandera `ignore` que descarta la respuesta si llegó tarde (cambio rápido de tipo).
+- **Error de carga.** Si falla `/vigentes`, el estado queda en "no cargado" y se ve "No pudimos cargar las tarifas" con "Reintentar"; nunca "Sin tarifa vigente". Si falla el historial, lista vacía y el aviso de `showApiError`.
+- **Tarjetas.** Una por tipo, en el orden de la API (Hora, Día, Mes): etiqueta del enum, `formatMoney(precio)` (`—` si no hay) y "Vigente desde dd/mm/yyyy", o "Sin tarifa vigente". Si hay `proxima`, debajo va el chip "Programada" y "Desde dd/mm/yyyy: $ X". Las demás futuras de un tipo solo se ven en el historial.
+- **Historial.** Selector de tipo, filas en el orden de la API (`vigenteDesde` descendente) con precio, "Desde … hasta …" o "sin fecha de fin" y el chip de estado de `tarifaEstado(t, today)`. "Hoy" sale de `useTenantDates().today()` (zona del tenant).
+- **Fechas y dinero.** `DateOnly` se muestra con `formatDateOnly` (nunca por `Date`); el dinero con `formatMoney`. Las etiquetas de tipo son las del enum ("Hora / Día / Mes"), no las de las copias locales retiradas.
+
 ## Lógica pura (`src/utils/tarifas.js`)
 
 Sin React ni estado. "Hoy" entra siempre como parámetro (un `DateOnly` en la zona del tenant); ningún test depende de la fecha del sistema.
