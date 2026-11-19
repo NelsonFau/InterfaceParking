@@ -82,7 +82,28 @@ export default function MeProvider({ children }) {
     setAttempt((n) => n + 1);
   }, []);
 
-  const value = useMemo(() => ({ ...state, reload }), [state, reload]);
+  // Refresco silencioso de /me (spec 11, D-FK2): no pasa por `cargando`, así que no desmonta la pantalla.
+  // Si falla (o la zona nueva es inválida), conserva el `me` anterior y rechaza con ApiError para que
+  // quien llama use showApiError. Si hay varios en curso, gana la última respuesta.
+  const refreshSeq = useRef(0);
+  const refreshMe = useCallback(async () => {
+    const mine = ++refreshSeq.current;
+    let me;
+    try {
+      me = await getMe();
+    } catch (err) {
+      throw normalizeError(err);
+    }
+    if (!isValidTimeZone(me?.tenant?.zonaHoraria)) throw timeZoneError();
+    if (mine === refreshSeq.current) {
+      setState((current) =>
+        current.status === ME_STATUS.READY ? { status: ME_STATUS.READY, me, error: null } : current
+      );
+    }
+    return me;
+  }, []);
+
+  const value = useMemo(() => ({ ...state, reload, refreshMe }), [state, reload, refreshMe]);
 
   return <MeContext.Provider value={value}>{children}</MeContext.Provider>;
 }

@@ -23,7 +23,9 @@ export const PRIVATE_ROUTES = [
   { path: TRAZABILIDAD_PATH, label: "Trazabilidad", permiso: "auditoria.ver" },
   { path: ALERTAS_PATH, label: "Alertas operativas", permiso: "alertas.ver" },
   { path: "/caja-diaria", label: "Caja diaria", permiso: "caja.ver" },
-  // Spec 12 (D-FL3): pantalla de administración, al final del menú.
+  // Specs 11 y 12: pantallas de administración, al final del menú (contrato de rutas de brechas-front.md).
+  { path: "/configuracion", label: "Configuración", permiso: "configuracion.ver" },
+  // Spec 12 (D-FL3).
   { path: "/usuarios", label: "Usuarios", permiso: "usuarios.ver" },
 ];
 

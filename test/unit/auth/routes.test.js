@@ -6,7 +6,7 @@ import { AUDITOR, OPERADOR, SUPERADMIN } from "./rolePermissions.fixture.js";
 const paths = (routes) => routes.map((r) => r.path);
 
 describe("routes", () => {
-  it("el mapa tiene las 10 rutas privadas con su permiso", () => {
+  it("el mapa tiene las 11 rutas privadas con su permiso", () => {
     expect(PRIVATE_ROUTES.map((r) => [r.path, r.permiso])).toEqual([
       ["/dashboard", "panel.ver"],
       ["/operaciones", "alertas.ver"],
@@ -17,8 +17,19 @@ describe("routes", () => {
       ["/trazabilidad", "auditoria.ver"],
       ["/alertas-operativas", "alertas.ver"],
       ["/caja-diaria", "caja.ver"],
+      ["/configuracion", "configuracion.ver"],
       ["/usuarios", "usuarios.ver"],
     ]);
+  });
+
+  it("/configuracion va antes de /usuarios, al final del menú, y la ven los que tienen configuracion.ver", () => {
+    expect(paths(PRIVATE_ROUTES).slice(-2)).toEqual(["/configuracion", "/usuarios"]);
+    expect(paths(accessibleRoutes(["configuracion.ver"]))).toEqual(["/configuracion"]);
+    expect(paths(accessibleRoutes(AUDITOR))).toContain("/configuracion");
+  });
+
+  it("OPERADOR no ve /configuracion", () => {
+    expect(paths(accessibleRoutes(OPERADOR))).not.toContain("/configuracion");
   });
 
   it("/usuarios es la última entrada del mapa y aparece con usuarios.ver", () => {
@@ -31,9 +42,9 @@ describe("routes", () => {
     expect(paths(accessibleRoutes(OPERADOR))).not.toContain("/usuarios");
   });
 
-  it("OPERADOR accede a todas las rutas menos /trazabilidad y /usuarios", () => {
+  it("OPERADOR accede a todas las rutas menos /trazabilidad, /configuracion y /usuarios", () => {
     expect(paths(accessibleRoutes(OPERADOR))).toEqual(
-      paths(PRIVATE_ROUTES).filter((p) => p !== "/trazabilidad" && p !== "/usuarios")
+      paths(PRIVATE_ROUTES).filter((p) => !["/trazabilidad", "/configuracion", "/usuarios"].includes(p))
     );
     expect(initialRoute(OPERADOR)).toBe("/dashboard");
   });
