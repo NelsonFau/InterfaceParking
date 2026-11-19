@@ -170,6 +170,20 @@ describe("getAlertLinks", () => {
     expect(getAlertLinks({ ocupacionId: null, cajaSesionId: null }, { canTrazabilidad: true })).toEqual([]);
     expect(getAlertLinks({ cajaSesionId: 7 }, { canTrazabilidad: true })[0].to).toBe("/trazabilidad?cajaSesionId=7");
   });
+
+  it("07: 'Ver ocupación' con ocupacionId y ocupaciones.ver, antes del de Trazabilidad", () => {
+    const alerta = { ocupacionId: 12, cajaSesionId: 7 };
+    const links = getAlertLinks(alerta, { canTrazabilidad: true, canOcupaciones: true });
+    expect(links.map((l) => l.key)).toEqual(["ocupacion", "trazabilidad"]);
+    expect(links[0]).toEqual({ key: "ocupacion", label: "Ver ocupación", to: "/ocupaciones?id=12" });
+  });
+
+  it("07: sin permiso de Ocupaciones o sin ocupacionId no hay enlace de Ocupación", () => {
+    expect(getAlertLinks({ ocupacionId: 12 }, { canOcupaciones: false })).toEqual([]);
+    expect(getAlertLinks({ ocupacionId: 12 })).toEqual([]);
+    expect(getAlertLinks({ cajaSesionId: 7 }, { canOcupaciones: true })).toEqual([]);
+    expect(getAlertLinks({ ocupacionId: null }, { canOcupaciones: true })).toEqual([]);
+  });
 });
 
 describe("sumCounts", () => {

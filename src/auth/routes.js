@@ -5,17 +5,23 @@ import { can } from "./permissions.js";
 // Ruta de Trazabilidad (D-FD3, D-FD5): una sola constante para el mapa y para el contrato de enlace.
 export const TRAZABILIDAD_PATH = "/trazabilidad";
 
+// Ocupaciones (spec 07, D-FG14): una constante para el mapa y para el contrato de enlace `/ocupaciones?id=N`.
+export const OCUPACIONES_PATH = "/ocupaciones";
+
+// Alertas operativas: la ruta la comparten el mapa, alertas.js y los enlaces de Ocupaciones (D-FG15).
+export const ALERTAS_PATH = "/alertas-operativas";
+
 export const PRIVATE_ROUTES = [
   { path: "/dashboard", label: "Dashboard", permiso: "panel.ver" },
   // P-FA4 cerrado (spec 05): el Monitor ya no mezcla caja, así que alertas.ver alcanza. Si la 09 repone un
   // widget de caja, revisa si esta ruta debe exigir además caja.ver.
   { path: "/operaciones", label: "Monitor operativo", permiso: "alertas.ver" },
   { path: "/cocheras", label: "Cocheras", permiso: "cocheras.ver" },
-  { path: "/ocupaciones", label: "Ocupaciones", permiso: "ocupaciones.ver" },
+  { path: OCUPACIONES_PATH, label: "Ocupaciones", permiso: "ocupaciones.ver" },
   { path: "/clientes", label: "Clientes", permiso: "clientes.ver" },
   { path: "/tarifas", label: "Tarifas", permiso: "tarifas.ver" },
   { path: TRAZABILIDAD_PATH, label: "Trazabilidad", permiso: "auditoria.ver" },
-  { path: "/alertas-operativas", label: "Alertas operativas", permiso: "alertas.ver" },
+  { path: ALERTAS_PATH, label: "Alertas operativas", permiso: "alertas.ver" },
   { path: "/caja-diaria", label: "Caja diaria", permiso: "caja.ver" },
 ];
 

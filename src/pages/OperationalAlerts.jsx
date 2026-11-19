@@ -60,7 +60,13 @@ const ALERTA_RESUELTA = "alerta_resuelta";
 
 function AlertRow({ alerta, formatInstant, can, onResolve }) {
   const resolve = getResolveState(alerta, can);
-  const links = getAlertLinks(alerta, { canTrazabilidad: can("auditoria.ver") });
+  const links = getAlertLinks(alerta, {
+    canTrazabilidad: can("auditoria.ver"),
+    canOcupaciones: can("ocupaciones.ver"),
+  });
+  // El texto "Ocupación N" pasa a ser el enlace de Ocupación cuando el usuario puede verla (D-FG14).
+  const ocupacionLink = links.find((l) => l.key === "ocupacion");
+  const otherLinks = links.filter((l) => l.key !== "ocupacion");
   const resolucion = resolutionSummary(alerta, formatInstant);
   const critica = !alerta.resuelta && alerta.severidad === SeveridadAlerta.CRITICA;
 
@@ -109,17 +115,22 @@ function AlertRow({ alerta, formatInstant, can, onResolve }) {
           <Stack direction={{ xs: "column", md: "row" }} justifyContent="space-between" spacing={1}>
             <Stack spacing={0.5}>
               <Stack direction="row" spacing={2} useFlexGap flexWrap="wrap" alignItems="center">
-                {alerta.ocupacionId != null && (
-                  <Typography variant="body2" color="text.secondary">
-                    Ocupación {alerta.ocupacionId}
-                  </Typography>
-                )}
+                {alerta.ocupacionId != null &&
+                  (ocupacionLink ? (
+                    <Button size="small" component={RouterLink} to={ocupacionLink.to} title={ocupacionLink.label}>
+                      Ocupación {alerta.ocupacionId}
+                    </Button>
+                  ) : (
+                    <Typography variant="body2" color="text.secondary">
+                      Ocupación {alerta.ocupacionId}
+                    </Typography>
+                  ))}
                 {alerta.cajaSesionId != null && (
                   <Typography variant="body2" color="text.secondary">
                     Caja {alerta.cajaSesionId}
                   </Typography>
                 )}
-                {links.map((l) => (
+                {otherLinks.map((l) => (
                   <Button key={l.key} size="small" component={RouterLink} to={l.to}>
                     {l.label}
                   </Button>
