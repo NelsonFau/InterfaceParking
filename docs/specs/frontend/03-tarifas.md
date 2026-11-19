@@ -288,7 +288,7 @@ Nada. (`Tarifas.jsx` queda con el mismo nombre y ruta.)
 
 ### Paso 2 — Módulo de API
 
-- [ ] **2.1** Crear `src/api/tarifaApi.js` (D-FC2) y `test/unit/api/tarifaApi.test.js` con `vi.mock` de `http`.
+- [x] **2.1** Crear `src/api/tarifaApi.js` (D-FC2) y `test/unit/api/tarifaApi.test.js` con `vi.mock` de `http`.
 
   *Aceptación:* `npm test` pasa con: `listTarifasVigentes` hace `GET /Tarifa/vigentes`; `listTarifaHistorial(2)` hace `GET /Tarifa/historial` con `params: { tipo: 2 }`; `updateTarifa` hace `PUT /Tarifa` con el cuerpo recibido, sin modificarlo; `removeTarifa(7)` hace `DELETE /Tarifa/7` y devuelve `undefined`; una respuesta que no es un arreglo en las dos lecturas lanza un `ApiError` con `code: "respuesta_invalida"`; ninguna función captura errores (un rechazo de `http` se propaga). `npm run lint` y `npm run build` pasan.
 

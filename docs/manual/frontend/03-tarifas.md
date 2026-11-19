@@ -2,6 +2,19 @@
 
 > Se completa paso a paso; la versión final se cierra en el paso 6 de la spec (`docs/specs/frontend/03-tarifas.md`).
 
+## Módulo de API (`src/api/tarifaApi.js`)
+
+Patrón de la 02 (D-FB14): funciones `async` que devuelven `data`, sin capturar errores (la pantalla llama a `showApiError`) y sin convertir fechas ni enums.
+
+| Función | Endpoint | Devuelve |
+|---|---|---|
+| `listTarifasVigentes()` | `GET /Tarifa/vigentes` | `{ tipo, vigente, proxima }[]` (siempre 3) |
+| `listTarifaHistorial(tipo)` | `GET /Tarifa/historial` con `params: { tipo }` | `Tarifa[]` |
+| `updateTarifa(body)` | `PUT /Tarifa` | `Tarifa` |
+| `removeTarifa(id)` | `DELETE /Tarifa/{id}` | `undefined` (204) |
+
+Las dos lecturas lanzan `ApiError` con `code: "respuesta_invalida"` si la respuesta no es un arreglo: una respuesta rara no se disfraza de "no hay tarifas".
+
 ## Lógica pura (`src/utils/tarifas.js`)
 
 Sin React ni estado. "Hoy" entra siempre como parámetro (un `DateOnly` en la zona del tenant); ningún test depende de la fecha del sistema.
