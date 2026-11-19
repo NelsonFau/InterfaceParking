@@ -17,4 +17,4 @@ Rama de integración: `develop` (desde el 18/11/2026; reemplaza a `master` de D-
 | 09 — Caja con sesiones (reemplaza Caja diaria) | Frontend | Sin crear | 02, 08 | |
 | 10 — Contratos mensuales: ajuste de precio y baja programada | Frontend | Sin crear | 07 | |
 | [11 — Configuración del tenant](frontend/11-configuracion.md) | Frontend | Aprobada | 02 | `feature/specs-etapa3` (spec), `feature/front-configuracion` (ejecución, worktree `../parkingcontrol-front-configuracion`) |
-| [12 — Usuarios](frontend/12-usuarios.md) | Frontend | Aprobada | 02, 04 | `feature/specs-etapa3` (spec), `feature/front-usuarios` (ejecución, worktree `../parkingcontrol-front-usuarios`) |
+| [12 — Usuarios](frontend/12-usuarios.md) | Frontend | Terminada (19/11/2026; se vuelve verdadera al mergear el PR a `develop`) | 02, 04 | `feature/specs-etapa3` (spec), `feature/front-usuarios` (ejecución, worktree `../parkingcontrol-front-usuarios`) |
