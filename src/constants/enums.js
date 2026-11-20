@@ -85,7 +85,7 @@ export const EstadoOcupacion = defineEnum("EstadoOcupacion", {
 export const EstadoCochera = defineEnum("EstadoCochera", {
   DISPONIBLE: { value: 1, label: "Disponible", color: "success" },
   BLOQUEADA: { value: 2, label: "Bloqueada", color: "error" },
-  OCUPADA: { value: 3, label: "Ocupada", color: "warning", calculado: true },
+  OCUPADA: { value: 3, label: "Ocupada", color: "oc", calculado: true },
   RESERVADA: { value: 4, label: "Reservada", color: "info", calculado: true },
 });
 

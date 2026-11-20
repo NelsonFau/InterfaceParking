@@ -14,6 +14,7 @@ import {
   FormControlLabel,
   IconButton,
   Menu,
+  Paper,
   MenuItem,
   Skeleton,
   Stack,
@@ -40,6 +41,7 @@ import { showApiError } from "../api/errors";
 import { useMe, usePermissions } from "../auth/usePermissions";
 import { RolUsuario, labelOf, optionsOf } from "../constants/enums";
 import { buildTrazabilidadPath } from "../utils/trazabilidadLink";
+import { useDialogFullScreen } from "../componentes/useDialogFullScreen";
 import { useTenantDates } from "../utils/useTenantDates";
 import {
   ROLES_INVITABLES_KEYS,
@@ -56,6 +58,7 @@ const msgReenvio = (email) => `Le enviamos de nuevo la invitación a ${email}`;
 
 // Diálogo "Invitar usuario" (D-FL5): el rol arranca sin elegir y los errores se ven al tocar el campo o al enviar.
 function InvitarDialog({ onClose, onDone, onError }) {
+  const fullScreen = useDialogFullScreen();
   const [form, setForm] = useState({ nombre: "", email: "", rol: "" });
   const [touched, setTouched] = useState({});
   const [saving, setSaving] = useState(false);
@@ -83,7 +86,7 @@ function InvitarDialog({ onClose, onDone, onError }) {
   }
 
   return (
-    <Dialog open onClose={saving ? undefined : onClose} fullWidth maxWidth="xs">
+    <Dialog open onClose={saving ? undefined : onClose} fullScreen={fullScreen} fullWidth maxWidth="xs">
       <DialogTitle>Invitar usuario</DialogTitle>
       <DialogContent dividers>
         <Stack spacing={2} sx={{ pt: 1 }}>
@@ -139,6 +142,7 @@ function InvitarDialog({ onClose, onDone, onError }) {
 
 // Diálogo "Cambiar rol" (D-FL8): selector y, después, resumen "de X a Y" para confirmar.
 function RolDialog({ usuario, onClose, onDone, onError }) {
+  const fullScreen = useDialogFullScreen();
   const [rol, setRol] = useState(usuario.rol);
   const [confirmando, setConfirmando] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -158,7 +162,7 @@ function RolDialog({ usuario, onClose, onDone, onError }) {
   }
 
   return (
-    <Dialog open onClose={saving ? undefined : onClose} fullWidth maxWidth="xs">
+    <Dialog open onClose={saving ? undefined : onClose} fullScreen={fullScreen} fullWidth maxWidth="xs">
       <DialogTitle>{`Cambiar rol de ${usuario.nombre}`}</DialogTitle>
       <DialogContent dividers>
         {confirmando ? (
@@ -203,6 +207,7 @@ function RolDialog({ usuario, onClose, onDone, onError }) {
 
 // Confirmación de "Desactivar" (D-FL9). Desactivar es solo local: no se promete más que eso.
 function DesactivarDialog({ usuario, onClose, onDone, onError }) {
+  const fullScreen = useDialogFullScreen();
   const [saving, setSaving] = useState(false);
 
   async function desactivar() {
@@ -218,7 +223,7 @@ function DesactivarDialog({ usuario, onClose, onDone, onError }) {
   }
 
   return (
-    <Dialog open onClose={saving ? undefined : onClose} fullWidth maxWidth="xs">
+    <Dialog open onClose={saving ? undefined : onClose} fullScreen={fullScreen} fullWidth maxWidth="xs">
       <DialogTitle>{`¿Desactivar a ${usuario.nombre}?`}</DialogTitle>
       <DialogContent dividers>
         <Typography>No va a poder ingresar al sistema hasta que lo reactives.</Typography>
@@ -389,6 +394,7 @@ export default function Usuarios() {
     contenido = <Typography color="text.secondary">No hay usuarios con ese filtro.</Typography>;
   } else {
     contenido = (
+      <Paper variant="outlined">
       <TableContainer>
         <Table size="small">
           <TableHead>
@@ -448,13 +454,14 @@ export default function Usuarios() {
           </TableBody>
         </Table>
       </TableContainer>
+      </Paper>
     );
   }
 
   return (
     <Box sx={{ maxWidth: 1100, mx: "auto", px: { xs: 2, sm: 3 }, py: 2 }}>
       <Stack spacing={0.5} sx={{ mb: 2 }}>
-        <Typography variant="h5" sx={{ fontWeight: 900, letterSpacing: -0.3 }}>
+        <Typography variant="h5" sx={{ letterSpacing: -0.3 }}>
           Usuarios
         </Typography>
         <Typography variant="body2" sx={{ color: "text.secondary" }}>
@@ -487,16 +494,11 @@ export default function Usuarios() {
         alignItems={{ xs: "stretch", sm: "center" }}
         sx={{ mb: 2 }}
       >
-        <Button variant="contained" onClick={recargar} disabled={loading} sx={{ borderRadius: 2, fontWeight: 800 }}>
+        <Button variant="contained" onClick={recargar} disabled={loading}>
           Refrescar
         </Button>
         {canManage ? (
-          <Button
-            variant="contained"
-            color="secondary"
-            onClick={() => setDialog({ tipo: "invitar" })}
-            sx={{ borderRadius: 2, fontWeight: 800 }}
-          >
+          <Button variant="contained" color="secondary" onClick={() => setDialog({ tipo: "invitar" })}>
             Invitar usuario
           </Button>
         ) : null}

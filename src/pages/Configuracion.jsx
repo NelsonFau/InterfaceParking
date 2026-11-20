@@ -20,6 +20,7 @@ import { showApiError } from "../api/errors";
 import { useMe, usePermissions } from "../auth/usePermissions";
 import { FraccionMes, ModoCaja, ModoMes, labelOf, optionsOf } from "../constants/enums";
 import { ZONAS_HORARIAS, labelOfZona } from "../constants/zonasHorarias";
+import { useDialogFullScreen } from "../componentes/useDialogFullScreen";
 import {
   CONFIG_AYUDA,
   afterSaveError,
@@ -74,6 +75,7 @@ function ConfirmParagraphs({ cambios }) {
 }
 
 export default function Configuracion() {
+  const fullScreen = useDialogFullScreen();
   const { can } = usePermissions();
   const { refreshMe } = useMe();
   const canEdit = can("configuracion.editar");
@@ -248,17 +250,17 @@ export default function Configuracion() {
 
         <Paper variant="outlined" sx={{ p: 2 }}>
           <Stack spacing={2.5}>
-            <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>
+            <Typography variant="subtitle1">
               Local
             </Typography>
             {campoSelect("zonaHoraria", "Zona horaria", ZONAS_HORARIAS, zonaExtra)}
 
-            <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>
+            <Typography variant="subtitle1">
               Caja
             </Typography>
             {campoSelect("modoCaja", "Modo de caja", MODO_CAJA_OPTIONS)}
 
-            <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>
+            <Typography variant="subtitle1">
               Ocupaciones
             </Typography>
             {campoNumero("toleranciaInicioHoras", "Tolerancia de inicio (horas)")}
@@ -266,14 +268,14 @@ export default function Configuracion() {
             {campoNumero("techoFuturoMeses", "Techo hacia adelante (meses)")}
             {campoNumero("graciaHoraMinutos", "Gracia por hora (minutos)")}
 
-            <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>
+            <Typography variant="subtitle1">
               Contratos mensuales
             </Typography>
             {campoSelect("modoMes", "Modo del mes", MODO_MES_OPTIONS)}
             {campoSelect("fraccionMes", "Fracción del mes", FRACCION_MES_OPTIONS)}
             {campoNumero("diasGraciaMora", "Días de gracia de mora")}
 
-            <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>
+            <Typography variant="subtitle1">
               Alertas
             </Typography>
             <Box>
@@ -294,7 +296,6 @@ export default function Configuracion() {
               variant="contained"
               onClick={onGuardar}
               disabled={saving || !hayCambios || !validation?.ok}
-              sx={{ borderRadius: 2, fontWeight: 800 }}
             >
               Guardar
             </Button>
@@ -310,7 +311,7 @@ export default function Configuracion() {
   return (
     <Box sx={{ maxWidth: 800, mx: "auto", px: { xs: 2, sm: 3 }, py: 2 }}>
       <Stack spacing={0.5} sx={{ mb: 2 }}>
-        <Typography variant="h5" sx={{ fontWeight: 900, letterSpacing: -0.3 }}>
+        <Typography variant="h5" sx={{ letterSpacing: -0.3 }}>
           Configuración
         </Typography>
         <Typography variant="body2" sx={{ color: "text.secondary" }}>
@@ -321,7 +322,7 @@ export default function Configuracion() {
       {contenido}
 
       {confirmando ? (
-        <Dialog open onClose={saving ? undefined : () => setConfirmando(null)} fullWidth maxWidth="sm">
+        <Dialog open onClose={saving ? undefined : () => setConfirmando(null)} fullScreen={fullScreen} fullWidth maxWidth="sm">
           <DialogTitle>Confirmar cambios</DialogTitle>
           <DialogContent dividers>
             <ConfirmParagraphs cambios={confirmando} />

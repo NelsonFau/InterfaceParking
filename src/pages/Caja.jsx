@@ -15,7 +15,7 @@ export default function Caja() {
   const { search } = useLocation();
   const sesionId = parseCajaSesionId(search);
 
-  // La pestaña activa vive en el estado de la página (nada de localStorage: ARQ-1). "Historial" se monta la
+  // La pestaña activa vive en el estado de la página (no se guarda en el navegador: ARQ-1). "Historial" se monta la
   // primera vez que se abre y después queda montada, para conservar su filtro.
   const [tab, setTab] = useState("actual");
   const [historialVisto, setHistorialVisto] = useState(false);
@@ -36,7 +36,7 @@ export default function Caja() {
     <Box>
       <Stack spacing={2.5}>
         <Box>
-          <Typography variant="h4" sx={{ fontWeight: 900 }}>
+          <Typography variant="h4">
             Caja
           </Typography>
           <Typography sx={{ color: "text.secondary", mt: 0.5 }}>

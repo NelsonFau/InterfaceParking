@@ -67,3 +67,12 @@ Common base from spec 02 (`docs/specs/frontend/02-base-comun.md`; how it works: 
 
 - **Deep-link contract.** Other screens link to it with `buildTrazabilidadPath({ ocupacionId, pagoId, cajaSesionId, usuarioId, fuente, desde, hasta })` from [src/utils/trazabilidadLink.js](src/utils/trazabilidadLink.js) (never a hand-built string), e.g. `/trazabilidad?ocupacionId=12`. Show the link only if `can("auditoria.ver")`. `desde`/`hasta` are `DateOnly` in the tenant zone and go together; with an id the screen opens without a range, otherwise with the last 7 days. The applied filters live in the URL.
 - Pure logic in `src/utils/trazabilidad{Link,Filtros,Evento}.js`; API in `src/api/trazabilidadApi.js` and `src/api/usuariosApi.js` (`listUsuarios` only; spec 12 adds the rest to the same file). Always normalize backend `fuente`/`accion` with `canonicalKey` before `labelOf`/`colorOf` (the backend sends `Finalizar`).
+
+## Tema y estilos (spec 13)
+
+How it works: `docs/manual/frontend/13-diseno.md`.
+
+- The theme is `getTheme(mode)` in [src/theme/theme.js](src/theme/theme.js) (`createTheme`, light and dark): palette, `palette.pc` (what MUI lacks: side menu, shadows, status `tone`s), radii (`RADIUS`, `FIELD_RADIUS`, `BUTTON_RADIUS`) and `components` overrides. `createTheme` lives only there.
+- There is **one** `ThemeProvider`, in `main.jsx` through `ThemeRoot` (it also holds the color mode, in memory only, and the `Toaster`). Do not add another.
+- **No loose colors, radii or shadows in pages or components**: no `#hex`, `rgba(`, `boxShadow` or `borderRadius` outside `src/theme/`. An `sx` stays only for layout (grid, width, alignment); colors come from the theme (`palette`, `palette.pc.tone`). To add a color, see the manual.
+- Chips take their color from `colorOf` (enums) and the theme paints it; no local color maps in pages. Dialogs use `useDialogFullScreen` (`fullScreen` below `sm`); confirmations use `ConfirmDialog`, never `window.confirm`.

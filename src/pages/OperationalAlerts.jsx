@@ -28,6 +28,8 @@ import {
 import { showApiError } from "../api/errors";
 import { getAlerta, listAlertas, resolveAlerta } from "../api/operationalAlertsApi";
 import { usePermissions } from "../auth/usePermissions";
+import { useDialogFullScreen } from "../componentes/useDialogFullScreen";
+import { COLOR_TONE } from "../theme/theme";
 import { SeveridadAlerta, TipoAlertaOperativa, colorOf, labelOf, optionsOf } from "../constants/enums";
 import {
   ALERTS_REFRESH_MS,
@@ -78,34 +80,52 @@ function AlertRow({ alerta, formatInstant, can, onResolve }) {
   );
 
   return (
-    <Card sx={{ borderRadius: 3, border: "1px solid", borderColor: critica ? "error.main" : "divider" }}>
-      <CardContent>
-        <Stack spacing={1.5}>
-          <Stack direction={{ xs: "column", md: "row" }} justifyContent="space-between" spacing={1}>
-            <Stack direction="row" spacing={1} alignItems="center" useFlexGap flexWrap="wrap">
-              <Chip
-                size="small"
-                label={labelOf(SeveridadAlerta, alerta.severidad)}
-                color={colorOf(SeveridadAlerta, alerta.severidad)}
-                sx={{ fontWeight: 800 }}
-              />
-              <Chip
-                size="small"
-                label={alerta.resuelta ? "RESUELTA" : "ABIERTA"}
-                color={alerta.resuelta ? "success" : "warning"}
-                variant={alerta.resuelta ? "filled" : "outlined"}
-                sx={{ fontWeight: 800 }}
-              />
-              {alerta.esDeDinero && <Chip size="small" label="DINERO" color="secondary" sx={{ fontWeight: 800 }} />}
-            </Stack>
+    <Card sx={{ overflow: "hidden", ...(critica && { borderColor: "error.main" }) }}>
+      <Stack direction={{ xs: "column", md: "row" }}>
+        {/* Panel lateral de severidad: a la izquierda en desktop y arriba en mobile (D-FM4) */}
+        <Stack
+          direction={{ xs: "row", md: "column" }}
+          spacing={1}
+          useFlexGap
+          flexWrap="wrap"
+          alignItems={{ xs: "center", md: "flex-start" }}
+          sx={(t) => {
+            const tone = t.palette.pc.tone[COLOR_TONE[colorOf(SeveridadAlerta, alerta.severidad)] ?? "de"];
+            return {
+              p: 2,
+              flexShrink: 0,
+              width: { md: 180 },
+              bgcolor: tone.bg,
+              color: tone.text,
+              borderBottom: { xs: `1px solid ${tone.border}`, md: "none" },
+              borderRight: { md: `1px solid ${tone.border}` },
+            };
+          }}
+        >
+          <Chip
+            size="small"
+            label={labelOf(SeveridadAlerta, alerta.severidad)}
+            color={colorOf(SeveridadAlerta, alerta.severidad)}
+          />
+          <Chip
+            size="small"
+            label={alerta.resuelta ? "RESUELTA" : "ABIERTA"}
+            color={alerta.resuelta ? "success" : "warning"}
+            variant={alerta.resuelta ? "filled" : "outlined"}
+          />
+          {alerta.esDeDinero && <Chip size="small" label="DINERO" color="secondary" />}
+        </Stack>
 
+        <CardContent sx={{ flex: 1, minWidth: 0 }}>
+        <Stack spacing={1.5}>
+          <Stack direction={{ xs: "column", md: "row" }} justifyContent="flex-end" spacing={1}>
             <Typography variant="body2" color="text.secondary">
               Creada: {formatInstant(alerta.fechaCreacion)}
             </Typography>
           </Stack>
 
           <Box>
-            <Typography variant="h6" sx={{ fontWeight: 900 }}>
+            <Typography variant="h6">
               {labelOf(TipoAlertaOperativa, alerta.tipo)}
             </Typography>
             <Typography sx={{ color: "text.secondary", mt: 0.5 }}>{alerta.mensaje}</Typography>
@@ -165,7 +185,8 @@ function AlertRow({ alerta, formatInstant, can, onResolve }) {
               ))}
           </Stack>
         </Stack>
-      </CardContent>
+        </CardContent>
+      </Stack>
     </Card>
   );
 }
@@ -173,8 +194,9 @@ function AlertRow({ alerta, formatInstant, can, onResolve }) {
 function ResolveDialog({ alerta, comentario, onChange, resolving, onCancel, onConfirm }) {
   const esDeDinero = Boolean(alerta?.esDeDinero);
   const vacio = comentario.trim() === "";
+  const fullScreen = useDialogFullScreen();
   return (
-    <Dialog open={Boolean(alerta)} onClose={resolving ? undefined : onCancel} fullWidth maxWidth="sm">
+    <Dialog open={Boolean(alerta)} onClose={resolving ? undefined : onCancel} fullScreen={fullScreen} fullWidth maxWidth="sm">
       <DialogTitle>Resolver alerta</DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ mt: 1 }}>
@@ -388,7 +410,7 @@ export default function OperationalAlerts() {
       <Stack spacing={1.5}>
         {loading && <LinearProgress />}
         {current.items.length === 0 ? (
-          <Card sx={{ borderRadius: 3 }}>
+          <Card>
             <CardContent>
               <Typography sx={{ color: "text.secondary" }}>No hay alertas para los filtros seleccionados.</Typography>
             </CardContent>
@@ -416,7 +438,7 @@ export default function OperationalAlerts() {
       <Stack spacing={2.5}>
         <Stack direction={{ xs: "column", md: "row" }} justifyContent="space-between" spacing={2}>
           <Box>
-            <Typography variant="h4" sx={{ fontWeight: 900 }}>
+            <Typography variant="h4">
               Alertas operativas
             </Typography>
             <Typography sx={{ color: "text.secondary", mt: 0.5 }}>
@@ -441,7 +463,7 @@ export default function OperationalAlerts() {
           </Stack>
         </Stack>
 
-        <Card sx={{ borderRadius: 3 }}>
+        <Card>
           <CardContent>
             <Stack direction={{ xs: "column", md: "row" }} spacing={2} useFlexGap flexWrap="wrap" alignItems="flex-start">
               <TextField

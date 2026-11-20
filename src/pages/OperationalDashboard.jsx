@@ -55,20 +55,14 @@ function toView(settled) {
 function KpiCard({ title, value, subtitle, danger }) {
   const active = danger && typeof value === "number" && value > 0;
   return (
-    <Card
-      sx={{
-        borderRadius: 3,
-        border: "1px solid",
-        borderColor: active ? "error.main" : "divider",
-        height: "100%",
-      }}
-    >
+    // Se resalta en `error` con la variante de borde del tema; si no, la `Card` outlined por defecto.
+    <Card sx={{ height: "100%", ...(active && { borderColor: "error.main" }) }}>
       <CardContent>
         <Typography color="text.secondary" variant="body2">
           {title}
         </Typography>
 
-        <Typography variant="h4" sx={{ fontWeight: 900, mt: 0.5, color: active ? "error.main" : "text.primary" }}>
+        <Typography variant="h4" sx={{ fontWeight: 800, mt: 0.5, color: active ? "error.main" : "text.primary" }}>
           {formatNumber(value)}
         </Typography>
 
@@ -165,7 +159,7 @@ export default function OperationalDashboard() {
     return (
       <Stack spacing={1.5}>
         {view.criticasRecientes.map((a) => (
-          <Card key={a.id} variant="outlined" sx={{ borderRadius: 2, borderColor: "error.main" }}>
+          <Card key={a.id} variant="outlined" sx={{ borderColor: "error.main" }}>
             <CardContent sx={{ py: 1.5 }}>
               <Stack spacing={1}>
                 <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between">
@@ -217,7 +211,7 @@ export default function OperationalDashboard() {
       <Stack spacing={2.5}>
         <Stack direction={{ xs: "column", md: "row" }} justifyContent="space-between" spacing={2}>
           <Box>
-            <Typography variant="h4" sx={{ fontWeight: 900 }}>
+            <Typography variant="h4">
               Monitor operativo
             </Typography>
 
@@ -265,11 +259,11 @@ export default function OperationalDashboard() {
 
         {can("caja.ver") ? <CajaWidget reloadKey={reloadKey} /> : null}
 
-        <Card sx={{ borderRadius: 3 }}>
+        <Card sx={{ borderColor: "error.main" }}>
           <CardContent>
             <Stack direction="row" justifyContent="space-between" alignItems="center">
               <Box>
-                <Typography variant="h6" sx={{ fontWeight: 900 }}>
+                <Typography variant="h6">
                   Alertas críticas recientes
                 </Typography>
 

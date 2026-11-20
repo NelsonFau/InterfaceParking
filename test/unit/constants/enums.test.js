@@ -24,6 +24,7 @@ import {
   labelOfKey,
   optionsOf,
 } from "../../../src/constants/enums.js";
+import { getTheme } from "../../../src/theme/theme.js";
 
 // Tabla de docs/inventario/backend.md, sección 2 (valores vigentes, sin los retirados).
 const ESPERADO = [
@@ -134,6 +135,42 @@ describe("colorOf", () => {
     expect(colorOf(TipoOcupacion, 1)).toBe("default");
     expect(colorOf(EstadoCochera, 99)).toBe("default");
     expect(colorOf(EstadoCochera, null)).toBe("default");
+  });
+});
+
+describe("colores de los enums y el tema (D-FM4)", () => {
+  it("1: Ocupada es oc (pizarra)", () => {
+    expect(colorOf(EstadoCochera, EstadoCochera.OCUPADA)).toBe("oc");
+  });
+
+  it("2: Disponible, Bloqueada y Reservada no cambian", () => {
+    expect(colorOf(EstadoCochera, EstadoCochera.DISPONIBLE)).toBe("success");
+    expect(colorOf(EstadoCochera, EstadoCochera.BLOQUEADA)).toBe("error");
+    expect(colorOf(EstadoCochera, EstadoCochera.RESERVADA)).toBe("info");
+  });
+
+  it("3: todo color declarado por un enum es default o una clave de la paleta de los dos temas", () => {
+    const enums = [
+      TipoOcupacion, EstadoOcupacion, EstadoCochera, MetodoPago, EstadoPago, RolUsuario, ModoCaja, ModoMes,
+      FraccionMes, ResolucionExcedente, EstadoCajaSesion, TipoEventoCaja, TipoMovimientoCaja, SeveridadAlerta,
+      TipoAlertaOperativa, Fuente, AccionTrazabilidad,
+    ];
+    const claves = [getTheme("light").palette, getTheme("dark").palette];
+    for (const E of enums) {
+      for (const e of entriesOf(E)) {
+        if (e.color === undefined || e.color === "default") continue;
+        for (const palette of claves) expect(palette[e.color], `${e.key}: ${e.color}`).toBeDefined();
+      }
+    }
+  });
+
+  it("4: palette.oc tiene main, light y contrastText en los dos temas", () => {
+    for (const mode of ["light", "dark"]) {
+      const { oc } = getTheme(mode).palette;
+      expect(oc.main).toBeTruthy();
+      expect(oc.light).toBeTruthy();
+      expect(oc.contrastText).toBeTruthy();
+    }
   });
 });
 

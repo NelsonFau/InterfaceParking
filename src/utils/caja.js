@@ -152,6 +152,11 @@ export function diferenciaInfo(diferencia) {
   return { tipo: "cero", label: "sin diferencia", color: "text.primary" };
 }
 
+/** Color del tema para una diferencia ya clasificada por `diferenciaInfo`. */
+export function difColor(info) {
+  return info.tipo === "cero" ? "success.main" : info.color;
+}
+
 function validateMonto(value) {
   const raw = String(value ?? "").trim();
   if (!MONEY_RE.test(raw)) return { message: MSG_MONTO_FORMATO_CAJA };

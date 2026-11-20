@@ -25,6 +25,7 @@ import { showApiError } from "../../api/errors";
 import { usePermissions } from "../../auth/usePermissions";
 import {
   cajaFieldErrors,
+  difColor,
   diferenciaInfo,
   diferenciaVista,
   shouldCloseActionAfterCaja,
@@ -33,6 +34,8 @@ import {
 } from "../../utils/caja";
 import { buildAlertasPath } from "../../utils/alertas";
 import { formatMoney } from "../../utils/formato";
+import { useDialogFullScreen } from "../useDialogFullScreen";
+import DiferenciaTexto from "./DiferenciaTexto";
 import TotalesPorMetodo from "./TotalesPorMetodo";
 import { useCajaEsperado } from "./useCajaEsperado";
 
@@ -49,16 +52,6 @@ function Fila({ label, children }) {
   );
 }
 
-function DiferenciaTexto({ diferencia }) {
-  const info = diferenciaInfo(diferencia);
-  if (!info) return "—";
-  return (
-    <Box component="span" sx={{ color: info.color, fontWeight: 800 }}>
-      {info.tipo === "cero" ? info.label : `${formatMoney(Math.abs(diferencia))} (${info.label})`}
-    </Box>
-  );
-}
-
 /**
  * @param {{ sesion: { id: number, fondoInicial?: number }, onClose: () => void, onChanged?: () => void,
  *   onError?: (apiError: import("../../api/errors").ApiError) => void }} props
@@ -67,6 +60,7 @@ function DiferenciaTexto({ diferencia }) {
  */
 export default function CerrarCajaDialog({ sesion, onClose, onChanged, onError }) {
   const { can } = usePermissions();
+  const fullScreen = useDialogFullScreen();
   const verEsperado = can("caja.ver_esperado");
   const esperado = useCajaEsperado(sesion.id, verEsperado);
 
@@ -120,7 +114,7 @@ export default function CerrarCajaDialog({ sesion, onClose, onChanged, onError }
     const tipoDif = diferenciaInfo(cierre.diferencia)?.tipo;
     const hayDiferencia = tipoDif === "sobra" || tipoDif === "falta";
     return (
-      <Dialog open onClose={cerrarResultado} fullWidth maxWidth="sm">
+      <Dialog open onClose={cerrarResultado} fullWidth maxWidth="sm" fullScreen={fullScreen}>
         <DialogTitle>Caja cerrada</DialogTitle>
         <DialogContent dividers>
           <Stack spacing={2} sx={{ pt: 1 }}>
@@ -162,7 +156,7 @@ export default function CerrarCajaDialog({ sesion, onClose, onChanged, onError }
   }
 
   return (
-    <Dialog open onClose={saving ? undefined : onClose} fullWidth maxWidth="sm">
+    <Dialog open onClose={saving ? undefined : onClose} fullWidth maxWidth="sm" fullScreen={fullScreen}>
       <DialogTitle>Cerrar caja</DialogTitle>
       <DialogContent dividers>
         <Stack spacing={2} sx={{ pt: 1 }}>
@@ -213,7 +207,7 @@ export default function CerrarCajaDialog({ sesion, onClose, onChanged, onError }
           />
 
           {infoDif ? (
-            <Typography variant="body2" sx={{ color: infoDif.color, fontWeight: 700 }}>
+            <Typography variant="body2" sx={{ color: difColor(infoDif), fontWeight: 700 }}>
               {infoDif.tipo === "cero"
                 ? "Diferencia: sin diferencia"
                 : `Diferencia: ${formatMoney(Math.abs(diferencia))} (${infoDif.label})`}
@@ -261,7 +255,7 @@ export default function CerrarCajaDialog({ sesion, onClose, onChanged, onError }
         <Button onClick={onClose} disabled={saving}>
           Cancelar
         </Button>
-        <Button variant="contained" onClick={enviar} disabled={saving} sx={{ fontWeight: 900 }}>
+        <Button variant="contained" onClick={enviar} disabled={saving}>
           Cerrar caja
         </Button>
       </DialogActions>

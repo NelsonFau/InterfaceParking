@@ -3,6 +3,7 @@
 // (400 `errors.VigenteDesde`). El resultado muestra lo que devolvió el backend; no se calcula nada.
 import { useState } from "react";
 import { Alert, Button, Dialog, DialogActions, DialogContent, DialogTitle, Stack, TextField, Typography } from "@mui/material";
+import { useDialogFullScreen } from "../useDialogFullScreen";
 import toast from "react-hot-toast";
 import { normalizeError, showApiError } from "../../api/errors";
 import { adjustOcupacionPrecio } from "../../api/ocupacionApi";
@@ -23,6 +24,7 @@ import { useTenantDates } from "../../utils/useTenantDates";
  *   onChanged: () => void }} props `onChanged` recarga el detalle y el listado de la página.
  */
 export default function AjustePrecioDialog({ ocupacion, onClose, onChanged }) {
+  const fullScreen = useDialogFullScreen();
   const { today } = useTenantDates();
   const [manana] = useState(() => defaultVigenteDesde(today()));
   const [form, setForm] = useState({ vigenteDesde: manana, precioUnitario: "", motivo: "" });
@@ -68,7 +70,7 @@ export default function AjustePrecioDialog({ ocupacion, onClose, onChanged }) {
 
   if (resultado) {
     return (
-      <Dialog open onClose={cerrar} fullWidth maxWidth="xs">
+      <Dialog open onClose={cerrar} fullWidth maxWidth="xs" fullScreen={fullScreen}>
         <DialogTitle>Ajustar precio</DialogTitle>
         <DialogContent dividers>
           <Stack spacing={1.5} sx={{ pt: 1 }}>
@@ -89,7 +91,7 @@ export default function AjustePrecioDialog({ ocupacion, onClose, onChanged }) {
   }
 
   return (
-    <Dialog open onClose={saving ? undefined : onClose} fullWidth maxWidth="xs">
+    <Dialog open onClose={saving ? undefined : onClose} fullWidth maxWidth="xs" fullScreen={fullScreen}>
       <DialogTitle>Ajustar precio</DialogTitle>
       <DialogContent dividers>
         <Stack spacing={2} sx={{ pt: 1 }}>
@@ -135,7 +137,7 @@ export default function AjustePrecioDialog({ ocupacion, onClose, onChanged }) {
         <Button onClick={onClose} disabled={saving}>
           Volver
         </Button>
-        <Button variant="contained" onClick={enviar} disabled={saving} sx={{ fontWeight: 900 }}>
+        <Button variant="contained" onClick={enviar} disabled={saving}>
           Ajustar precio
         </Button>
       </DialogActions>

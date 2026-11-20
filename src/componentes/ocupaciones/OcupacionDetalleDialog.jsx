@@ -25,6 +25,7 @@ import { buildAlertasDeOcupacionPath } from "../../utils/ocupacionLink";
 import { formatMoney } from "../../utils/formato";
 import { buildTrazabilidadPath } from "../../utils/trazabilidadLink";
 import { useTenantDates } from "../../utils/useTenantDates";
+import { useDialogFullScreen } from "../useDialogFullScreen";
 import DevolucionDialog from "../pagos/DevolucionDialog";
 import PagosSeccion from "../pagos/PagosSeccion";
 import ContratoMensualSeccion from "./ContratoMensualSeccion";
@@ -33,7 +34,7 @@ import CuentaOcupacion from "./CuentaOcupacion";
 function Section({ titulo, children }) {
   return (
     <Box component="section">
-      <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 0.5 }}>
+      <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
         {titulo}
       </Typography>
       {children}
@@ -52,6 +53,7 @@ function Section({ titulo, children }) {
  */
 export default function OcupacionDetalleDialog({ id, reloadKey, now, can, onClose, onError, onLoaded, onChanged, onAction }) {
   const { formatInstant } = useTenantDates();
+  const fullScreen = useDialogFullScreen();
   // `{ key, status: "ok" | "error", data }`: `key` es el pedido que lo trajo. Mientras no coincida con
   // el actual, se muestran esqueletos (o los datos viejos, si hay, para no parpadear al recargar).
   const [result, setResult] = useState(null);
@@ -102,10 +104,10 @@ export default function OcupacionDetalleDialog({ id, reloadKey, now, can, onClos
     cuerpo = (
       <Stack spacing={2}>
         <Stack direction="row" alignItems="center" gap={1} flexWrap="wrap" useFlexGap>
-          <Typography variant="h6" sx={{ fontWeight: 900 }}>
+          <Typography variant="h6">
             Ocupación #{d.id}
           </Typography>
-          <Chip size="small" label={chip.label} color={chip.color} sx={{ fontWeight: 700 }} />
+          <Chip size="small" label={chip.label} color={chip.color} />
           <Chip size="small" variant="outlined" label={labelOf(TipoOcupacion, d.tipo)} />
           <Chip size="small" variant="outlined" label={`Cochera #${d.cocheraNumero}`} />
         </Stack>
@@ -144,7 +146,7 @@ export default function OcupacionDetalleDialog({ id, reloadKey, now, can, onClos
           {/* Spec 08 (D-FH6): primera entrada de la devolución, con el saldo a favor de la ocupación. */}
           {can("pagos.devolver") && Number(d.saldoAFavor ?? 0) > 0 ? (
             <Box sx={{ mt: 1 }}>
-              <Button size="small" variant="outlined" color="warning" onClick={() => setDevolviendo(true)} sx={{ fontWeight: 800 }}>
+              <Button size="small" variant="outlined" color="warning" onClick={() => setDevolviendo(true)}>
                 Registrar devolución
               </Button>
             </Box>
@@ -208,22 +210,22 @@ export default function OcupacionDetalleDialog({ id, reloadKey, now, can, onClos
   }
 
   return (
-    <Dialog open onClose={onClose} fullWidth maxWidth="md">
+    <Dialog open onClose={onClose} fullWidth maxWidth="md" fullScreen={fullScreen}>
       <DialogTitle>Detalle de la ocupación</DialogTitle>
       <DialogContent dividers>{cuerpo}</DialogContent>
       <DialogActions>
         {acciones?.registrarPago ? (
-          <Button color="success" variant="contained" onClick={() => onAction("pago", d)} sx={{ fontWeight: 900 }}>
+          <Button color="success" variant="contained" onClick={() => onAction("pago", d)}>
             Registrar pago
           </Button>
         ) : null}
         {acciones?.cancelarReserva ? (
-          <Button color="error" variant="contained" onClick={() => onAction("cancelar", d)} sx={{ fontWeight: 900 }}>
+          <Button color="error" variant="contained" onClick={() => onAction("cancelar", d)}>
             Cancelar reserva
           </Button>
         ) : null}
         {acciones?.finalizar ? (
-          <Button color="success" variant="contained" onClick={() => onAction("finalizar", d)} sx={{ fontWeight: 900 }}>
+          <Button color="success" variant="contained" onClick={() => onAction("finalizar", d)}>
             Finalizar
           </Button>
         ) : null}

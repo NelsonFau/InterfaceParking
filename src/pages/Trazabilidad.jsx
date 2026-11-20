@@ -13,6 +13,7 @@ import {
   Chip,
   LinearProgress,
   MenuItem,
+  Paper,
   Skeleton,
   Stack,
   Table,
@@ -160,7 +161,7 @@ function Filtros({ applied, loading, onSearch, onClear, usuarios, usuariosSelect
   );
 
   return (
-    <Card variant="outlined">
+    <Card>
       <CardContent>
         <Box component="form" onSubmit={submit} noValidate>
           <Stack direction="row" spacing={1.5} useFlexGap flexWrap="wrap" alignItems="flex-start">
@@ -386,6 +387,7 @@ function Panel({ applied, path, onNavigate, usuarios, usuariosSelector }) {
         {items.length === 0 ? (
           <Alert severity="info">No hay eventos para estos filtros.</Alert>
         ) : (
+          <Paper variant="outlined">
           <TableContainer>
             <Table size="small">
               <TableHead>
@@ -434,6 +436,7 @@ function Panel({ applied, path, onNavigate, usuarios, usuariosSelector }) {
               </TableBody>
             </Table>
           </TableContainer>
+          </Paper>
         )}
         <TablePagination
           component="div"

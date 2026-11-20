@@ -28,6 +28,24 @@ export function parseOcupacionId(search) {
 }
 
 /**
+ * Ruta del atajo "Registrar ingreso" (spec 13, D-FM10): abre Ocupaciones con el alta abierta.
+ * @returns {string} `/ocupaciones?nueva=1`
+ */
+export function buildNuevaOcupacionPath() {
+  return `${OCUPACIONES_PATH}?nueva=1`;
+}
+
+/**
+ * `true` si el query trae `nueva=1` (el valor exacto; `0`, `abc` o la ausencia dan `false`).
+ * @param {string | URLSearchParams | null | undefined} search
+ * @returns {boolean}
+ */
+export function hasNuevaFlag(search) {
+  const params = search instanceof URLSearchParams ? search : new URLSearchParams(search ?? "");
+  return params.get("nueva") === "1";
+}
+
+/**
  * Ruta de Alertas filtrada por una ocupación (contrato de D-FE6 de la spec 05). Sin id válido, la ruta sola.
  * @param {number | string | null | undefined} ocupacionId
  * @returns {string} por ejemplo `/alertas-operativas?ocupacionId=12`

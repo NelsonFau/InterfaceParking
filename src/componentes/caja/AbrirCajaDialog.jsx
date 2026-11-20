@@ -9,12 +9,14 @@ import { showApiError } from "../../api/errors";
 import { ModoCaja } from "../../constants/enums";
 import { cajaFieldErrors, fondoDifiere, shouldCloseActionAfterCaja, shouldReloadAfterCaja, validateAbrir } from "../../utils/caja";
 import { formatMoney } from "../../utils/formato";
+import { useDialogFullScreen } from "../useDialogFullScreen";
 
 /**
  * @param {{ modo?: number, fondoPropuesto?: number | null, onClose: () => void, onChanged?: () => void }} props
  *   `onChanged` pide recargar la caja actual (después de abrir o de un error por estado viejo).
  */
 export default function AbrirCajaDialog({ modo, fondoPropuesto, onClose, onChanged }) {
+  const fullScreen = useDialogFullScreen();
   const [fondo, setFondo] = useState(() => Number(fondoPropuesto ?? 0).toFixed(2));
   const [observacion, setObservacion] = useState("");
   const [errors, setErrors] = useState({});
@@ -50,7 +52,7 @@ export default function AbrirCajaDialog({ modo, fondoPropuesto, onClose, onChang
   }
 
   return (
-    <Dialog open onClose={saving ? undefined : onClose} fullWidth maxWidth="xs">
+    <Dialog open onClose={saving ? undefined : onClose} fullWidth maxWidth="xs" fullScreen={fullScreen}>
       <DialogTitle>Abrir caja</DialogTitle>
       <DialogContent dividers>
         <Stack spacing={2} sx={{ pt: 1 }}>
@@ -99,7 +101,7 @@ export default function AbrirCajaDialog({ modo, fondoPropuesto, onClose, onChang
         <Button onClick={onClose} disabled={saving}>
           Cancelar
         </Button>
-        <Button variant="contained" onClick={enviar} disabled={saving} sx={{ fontWeight: 900 }}>
+        <Button variant="contained" onClick={enviar} disabled={saving}>
           Abrir caja
         </Button>
       </DialogActions>

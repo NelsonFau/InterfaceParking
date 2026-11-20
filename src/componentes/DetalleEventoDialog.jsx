@@ -13,6 +13,7 @@ import {
   DialogContent,
   DialogTitle,
   FormControlLabel,
+  Paper,
   Stack,
   Switch,
   Table,
@@ -22,18 +23,18 @@ import {
   TableRow,
   Typography,
 } from "@mui/material";
-import { alpha } from "@mui/material/styles";
 import { AccionTrazabilidad, Fuente, colorOf, labelOf } from "../constants/enums";
 import { auditoriaDetalle, canonicalKey, detallePares, formatValor, humanizeKey } from "../utils/trazabilidadEvento";
 import { useTenantDates } from "../utils/useTenantDates";
+import { useDialogFullScreen } from "./useDialogFullScreen";
 
-const ESTADO_COLOR = { cambiado: "warning", agregado: "success", quitado: "error" };
+// Tono del tema (`palette.pc.tone`) de cada estado de un campo.
+const ESTADO_TONO = { cambiado: "wa", agregado: "ok", quitado: "er" };
 const ESTADO_TEXTO = { cambiado: "Cambiado", agregado: "Agregado", quitado: "Quitado" };
 
 const PRE_SX = {
   m: 0,
   p: 1.5,
-  borderRadius: 1,
   bgcolor: "action.hover",
   fontSize: 12.5,
   whiteSpace: "pre-wrap",
@@ -48,9 +49,9 @@ function Pre({ titulo, children }) {
       <Typography variant="subtitle2" gutterBottom>
         {titulo}
       </Typography>
-      <Box component="pre" sx={PRE_SX}>
+      <Paper component="pre" variant="outlined" sx={PRE_SX}>
         {children}
-      </Box>
+      </Paper>
     </Box>
   );
 }
@@ -75,9 +76,9 @@ function TablaDiferencias({ filas, soloCambiados, timeZone }) {
       </TableHead>
       <TableBody>
         {visibles.map((f) => {
-          const color = ESTADO_COLOR[f.estado];
+          const color = ESTADO_TONO[f.estado];
           return (
-            <TableRow key={f.campo} sx={color ? { bgcolor: (t) => alpha(t.palette[color].main, 0.12) } : undefined}>
+            <TableRow key={f.campo} sx={color ? { bgcolor: (t) => t.palette.pc.tone[color].bg } : undefined}>
               <TableCell sx={{ verticalAlign: "top" }}>
                 <Typography variant="body2" fontWeight={color ? 700 : 400}>
                   {humanizeKey(f.campo)}
@@ -184,12 +185,13 @@ function idsRelacionados(evento) {
  */
 export default function DetalleEventoDialog({ evento, onClose }) {
   const { formatInstant, timeZone } = useTenantDates();
+  const fullScreen = useDialogFullScreen();
   const fuente = canonicalKey(evento?.fuente);
   const accion = canonicalKey(evento?.accion);
   const ids = evento ? idsRelacionados(evento) : [];
 
   return (
-    <Dialog open={Boolean(evento)} onClose={onClose} fullWidth maxWidth="md">
+    <Dialog open={Boolean(evento)} onClose={onClose} fullScreen={fullScreen} fullWidth maxWidth="md">
       <DialogTitle>Detalle del evento</DialogTitle>
       <DialogContent dividers>
         {evento && (

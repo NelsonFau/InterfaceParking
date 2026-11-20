@@ -15,6 +15,8 @@ import {
   Divider,
   Skeleton,
   Stack,
+  Tab,
+  Tabs,
   TextField,
   Typography,
 } from "@mui/material";
@@ -27,6 +29,8 @@ import {
 } from "../api/cocheraApi";
 import { showApiError } from "../api/errors";
 import { usePermissions } from "../auth/usePermissions";
+import PlanoGrilla from "../componentes/cocheras/PlanoGrilla";
+import { useDialogFullScreen } from "../componentes/useDialogFullScreen";
 import { EstadoCochera, EstadoOcupacion, TipoOcupacion, colorOf, labelOf } from "../constants/enums";
 import {
   MAX_NOTA,
@@ -55,7 +59,7 @@ const TICK_MS = 60_000;
 
 // Un único mapa de color de MUI a color del tema (D-FF4). `tono` es "light" (tarjeta) o "main" (historial).
 function borderOf(color, tono) {
-  return ["success", "warning", "error", "info"].includes(color) ? `${color}.${tono}` : "divider";
+  return ["success", "warning", "error", "info", "oc"].includes(color) ? `${color}.${tono}` : "divider";
 }
 
 const GRID_COLUMNS = {
@@ -86,19 +90,15 @@ function CocheraCard({ c, now, formatInstant, onClick }) {
 
   return (
     <Card
-      variant="outlined"
       onClick={onClick}
       sx={{
         cursor: "pointer",
-        borderRadius: 3,
         borderWidth: 2,
         borderColor: borderOf(color, "light"),
         height: 150, // altura fija
         display: "flex",
-        boxShadow: "0 6px 18px rgba(0,0,0,.06)",
-        transition: "transform .08s ease, box-shadow .08s ease",
+        transition: "transform .08s ease",
         "&:active": { transform: "scale(0.99)" },
-        "&:hover": { boxShadow: "0 10px 22px rgba(0,0,0,.08)" },
         overflow: "hidden",
       }}
     >
@@ -114,7 +114,7 @@ function CocheraCard({ c, now, formatInstant, onClick }) {
         }}
       >
         <Stack direction="row" justifyContent="space-between" alignItems="center" gap={1}>
-          <Typography variant="subtitle1" sx={{ fontWeight: 900, letterSpacing: -0.2 }}>
+          <Typography variant="subtitle1">
             #{c.numero}
           </Typography>
           <Chip
@@ -122,7 +122,6 @@ function CocheraCard({ c, now, formatInstant, onClick }) {
             label={labelOf(EstadoCochera, c.estado)}
             color={color}
             variant="filled"
-            sx={{ fontWeight: 700 }}
           />
         </Stack>
 
@@ -132,7 +131,7 @@ function CocheraCard({ c, now, formatInstant, onClick }) {
           </Typography>
         ) : (
           <Box sx={{ minWidth: 0 }}>
-            <Typography variant="body1" sx={{ fontWeight: 800, lineHeight: 1.15 }} noWrap title={info.cliente}>
+            <Typography variant="body1" sx={{ lineHeight: 1.15 }} noWrap title={info.cliente}>
               {info.cliente}
             </Typography>
             <Typography variant="body2" sx={{ color: "text.secondary" }} noWrap title={segunda}>
@@ -151,6 +150,7 @@ function CocheraCard({ c, now, formatInstant, onClick }) {
 
 // Diálogo "Agregar cocheras" (D-FF7): la vista previa es la confirmación.
 function AltaDialog({ numeros, onClose, onDone, onError }) {
+  const fullScreen = useDialogFullScreen();
   const [desde, setDesde] = useState("");
   const [hasta, setHasta] = useState("");
   const [saving, setSaving] = useState(false);
@@ -173,7 +173,7 @@ function AltaDialog({ numeros, onClose, onDone, onError }) {
   }
 
   return (
-    <Dialog open onClose={saving ? undefined : onClose} fullWidth maxWidth="xs">
+    <Dialog open onClose={saving ? undefined : onClose} fullWidth maxWidth="xs" fullScreen={fullScreen}>
       <DialogTitle>Agregar cocheras</DialogTitle>
       <DialogContent dividers>
         <Stack spacing={2} sx={{ pt: 1 }}>
@@ -212,6 +212,7 @@ function AltaDialog({ numeros, onClose, onDone, onError }) {
 
 // Diálogo "Editar" (D-FF8): número y nota. La nota llega precargada porque este PUT la reemplaza.
 function EditDialog({ detalle, numeros, onClose, onDone, onError }) {
+  const fullScreen = useDialogFullScreen();
   const [numero, setNumero] = useState(String(detalle.numero));
   const [nota, setNota] = useState(detalle.nota ?? "");
   const [saving, setSaving] = useState(false);
@@ -233,7 +234,7 @@ function EditDialog({ detalle, numeros, onClose, onDone, onError }) {
   }
 
   return (
-    <Dialog open onClose={saving ? undefined : onClose} fullWidth maxWidth="xs">
+    <Dialog open onClose={saving ? undefined : onClose} fullWidth maxWidth="xs" fullScreen={fullScreen}>
       <DialogTitle>{`Editar cochera #${detalle.numero}`}</DialogTitle>
       <DialogContent dividers>
         <Stack spacing={2} sx={{ pt: 1 }}>
@@ -273,6 +274,7 @@ function EditDialog({ detalle, numeros, onClose, onDone, onError }) {
 
 // Diálogo de Bloquear (motivo obligatorio) y Desbloquear (nota opcional, precargada) (D-FF9).
 function EstadoDialog({ bloquear, detalle, onClose, onDone, onError }) {
+  const fullScreen = useDialogFullScreen();
   const [nota, setNota] = useState(bloquear ? "" : (detalle.nota ?? ""));
   const [saving, setSaving] = useState(false);
 
@@ -307,7 +309,7 @@ function EstadoDialog({ bloquear, detalle, onClose, onDone, onError }) {
   }
 
   return (
-    <Dialog open onClose={saving ? undefined : onClose} fullWidth maxWidth="xs">
+    <Dialog open onClose={saving ? undefined : onClose} fullWidth maxWidth="xs" fullScreen={fullScreen}>
       <DialogTitle>{`${bloquear ? "Bloquear" : "Desbloquear"} cochera #${detalle.numero}`}</DialogTitle>
       <DialogContent dividers>
         <Stack spacing={2} sx={{ pt: 1 }}>
@@ -356,6 +358,9 @@ export default function Cocheras() {
   const canManage = can("cocheras.gestionar");
   const canTrazabilidad = can("auditoria.ver");
   const { formatInstant } = useTenantDates();
+  const fullScreen = useDialogFullScreen();
+  // Pestaña activa: "tarjetas" (grilla de la 06) o "plano" (mosaico por número, D-FM14). Solo en memoria.
+  const [vista, setVista] = useState("tarjetas");
 
   // `null` = todavía no cargado: nunca se muestra como "no hay cocheras" (D-FF12).
   const [items, setItems] = useState(null);
@@ -478,7 +483,7 @@ export default function Cocheras() {
   const ocupa = detalle?.ocupacionActiva ?? null;
 
   const botonAgregar = canManage ? (
-    <Button variant="contained" onClick={() => setDialog("alta")} sx={{ borderRadius: 2, fontWeight: 800 }}>
+    <Button variant="contained" onClick={() => setDialog("alta")}>
       Agregar cocheras
     </Button>
   ) : null;
@@ -514,6 +519,9 @@ export default function Cocheras() {
     );
   } else if (filtered.length === 0) {
     grilla = <Typography color="text.secondary">No hay cocheras con ese número.</Typography>;
+  } else if (vista === "plano") {
+    // Misma lista ya cargada (y filtrada por número); el clic abre el mismo detalle.
+    grilla = <PlanoGrilla items={filtered} onSelect={abrirDetalle} />;
   } else {
     grilla = (
       <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: GRID_COLUMNS }}>
@@ -527,7 +535,7 @@ export default function Cocheras() {
   return (
     <Box sx={{ maxWidth: 1100, mx: "auto", px: { xs: 2, sm: 3 }, py: 2 }}>
       <Stack spacing={0.5} sx={{ mb: 2 }}>
-        <Typography variant="h5" sx={{ fontWeight: 900, letterSpacing: -0.3 }}>
+        <Typography variant="h5">
           Cocheras
         </Typography>
         <Typography variant="body2" sx={{ color: "text.secondary" }}>
@@ -541,12 +549,7 @@ export default function Cocheras() {
         alignItems={{ xs: "stretch", sm: "center" }}
         sx={{ mb: 2 }}
       >
-        <Button
-          variant="contained"
-          onClick={recargarLista}
-          disabled={loading}
-          sx={{ borderRadius: 2, fontWeight: 800 }}
-        >
+        <Button variant="contained" onClick={recargarLista} disabled={loading}>
           Refrescar
         </Button>
 
@@ -564,10 +567,20 @@ export default function Cocheras() {
 
       <Divider sx={{ mb: 2 }} />
 
+      <Tabs
+        value={vista}
+        onChange={(_, v) => setVista(v)}
+        aria-label="Vista de cocheras"
+        sx={{ mb: 2, width: "fit-content", maxWidth: "100%" }}
+      >
+        <Tab value="tarjetas" label="Tarjetas" />
+        <Tab value="plano" label="Plano" />
+      </Tabs>
+
       {grilla}
 
       {/* DETALLE */}
-      <Dialog open={detalleId !== null} onClose={cerrarDetalle} fullWidth maxWidth="md">
+      <Dialog open={detalleId !== null} onClose={cerrarDetalle} fullWidth maxWidth="md" fullScreen={fullScreen}>
         <DialogTitle>Detalle cochera</DialogTitle>
         <DialogContent dividers>
           {!detalle ? (
@@ -620,7 +633,7 @@ export default function Cocheras() {
                 </Typography>
 
                 {ocupa ? (
-                  <Card variant="outlined" sx={{ borderRadius: 3 }}>
+                  <Card>
                     <CardContent>
                       <Typography fontWeight={900}>{ocupa.clienteNombre}</Typography>
                       <Typography variant="body2" color="text.secondary">
@@ -666,11 +679,7 @@ export default function Cocheras() {
                     {detalle.historial.map((h) => {
                       const color = colorOf(EstadoOcupacion, h.estado);
                       return (
-                        <Card
-                          key={h.id}
-                          variant="outlined"
-                          sx={{ borderWidth: 2, borderColor: borderOf(color, "main"), borderRadius: 3 }}
-                        >
+                        <Card key={h.id} sx={{ borderWidth: 2, borderColor: borderOf(color, "main") }}>
                           <CardContent sx={{ py: 1.2 }}>
                             <Stack direction="row" justifyContent="space-between" alignItems="center" gap={1}>
                               <Typography

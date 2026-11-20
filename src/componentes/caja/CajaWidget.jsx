@@ -84,7 +84,7 @@ export default function CajaWidget({ reloadKey = 0 }) {
                 <Typography variant="body2" color="text.secondary">
                   Efectivo esperado
                 </Typography>
-                <Typography variant="h5" sx={{ fontWeight: 900 }}>
+                <Typography variant="h5" sx={{ fontWeight: 800 }}>
                   {formatMoney(result.esperado.efectivoEsperado)}
                 </Typography>
               </Box>
@@ -99,11 +99,11 @@ export default function CajaWidget({ reloadKey = 0 }) {
   }
 
   return (
-    <Card sx={{ borderRadius: 3 }}>
+    <Card>
       <CardContent>
         <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
           <Box>
-            <Typography variant="h6" sx={{ fontWeight: 900 }}>
+            <Typography variant="h6">
               Caja
             </Typography>
           </Box>

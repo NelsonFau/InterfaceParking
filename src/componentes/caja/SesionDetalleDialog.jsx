@@ -39,7 +39,6 @@ import {
 import {
   accionesDeSesion,
   cierreVigente,
-  diferenciaInfo,
   eventoCampos,
   shouldCloseDetailAfterCaja,
 } from "../../utils/caja";
@@ -48,7 +47,9 @@ import { usuarioLabel } from "../../utils/pagos";
 import { buildTrazabilidadPath } from "../../utils/trazabilidadLink";
 import { useTenantDates } from "../../utils/useTenantDates";
 import PagoDetalleDialog from "../pagos/PagoDetalleDialog";
+import { useDialogFullScreen } from "../useDialogFullScreen";
 import CerrarCajaDialog from "./CerrarCajaDialog";
+import Dif from "./DiferenciaTexto";
 import ReabrirCajaDialog from "./ReabrirCajaDialog";
 import TotalesPorMetodo from "./TotalesPorMetodo";
 import { useCajaEsperado } from "./useCajaEsperado";
@@ -77,22 +78,13 @@ function Fila({ label, children }) {
   );
 }
 
-function Dif({ diferencia }) {
-  const info = diferenciaInfo(diferencia);
-  if (!info) return "—";
-  return (
-    <Box component="span" sx={{ color: info.color, fontWeight: 800 }}>
-      {info.tipo === "cero" ? info.label : `${formatMoney(Math.abs(diferencia))} (${info.label})`}
-    </Box>
-  );
-}
-
 /**
  * @param {{ sesionId: number, onClose: () => void, onChanged?: () => void }} props
  *   `onChanged` avisa a la pantalla que la caja cambió (cerrar, reabrir o anular/devolver desde un pago de un
  *   movimiento) para que recargue la pestaña "Caja actual" y el historial.
  */
 export default function SesionDetalleDialog({ sesionId, onClose, onChanged }) {
+  const fullScreen = useDialogFullScreen();
   const { formatInstant } = useTenantDates();
   const { can } = usePermissions();
   const { me } = useMe();
@@ -335,7 +327,7 @@ export default function SesionDetalleDialog({ sesionId, onClose, onChanged }) {
 
   return (
     <>
-      <Dialog open onClose={onClose} fullWidth maxWidth="md">
+      <Dialog open onClose={onClose} fullWidth maxWidth="md" fullScreen={fullScreen}>
         <DialogTitle>Caja #{sesionId}</DialogTitle>
         <DialogContent dividers>{renderCuerpo()}</DialogContent>
         <DialogActions>
@@ -350,7 +342,7 @@ export default function SesionDetalleDialog({ sesionId, onClose, onChanged }) {
             </Button>
           ) : null}
           {detalle && acciones.cerrar ? (
-            <Button variant="contained" onClick={() => setAccion("cerrar")} sx={{ fontWeight: 900 }}>
+            <Button variant="contained" onClick={() => setAccion("cerrar")}>
               Cerrar caja
             </Button>
           ) : null}

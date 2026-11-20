@@ -37,7 +37,7 @@ import {
   shouldReloadAfter,
   takeOf,
 } from "../utils/ocupaciones";
-import { parseOcupacionId } from "../utils/ocupacionLink";
+import { hasNuevaFlag, parseOcupacionId } from "../utils/ocupacionLink";
 import { useTenantDates } from "../utils/useTenantDates";
 
 // Cada cuánto se refresca el reloj de la pantalla (fase y botones), sin pedir nada al servidor.
@@ -51,10 +51,7 @@ function OcupacionCard({ o, now, can, formatInstant, onVer, onAction }) {
   const topeValor = fase === FASE.FINALIZADA ? (o.precioTotal ?? o.topeDeCobro) : o.topeDeCobro;
 
   return (
-    <Card
-      variant="outlined"
-      sx={{ borderRadius: 3, borderColor: "divider", boxShadow: "0 6px 18px rgba(0,0,0,.06)" }}
-    >
+    <Card>
       <CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
         <Stack
           direction={{ xs: "column", sm: "row" }}
@@ -67,8 +64,8 @@ function OcupacionCard({ o, now, can, formatInstant, onVer, onAction }) {
               <Typography sx={{ fontWeight: 900 }} noWrap>
                 Cochera #{o.cocheraNumero ?? o.cocheraId}
               </Typography>
-              <Chip size="small" label={chip.label} color={chip.color} sx={{ fontWeight: 700 }} />
-              <Chip size="small" variant="outlined" label={labelOf(TipoOcupacion, o.tipo)} sx={{ fontWeight: 700 }} />
+              <Chip size="small" label={chip.label} color={chip.color} />
+              <Chip size="small" variant="outlined" label={labelOf(TipoOcupacion, o.tipo)} />
             </Stack>
 
             <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.35 }}>
@@ -91,15 +88,15 @@ function OcupacionCard({ o, now, can, formatInstant, onVer, onAction }) {
           </Box>
 
           <Stack direction="row" spacing={1} justifyContent="flex-end" useFlexGap sx={{ flexWrap: "wrap" }}>
-            <Button variant="outlined" onClick={() => onVer(o.id)} sx={{ borderRadius: 2, fontWeight: 800 }}>
+            <Button variant="outlined" size="large" onClick={() => onVer(o.id)}>
               Ver
             </Button>
             {acciones.registrarPago ? (
               <Button
                 color="success"
                 variant="contained"
+                size="large"
                 onClick={() => onAction("pago", o)}
-                sx={{ borderRadius: 2, fontWeight: 900 }}
               >
                 Registrar pago
               </Button>
@@ -108,8 +105,8 @@ function OcupacionCard({ o, now, can, formatInstant, onVer, onAction }) {
               <Button
                 color="error"
                 variant="contained"
+                size="large"
                 onClick={() => onAction("cancelar", o)}
-                sx={{ borderRadius: 2, fontWeight: 900 }}
               >
                 Cancelar reserva
               </Button>
@@ -118,8 +115,8 @@ function OcupacionCard({ o, now, can, formatInstant, onVer, onAction }) {
               <Button
                 color="success"
                 variant="contained"
+                size="large"
                 onClick={() => onAction("finalizar", o)}
-                sx={{ borderRadius: 2, fontWeight: 900 }}
               >
                 Finalizar
               </Button>
@@ -171,6 +168,23 @@ export default function Ocupaciones() {
   const [ajusteMasivo, setAjusteMasivo] = useState(false);
 
   const detailId = parseOcupacionId(searchParams);
+
+  // Atajo "Registrar ingreso" (spec 13, D-FM10, DV-FM1): `?nueva=1` abre el alta y se limpia con replace,
+  // así "atrás" y recargar no la reabren (mismo patrón que `?id=N`). Sin `ocupaciones.crear` solo se limpia.
+  const quiereAlta = hasNuevaFlag(searchParams);
+  const puedeCrear = can("ocupaciones.crear");
+  useEffect(() => {
+    if (!quiereAlta) return;
+    if (puedeCrear) setDialog({ type: "alta" });
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete("nueva");
+        return next;
+      },
+      { replace: true },
+    );
+  }, [quiereAlta, puedeCrear, setSearchParams]);
 
   const reloadList = useCallback(() => {
     setLoading(true);
@@ -373,7 +387,7 @@ export default function Ocupaciones() {
   return (
     <Box sx={{ maxWidth: 1100, mx: "auto", px: { xs: 2, sm: 3 }, py: 2 }}>
       <Stack spacing={0.5} sx={{ mb: 2 }}>
-        <Typography variant="h5" sx={{ fontWeight: 900, letterSpacing: -0.3 }}>
+        <Typography variant="h5">
           Ocupaciones
         </Typography>
         <Typography variant="body2" sx={{ color: "text.secondary" }}>
@@ -388,38 +402,31 @@ export default function Ocupaciones() {
         sx={{ mb: 2 }}
       >
         {can("ocupaciones.crear") ? (
-          <Button
-            variant="contained"
-            onClick={() => setDialog({ type: "alta" })}
-            sx={{ borderRadius: 2, fontWeight: 900 }}
-          >
+          <Button variant="contained" onClick={() => setDialog({ type: "alta" })}>
             Nueva ocupación
           </Button>
         ) : null}
 
         {can("tarifas.editar") ? (
-          <Button variant="outlined" onClick={() => setAjusteMasivo(true)} sx={{ borderRadius: 2, fontWeight: 800 }}>
+          <Button variant="outlined" onClick={() => setAjusteMasivo(true)}>
             Ajustar precios mensuales
           </Button>
         ) : null}
 
-        <Button variant="outlined" onClick={reloadList} disabled={loading} sx={{ borderRadius: 2, fontWeight: 800 }}>
+        <Button variant="outlined" onClick={reloadList} disabled={loading}>
           Refrescar
         </Button>
       </Stack>
 
-      <Card
-        variant="outlined"
-        sx={{ mb: 2, borderRadius: 3, borderColor: "divider", boxShadow: "0 6px 18px rgba(0,0,0,.06)" }}
-      >
+      <Card sx={{ mb: 2 }}>
         <CardContent>
           <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }} gap={1}>
             <Typography fontWeight={900}>Filtros</Typography>
             <Stack direction="row" gap={1}>
-              <Button onClick={limpiar} disabled={loading} sx={{ borderRadius: 2, fontWeight: 800 }}>
+              <Button onClick={limpiar} disabled={loading}>
                 Limpiar
               </Button>
-              <Button variant="outlined" onClick={aplicar} disabled={loading} sx={{ borderRadius: 2, fontWeight: 800 }}>
+              <Button variant="outlined" onClick={aplicar} disabled={loading}>
                 Aplicar
               </Button>
             </Stack>

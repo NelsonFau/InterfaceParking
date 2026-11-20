@@ -49,7 +49,7 @@ export default function CuentaOcupacion({ ocupacion, fase }) {
       </Row>
       {saldoAFavor > 0 ? (
         <Box>
-          <Chip size="small" color="warning" label={`Saldo a favor ${formatMoney(saldoAFavor)}`} sx={{ fontWeight: 700 }} />
+          <Chip size="small" color="warning" label={`Saldo a favor ${formatMoney(saldoAFavor)}`} />
         </Box>
       ) : null}
       {saldoAFavor > 0 && (finalizada || cancelada) ? (

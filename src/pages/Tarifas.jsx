@@ -36,6 +36,7 @@ import {
   validateTarifaForm,
 } from "../utils/tarifas";
 import { useTenantDates } from "../utils/useTenantDates";
+import { useDialogFullScreen } from "../componentes/useDialogFullScreen";
 
 const TIPO_OPTIONS = optionsOf(TipoOcupacion);
 
@@ -53,6 +54,7 @@ function EstadoChip({ estado }) {
 
 export default function Tarifas() {
   const { today } = useTenantDates();
+  const fullScreen = useDialogFullScreen();
   const hoy = today();
   const { can } = usePermissions();
   // Todo lo que escribe se oculta sin tarifas.editar (D-FC10); nunca se decide por rol.
@@ -231,7 +233,7 @@ export default function Tarifas() {
       ) : (
         <Stack spacing={2}>
           {/* TARIFAS POR TIPO: vigente y, debajo, la próxima programada */}
-          <Card variant="outlined">
+          <Card>
             <CardContent>
               <Typography fontWeight={800} sx={{ mb: 1 }}>
                 Tarifas vigentes
@@ -284,7 +286,7 @@ export default function Tarifas() {
           </Card>
 
           {/* HISTORIAL */}
-          <Card variant="outlined">
+          <Card>
             <CardContent>
               <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 1 }}>
                 <Typography fontWeight={800}>Historial</Typography>
@@ -354,7 +356,7 @@ export default function Tarifas() {
       )}
 
       {/* DIÁLOGO: cambiar precio (formulario y, después, confirmación) */}
-      <Dialog open={Boolean(dialog)} onClose={cerrarDialogo} fullWidth maxWidth="sm">
+      <Dialog open={Boolean(dialog)} onClose={cerrarDialogo} fullScreen={fullScreen} fullWidth maxWidth="sm">
         {dialog ? (
           <>
             <DialogTitle>{`Cambiar precio · ${labelOf(TipoOcupacion, dialog.tipo)}`}</DialogTitle>

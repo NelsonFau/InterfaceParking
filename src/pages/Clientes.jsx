@@ -3,6 +3,8 @@ import { http } from "../api/http";
 import { showApiError } from "../api/errors";
 import { usePermissions } from "../auth/usePermissions";
 import toast from "react-hot-toast";
+import ConfirmDialog from "../componentes/ConfirmDialog";
+import { useDialogFullScreen } from "../componentes/useDialogFullScreen";
 import {
   Box,
   Button,
@@ -27,7 +29,6 @@ function ActivoChip({ activo }) {
       label={activo ? "Activo" : "Inactivo"}
       color={activo ? "success" : "default"}
       variant={activo ? "filled" : "outlined"}
-      sx={{ fontWeight: 700 }}
     />
   );
 }
@@ -44,14 +45,7 @@ function LoadingList() {
 
 function ClienteCard({ c, onEdit, onToggle, canManage }) {
   return (
-    <Card
-      variant="outlined"
-      sx={{
-        borderRadius: 3,
-        borderColor: "divider",
-        boxShadow: "0 6px 18px rgba(0,0,0,.06)",
-      }}
-    >
+    <Card>
       <CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
         <Stack
           direction={{ xs: "column", sm: "row" }}
@@ -64,7 +58,7 @@ function ClienteCard({ c, onEdit, onToggle, canManage }) {
             <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 0.5 }}>
               <Typography
                 variant="subtitle1"
-                sx={{ fontWeight: 900, letterSpacing: -0.2 }}
+                sx={{ letterSpacing: -0.2 }}
                 noWrap
                 title={c.nombreCompleto}
               >
@@ -93,20 +87,11 @@ function ClienteCard({ c, onEdit, onToggle, canManage }) {
             justifyContent={{ xs: "flex-start", sm: "flex-end" }}
             sx={{ flexWrap: "wrap" }}
           >
-            <Button
-              variant="outlined"
-              onClick={onEdit}
-              sx={{ borderRadius: 2, fontWeight: 800 }}
-            >
+            <Button variant="outlined" onClick={onEdit}>
               Editar
             </Button>
 
-            <Button
-              variant="contained"
-              color={c.activo ? "error" : "success"}
-              onClick={onToggle}
-              sx={{ borderRadius: 2, fontWeight: 800 }}
-            >
+            <Button variant="contained" color={c.activo ? "error" : "success"} onClick={onToggle}>
               {c.activo ? "Desactivar" : "Reactivar"}
             </Button>
           </Stack>
@@ -120,6 +105,7 @@ function ClienteCard({ c, onEdit, onToggle, canManage }) {
 export default function Clientes() {
   const { can } = usePermissions();
   const canManage = can("clientes.gestionar");
+  const fullScreen = useDialogFullScreen();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -140,6 +126,10 @@ export default function Clientes() {
   const [open, setOpen] = useState(false);
   const [edit, setEdit] = useState(null); // null => crear
   const [saving, setSaving] = useState(false);
+
+  // confirmación de desactivar / reactivar (D-FM13): { tipo: "desactivar" | "reactivar", c }
+  const [confirmar, setConfirmar] = useState(null);
+  const [confirmando, setConfirmando] = useState(false);
 
   // form
   const [nombreCompleto, setNombreCompleto] = useState("");
@@ -249,9 +239,6 @@ export default function Clientes() {
   }
 
   async function desactivar(c) {
-    const ok = window.confirm(`¿Desactivar a "${c?.nombreCompleto}"?`);
-    if (!ok) return;
-
     try {
       await http.patch(`/Cliente/${c.id}/desactivar`);
       toast.success("Cliente desactivado");
@@ -264,9 +251,6 @@ export default function Clientes() {
   }
 
   async function reactivar(c) {
-    const ok = window.confirm(`¿Reactivar a "${c?.nombreCompleto}"?`);
-    if (!ok) return;
-
     try {
       await http.patch(`/Cliente/${c.id}/reactivar`);
       toast.success("Cliente reactivado");
@@ -276,11 +260,23 @@ export default function Clientes() {
     }
   }
 
+  async function confirmarAccion() {
+    if (!confirmar) return;
+    setConfirmando(true);
+    try {
+      if (confirmar.tipo === "desactivar") await desactivar(confirmar.c);
+      else await reactivar(confirmar.c);
+    } finally {
+      setConfirmando(false);
+      setConfirmar(null);
+    }
+  }
+
   return (
     <Box sx={{ maxWidth: 1100, mx: "auto", px: { xs: 2, sm: 3 }, py: 2 }}>
       {/* Header */}
       <Stack spacing={0.5} sx={{ mb: 2 }}>
-        <Typography variant="h5" sx={{ fontWeight: 900, letterSpacing: -0.3 }}>
+        <Typography variant="h5" sx={{ letterSpacing: -0.3 }}>
           Clientes (Activos)
         </Typography>
         <Typography variant="body2" sx={{ color: "text.secondary" }}>
@@ -296,21 +292,12 @@ export default function Clientes() {
         sx={{ mb: 2 }}
       >
         {canManage ? (
-          <Button
-            variant="contained"
-            onClick={abrirCrear}
-            sx={{ borderRadius: 2, fontWeight: 900 }}
-          >
+          <Button variant="contained" onClick={abrirCrear}>
             Nuevo cliente
           </Button>
         ) : null}
 
-        <Button
-          variant="outlined"
-          onClick={() => cargar(page)}
-          disabled={loading}
-          sx={{ borderRadius: 2, fontWeight: 800 }}
-        >
+        <Button variant="outlined" onClick={() => cargar(page)} disabled={loading}>
           Refrescar
         </Button>
 
@@ -325,15 +312,7 @@ export default function Clientes() {
 
       {/* Pagination toolbar */}
       {!loading && (
-        <Card
-          variant="outlined"
-          sx={{
-            mb: 2,
-            borderRadius: 3,
-            borderColor: "divider",
-            boxShadow: "0 6px 18px rgba(0,0,0,.06)",
-          }}
-        >
+        <Card sx={{ mb: 2 }}>
           <CardContent sx={{ py: 1.5, "&:last-child": { pb: 1.5 } }}>
             <Stack
               direction={{ xs: "column", sm: "row" }}
@@ -347,12 +326,7 @@ export default function Clientes() {
               </Typography>
 
               <Stack direction="row" spacing={1} alignItems="center" sx={{ flexWrap: "wrap" }}>
-                <Button
-                  variant="outlined"
-                  disabled={page <= 1}
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  sx={{ borderRadius: 2, fontWeight: 800 }}
-                >
+                <Button variant="outlined" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
                   Anterior
                 </Button>
 
@@ -360,7 +334,6 @@ export default function Clientes() {
                   variant="outlined"
                   disabled={page >= totalPages}
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                  sx={{ borderRadius: 2, fontWeight: 800 }}
                 >
                   Siguiente
                 </Button>
@@ -388,7 +361,7 @@ export default function Clientes() {
               key={c.id}
               c={c}
               onEdit={() => abrirEditar(c)}
-              onToggle={() => (c.activo ? desactivar(c) : reactivar(c))}
+              onToggle={() => setConfirmar({ tipo: c.activo ? "desactivar" : "reactivar", c })}
               canManage={canManage}
             />
           ))}
@@ -402,8 +375,8 @@ export default function Clientes() {
       )}
 
       {/* Dialog */}
-      <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth="sm">
-        <DialogTitle sx={{ fontWeight: 900 }}>
+      <Dialog open={open} onClose={() => setOpen(false)} fullScreen={fullScreen} fullWidth maxWidth="sm">
+        <DialogTitle>
           {edit ? "Editar cliente" : "Nuevo cliente"}
         </DialogTitle>
 
@@ -454,14 +427,28 @@ export default function Clientes() {
         </DialogContent>
 
         <DialogActions>
-          <Button onClick={() => setOpen(false)} sx={{ fontWeight: 800 }}>
+          <Button onClick={() => setOpen(false)}>
             Cancelar
           </Button>
-          <Button variant="contained" onClick={guardar} disabled={saving} sx={{ fontWeight: 900 }}>
+          <Button variant="contained" onClick={guardar} disabled={saving}>
             Guardar
           </Button>
         </DialogActions>
       </Dialog>
+
+      <ConfirmDialog
+        open={Boolean(confirmar)}
+        message={
+          confirmar
+            ? `${confirmar.tipo === "desactivar" ? "¿Desactivar" : "¿Reactivar"} a "${confirmar.c?.nombreCompleto}"?`
+            : ""
+        }
+        confirmLabel="Confirmar"
+        confirmColor={confirmar?.tipo === "desactivar" ? "error" : "success"}
+        loading={confirmando}
+        onConfirm={confirmarAccion}
+        onClose={() => setConfirmar(null)}
+      />
     </Box>
   );
 }

@@ -3,7 +3,7 @@ import { http } from "../api/http";
 import { showApiError } from "../api/errors";
 import {
   Box,
-  Paper,
+  Card,
   Typography,
   Stack,
   Skeleton,
@@ -11,49 +11,33 @@ import {
   Divider,
 } from "@mui/material";
 
-function StatCard({ title, value, hint }) {
+// Cada tarjeta toma el tono de su estado del tema (spec 13, tanda 4): fondo, borde y texto salen de `palette.pc.tone`.
+function StatCard({ title, value, hint, tone }) {
   return (
-    <Paper
-      elevation={0}
-      sx={{
+    <Card
+      sx={(t) => ({
         p: 2.25,
-        borderRadius: 3,
-        border: "1px solid",
-        borderColor: "divider",
-        bgcolor: "background.paper",
-        boxShadow: "0 6px 18px rgba(0,0,0,.06)",
+        bgcolor: t.palette.pc.tone[tone].bg,
+        borderColor: t.palette.pc.tone[tone].border,
+        color: t.palette.pc.tone[tone].text,
         minHeight: 118,
         display: "flex",
         flexDirection: "column",
         justifyContent: "space-between",
-      }}
+      })}
     >
       <Stack direction="row" alignItems="flex-start" justifyContent="space-between" gap={1}>
-        <Typography variant="body2" sx={{ color: "text.secondary", fontWeight: 600 }}>
+        <Typography variant="body2" sx={{ color: "inherit", fontWeight: 600 }}>
           {title}
         </Typography>
 
-        {hint ? (
-          <Chip
-            size="small"
-            label={hint}
-            sx={{ bgcolor: "action.hover", fontWeight: 600 }}
-          />
-        ) : null}
+        {hint ? <Chip size="small" label={hint} variant="outlined" /> : null}
       </Stack>
 
-      <Typography
-        variant="h3"
-        sx={{
-          mt: 1,
-          fontWeight: 800,
-          letterSpacing: -0.5,
-          lineHeight: 1,
-        }}
-      >
+      <Typography variant="h3" sx={{ mt: 1, fontWeight: 800, letterSpacing: -0.5, lineHeight: 1, color: "inherit" }}>
         {value}
       </Typography>
-    </Paper>
+    </Card>
   );
 }
 
@@ -108,12 +92,12 @@ export default function Dashboard() {
   const stats = useMemo(() => {
     if (!data) return [];
     return [
-      { title: "Total cocheras", value: data.totalCocheras, hint: "Inventario" },
-      { title: "Disponibles", value: data.disponiblesAhora, hint: "Ahora" },
-      { title: "Ocupadas", value: data.ocupadasAhora, hint: "Ahora" },
-      { title: "Bloqueadas", value: data.bloqueadas, hint: "Restringidas" },
-      { title: "Vencen hoy", value: data.vencenHoy, hint: "Urgente" },
-      { title: "Vencen en 7 días", value: data.vencenEn7Dias, hint: "Próximas" },
+      { title: "Total cocheras", value: data.totalCocheras, hint: "Inventario", tone: "de" },
+      { title: "Disponibles", value: data.disponiblesAhora, hint: "Ahora", tone: "ok" },
+      { title: "Ocupadas", value: data.ocupadasAhora, hint: "Ahora", tone: "oc" },
+      { title: "Bloqueadas", value: data.bloqueadas, hint: "Restringidas", tone: "er" },
+      { title: "Vencen hoy", value: data.vencenHoy, hint: "Urgente", tone: "wa" },
+      { title: "Vencen en 7 días", value: data.vencenEn7Dias, hint: "Próximas", tone: "in" },
     ];
   }, [data]);
 
@@ -153,7 +137,7 @@ export default function Dashboard() {
         }}
       >
         {stats.slice(0, 4).map((s) => (
-          <StatCard key={s.title} title={s.title} value={s.value} hint={s.hint} />
+          <StatCard key={s.title} title={s.title} value={s.value} hint={s.hint} tone={s.tone} />
         ))}
 
         {/* Segunda fila: centrada y más prolija */}
@@ -166,7 +150,7 @@ export default function Dashboard() {
           }}
         >
           {stats.slice(4).map((s) => (
-            <StatCard key={s.title} title={s.title} value={s.value} hint={s.hint} />
+            <StatCard key={s.title} title={s.title} value={s.value} hint={s.hint} tone={s.tone} />
           ))}
         </Box>
       </Box>

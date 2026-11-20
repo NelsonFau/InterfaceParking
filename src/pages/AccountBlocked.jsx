@@ -9,8 +9,8 @@ export default function AccountBlocked({ message }) {
   const cerrarSesion = () => logout({ logoutParams: { returnTo: `${window.location.origin}/login` } });
 
   return (
-    <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center", bgcolor: "#f6f8fb", px: 2 }}>
-      <Card elevation={0} sx={{ width: "100%", maxWidth: 460, borderRadius: 3, border: "1px solid", borderColor: "divider" }}>
+    <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center", bgcolor: "background.default", px: 2 }}>
+      <Card sx={{ width: "100%", maxWidth: 460 }}>
         <CardContent sx={{ p: 3 }}>
           <Stack spacing={2}>
             <Typography variant="h5" fontWeight={800}>

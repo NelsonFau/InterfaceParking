@@ -93,7 +93,7 @@ export default function CajaActualPanel({ refreshKey = 0, onChanged, onVerDetall
     <Stack spacing={2}>
       <Stack direction="row" justifyContent="space-between" alignItems="center" gap={1} flexWrap="wrap">
         <Stack direction="row" spacing={1} alignItems="center">
-          <Typography variant="h6" sx={{ fontWeight: 900 }}>
+          <Typography variant="h6">
             Caja actual
           </Typography>
           <Chip size="small" label={labelOf(ModoCaja, vista.modo)} />
@@ -108,7 +108,7 @@ export default function CajaActualPanel({ refreshKey = 0, onChanged, onVerDetall
       ) : null}
 
       {sinCaja ? (
-        <Card sx={{ borderRadius: 3 }}>
+        <Card>
           <CardContent>
             <Stack spacing={1.5}>
               <Typography>
@@ -123,7 +123,7 @@ export default function CajaActualPanel({ refreshKey = 0, onChanged, onVerDetall
               ) : null}
               {acciones.abrir ? (
                 <Box>
-                  <Button variant="contained" onClick={() => setDialogo("abrir")} sx={{ fontWeight: 900 }}>
+                  <Button variant="contained" onClick={() => setDialogo("abrir")}>
                     Abrir caja
                   </Button>
                 </Box>
@@ -132,7 +132,7 @@ export default function CajaActualPanel({ refreshKey = 0, onChanged, onVerDetall
           </CardContent>
         </Card>
       ) : (
-        <Card sx={{ borderRadius: 3 }}>
+        <Card>
           <CardContent>
             <Stack spacing={1.5}>
               {vista.estado === CAJA_ESTADO.ABIERTA_DIA_ANTERIOR ? (
@@ -164,7 +164,7 @@ export default function CajaActualPanel({ refreshKey = 0, onChanged, onVerDetall
                     Ver detalle
                   </Button>
                   {acciones.cerrar ? (
-                    <Button variant="contained" onClick={() => setDialogo("cerrar")} sx={{ fontWeight: 900 }}>
+                    <Button variant="contained" onClick={() => setDialogo("cerrar")}>
                       Cerrar caja
                     </Button>
                   ) : null}
@@ -185,7 +185,7 @@ export default function CajaActualPanel({ refreshKey = 0, onChanged, onVerDetall
                       <Typography variant="body2" color="text.secondary">
                         Efectivo esperado
                       </Typography>
-                      <Typography variant="h5" sx={{ fontWeight: 900 }}>
+                      <Typography variant="h5" sx={{ fontWeight: 800 }}>
                         {formatMoney(esperado.data.efectivoEsperado)}
                       </Typography>
                       <TotalesPorMetodo totales={esperado.data.totales} />
