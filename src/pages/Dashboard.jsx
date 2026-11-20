@@ -4,7 +4,7 @@
 // selector de nivel y el zoom.
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Alert, Box, Button, Chip, Paper, Skeleton, Stack, Typography } from "@mui/material";
+import { Alert, Box, Button, ButtonBase, Paper, Skeleton, Stack, Typography } from "@mui/material";
 import { http } from "../api/http";
 import { showApiError } from "../api/errors";
 import { usePermissions } from "../auth/usePermissions";
@@ -12,9 +12,9 @@ import CocheraMosaico from "../componentes/cocheras/CocheraMosaico";
 import { useCocherasMosaico } from "../componentes/cocheras/useCocherasMosaico";
 import EncabezadoPagina from "../componentes/ui/EncabezadoPagina";
 import Tarjeta from "../componentes/ui/Tarjeta";
-import { SituacionCochera, colorOf, entriesOf, labelOf } from "../constants/enums";
-import { COLOR_TONE } from "../theme/theme";
-import { contarSituaciones, situacionCochera } from "../utils/cocheras";
+import { SituacionCochera, entriesOf, labelOf } from "../constants/enums";
+import { LEGEND_RADIUS, SWATCH_RADIUS } from "../theme/theme";
+import { claveCochera, contarSituaciones, situacionCochera } from "../utils/cocheras";
 import { buildCocheraPath } from "../utils/cocheraLink";
 import { formatNumber } from "../utils/formato";
 
@@ -23,36 +23,51 @@ const GRID_COLUMNS = { xs: "repeat(2, 1fr)", sm: "repeat(3, 1fr)", md: "repeat(4
 
 function Indicador({ titulo, valor }) {
   return (
-    <Paper variant="tile" sx={{ p: 2 }}>
-      <Typography variant="body1" color="text.secondary">
+    <Paper variant="tile" sx={{ flex: "1 0 110px", minWidth: 110 }}>
+      <Typography variant="kpiLabel" color="text.secondary">
         {titulo}
       </Typography>
-      <Typography variant="kpi" component="div" sx={{ mt: 0.5 }}>
-        {formatNumber(valor)}
-      </Typography>
+      <Typography variant="kpi">{formatNumber(valor)}</Typography>
     </Paper>
   );
 }
 
-// Chip de la leyenda-filtro: un cuadradito del color de la situación y el conteo. El elegido va con borde oscuro.
-function ChipLeyenda({ etiqueta, cantidad, tono, activo, onClick }) {
+// Chip de la leyenda-filtro (detalles 6.3): cuadradito del color de la situación, texto de 16 px y el conteo.
+// El elegido va con fondo de tarjeta y borde del acento; los demás, transparentes.
+function ChipLeyenda({ etiqueta, cantidad, color, activo, onClick }) {
   return (
-    <Chip
-      variant="outlined"
-      clickable
+    <ButtonBase
       onClick={onClick}
       aria-pressed={activo}
-      icon={
-        tono ? (
-          <Box
-            component="span"
-            sx={(theme) => ({ width: 12, height: 12, ml: 1, flexShrink: 0, bgcolor: theme.palette.pc.tone[tono].text })}
-          />
-        ) : undefined
-      }
-      label={`${etiqueta} · ${formatNumber(cantidad)}`}
-      sx={{ height: 32, borderColor: activo ? "text.primary" : undefined }}
-    />
+      sx={(theme) => ({
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 1,
+        px: 1.5,
+        py: 0.75,
+        borderRadius: `${LEGEND_RADIUS}px`,
+        border: "1px solid",
+        borderColor: activo ? "primary.main" : "transparent",
+        bgcolor: activo ? "background.paper" : "transparent",
+        font: "inherit",
+        fontSize: "1rem",
+        fontWeight: 600,
+        color: "text.primary",
+        "&:hover": { bgcolor: activo ? "background.paper" : theme.palette.pc.sunk },
+      })}
+    >
+      <Box
+        component="span"
+        sx={(theme) => ({
+          width: 14,
+          height: 14,
+          flexShrink: 0,
+          borderRadius: `${SWATCH_RADIUS}px`,
+          bgcolor: color(theme),
+        })}
+      />
+      {`${etiqueta} · ${formatNumber(cantidad)}`}
+    </ButtonBase>
   );
 }
 
@@ -106,7 +121,6 @@ export default function Dashboard() {
     [items, now, deudaIds],
   );
   const cuenta = useMemo(() => contarSituaciones(conSituacion.map((x) => x.situacion)), [conSituacion]);
-  const visibles = filtro === TODOS ? conSituacion : conSituacion.filter((x) => x.situacion === filtro);
 
   if (!data) return <CargandoPanel />;
 
@@ -139,36 +153,49 @@ export default function Dashboard() {
     } else {
       grilla = (
         <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: GRID_COLUMNS }}>
-          {visibles.map(({ c }) => (
-            <CocheraMosaico key={c.id} cochera={c} now={now} deudaIds={deudaIds} onClick={(id) => navigate(buildCocheraPath(id))} />
+          {conSituacion.map(({ c, situacion }) => (
+            <CocheraMosaico
+              key={c.id}
+              cochera={c}
+              now={now}
+              deudaIds={deudaIds}
+              resalte={filtro === TODOS ? undefined : situacion === filtro ? "resaltado" : "atenuado"}
+              onClick={(id) => navigate(buildCocheraPath(id))}
+            />
           ))}
         </Box>
       );
     }
 
     plano = (
-      <Paper variant="hundido" sx={{ mt: 2, p: 2.5 }}>
-        <Stack spacing={2.5}>
+      <Box sx={{ mt: 2 }}>
+        <Paper variant="hundido" sx={{ p: 2.5 }}>
           {grilla}
-          {items && items.length > 0 ? (
-            <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: "wrap" }} aria-label="Leyenda y filtro de cocheras">
-              <ChipLeyenda etiqueta="Todos" cantidad={items.length} activo={filtro === TODOS} onClick={() => setFiltro(TODOS)} />
-              {entriesOf(SituacionCochera)
-                .filter((e) => (cuenta.get(e.value) ?? 0) > 0)
-                .map((e) => (
-                  <ChipLeyenda
-                    key={e.value}
-                    etiqueta={labelOf(SituacionCochera, e.value)}
-                    cantidad={cuenta.get(e.value)}
-                    tono={COLOR_TONE[colorOf(SituacionCochera, e.value)]}
-                    activo={filtro === e.value}
-                    onClick={() => setFiltro(e.value)}
-                  />
-                ))}
-            </Stack>
-          ) : null}
-        </Stack>
-      </Paper>
+        </Paper>
+        {items && items.length > 0 ? (
+          <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: "wrap", mt: 2 }} aria-label="Leyenda y filtro de cocheras">
+            <ChipLeyenda
+              etiqueta="Todos"
+              cantidad={items.length}
+              color={(theme) => theme.palette.pc.accent}
+              activo={filtro === TODOS}
+              onClick={() => setFiltro(TODOS)}
+            />
+            {entriesOf(SituacionCochera)
+              .filter((e) => (cuenta.get(e.value) ?? 0) > 0)
+              .map((e) => (
+                <ChipLeyenda
+                  key={e.value}
+                  etiqueta={labelOf(SituacionCochera, e.value)}
+                  cantidad={cuenta.get(e.value)}
+                  color={(theme) => theme.palette.pc.cochera[claveCochera(e.value)]}
+                  activo={filtro === e.value}
+                  onClick={() => setFiltro(e.value)}
+                />
+              ))}
+          </Stack>
+        ) : null}
+      </Box>
     );
   }
 
@@ -177,13 +204,7 @@ export default function Dashboard() {
       <EncabezadoPagina titulo="Panel" subtitulo="Estado general del garage en tiempo real." />
 
       <Tarjeta>
-        <Box
-          sx={{
-            display: "grid",
-            gap: 2,
-            gridTemplateColumns: { xs: "repeat(2, 1fr)", md: "repeat(3, 1fr)", lg: "repeat(6, 1fr)" },
-          }}
-        >
+        <Box sx={{ display: "flex", gap: 2, overflowX: "auto" }}>
           {indicadores.map((i) => (
             <Indicador key={i.titulo} titulo={i.titulo} valor={i.valor} />
           ))}

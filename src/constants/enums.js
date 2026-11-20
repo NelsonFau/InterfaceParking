@@ -148,7 +148,8 @@ export const TipoMovimientoCaja = defineEnum("TipoMovimientoCaja", {
 });
 
 export const SeveridadAlerta = defineEnum("SeveridadAlerta", {
-  BAJA: { value: 1, label: "Baja", color: "info" },
+  // Baja en gris (detalles de Claude Design 7: #8D969C); `gr` es un color del tema.
+  BAJA: { value: 1, label: "Baja", color: "gr" },
   MEDIA: { value: 2, label: "Media", color: "warning" },
   ALTA: { value: 3, label: "Alta", color: "error" },
   CRITICA: { value: 4, label: "Crítica", color: "error" },
@@ -217,7 +218,7 @@ export const SituacionCochera = defineEnum("SituacionCochera", {
   POR_HORA: { value: 3, label: "Por hora", color: "info" },
   POR_DIA: { value: 4, label: "Por día", color: "info" },
   RESERVADA: { value: 5, label: "Reservado", color: "secondary" },
-  CON_DEUDA: { value: 6, label: "Con deuda", color: "error" },
+  CON_DEUDA: { value: 6, label: "Por mes con deuda", color: "error" },
   BLOQUEADA: { value: 7, label: "Bloqueada", color: "default" },
 });
 

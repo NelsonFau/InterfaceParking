@@ -51,10 +51,10 @@ describe("getTheme", () => {
     }
   });
 
-  it("2: radio de tarjetas 10 y de botón 10", () => {
+  it("2: radio de tarjetas 10 y de botón 12 (detalles de Claude Design 4)", () => {
     expect(getTheme("light").shape.borderRadius).toBe(10);
     expect(RADIUS).toBe(10);
-    expect(BUTTON_RADIUS).toBe(10);
+    expect(BUTTON_RADIUS).toBe(12);
   });
 
   it("3: la fuente empieza con Red Hat Display", () => {

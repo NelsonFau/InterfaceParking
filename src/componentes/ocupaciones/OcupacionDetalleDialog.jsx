@@ -225,7 +225,7 @@ export default function OcupacionDetalleDialog({ id, reloadKey, now, can, onClos
           </Button>
         ) : null}
         {acciones?.finalizar ? (
-          <Button color="success" variant="contained" onClick={() => onAction("finalizar", d)}>
+          <Button color="info" variant="contained" onClick={() => onAction("finalizar", d)}>
             Finalizar
           </Button>
         ) : null}

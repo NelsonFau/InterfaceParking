@@ -41,7 +41,7 @@ function Paso({ n, titulo, subtitulo, children, sx }) {
   return (
     <Tarjeta sx={sx}>
       <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 2 }}>
-        <Avatar sx={{ width: 32, height: 32, fontSize: "0.9375rem", bgcolor: "pc.brown", color: "pc.onBrown" }}>{n}</Avatar>
+        <Avatar sx={{ width: 32, height: 32, fontSize: "1rem", bgcolor: "pc.brown", color: "pc.onBrown" }}>{n}</Avatar>
         <Box>
           <Typography variant="h6" component="h2">
             {titulo}

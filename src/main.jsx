@@ -4,6 +4,9 @@ import { BrowserRouter } from "react-router-dom";
 import "@fontsource/red-hat-display/400.css";
 import "@fontsource/red-hat-display/500.css";
 import "@fontsource/red-hat-display/600.css";
+// 700 (títulos, dinero, KPI) y 800 (logo): detalles de Claude Design 1.
+import "@fontsource/red-hat-display/700.css";
+import "@fontsource/red-hat-display/800.css";
 import App from "./App.jsx";
 import ThemeRoot from "./theme/ThemeRoot.jsx";
 import AuthProvider from "./auth/AuthProvider.jsx";

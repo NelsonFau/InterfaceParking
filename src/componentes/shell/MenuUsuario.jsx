@@ -28,7 +28,7 @@ export default function MenuUsuario({ compacto = false }) {
         aria-haspopup="menu"
         sx={{ flexGrow: 0, gap: 1.25, p: 0.5, minWidth: 0 }}
       >
-        <Avatar sx={{ width: 36, height: 36, fontSize: "0.875rem", fontWeight: 600, bgcolor: "background.paper", color: "text.primary" }}>
+        <Avatar sx={{ width: 36, height: 36, fontSize: "1rem", fontWeight: 600, bgcolor: "background.paper", color: "text.primary" }}>
           {iniciales(me?.nombre)}
         </Avatar>
         {compacto ? null : (

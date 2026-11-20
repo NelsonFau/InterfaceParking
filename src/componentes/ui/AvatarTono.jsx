@@ -15,8 +15,8 @@ export default function AvatarTono({ color = "default", tone, size = 36, childre
         return {
           width: size,
           height: size,
-          fontSize: "0.9375rem",
-          fontWeight: 500,
+          fontSize: "1rem",
+          fontWeight: 600,
           bgcolor: t.bg,
           color: t.text,
           border: `1px solid ${t.border}`,

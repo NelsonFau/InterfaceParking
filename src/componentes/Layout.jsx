@@ -34,7 +34,7 @@ export default function Layout() {
 
       <Box sx={{ flexGrow: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
         <CabeceraMigas pathname={pathname} menuButton={hamburguesa} compacto={isMobile} />
-        <Box component="main" sx={{ flexGrow: 1, px: { xs: 2, md: 4.5 }, py: { xs: 2, md: 3.5 }, minWidth: 0 }}>
+        <Box component="main" sx={{ flexGrow: 1, px: { xs: 2, md: 4.5 }, pt: { xs: 2, md: 3 }, pb: { xs: 2, md: 5 }, minWidth: 0 }}>
           <Outlet />
         </Box>
       </Box>

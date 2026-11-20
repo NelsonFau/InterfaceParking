@@ -15,9 +15,9 @@ import { Box, Card, Typography } from "@mui/material";
 export default function Tarjeta({ titulo, subtitulo, acciones, relleno = true, sx, children, ...rest }) {
   return (
     <Card sx={sx} {...rest}>
-      <Box sx={relleno ? { p: { xs: 2, sm: 3 } } : undefined}>
+      <Box sx={relleno ? { p: { xs: 2.5, sm: 3 } } : undefined}>
         {titulo || acciones ? (
-          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 2, flexWrap: "wrap", mb: 2 }}>
+          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 2, flexWrap: "wrap", mb: 1.5 }}>
             <Box sx={{ minWidth: 0 }}>
               {titulo ? (
                 <Typography variant="h6" component="h2">

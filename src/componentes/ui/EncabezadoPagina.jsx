@@ -14,7 +14,7 @@ import { Box, Typography } from "@mui/material";
  */
 export default function EncabezadoPagina({ titulo, subtitulo, acciones, pie, children }) {
   return (
-    <Box sx={{ mb: 2.5 }}>
+    <Box sx={{ mb: 2 }}>
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 2, flexWrap: "wrap" }}>
         <Box sx={{ minWidth: 0 }}>
           <Typography variant="h4" component="h1">

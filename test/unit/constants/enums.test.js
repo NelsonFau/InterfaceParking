@@ -129,6 +129,7 @@ describe("colorOf", () => {
   it("devuelve el color de MUI", () => {
     expect(colorOf(EstadoCochera, 1)).toBe("success");
     expect(colorOf(SeveridadAlerta, 4)).toBe("error");
+    expect(colorOf(SeveridadAlerta, 1)).toBe("gr");
   });
 
   it("sin color o desconocido devuelve default", () => {

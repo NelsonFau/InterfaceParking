@@ -1,10 +1,11 @@
 // Mosaico de una cochera (guía visual 2, Cocheras y Panel): tarjeta con fondo y borde teñidos por la situación,
 // "#12" en el color del tono con el chip de situación a la derecha, el cliente o "—" y la hora de inicio (o inicio y
 // fin en una reserva). La patente del diseño se omite (PB-25). El tono sale de `SituacionCochera` y del tema.
+import { alpha } from "@mui/material/styles";
 import { Box, Card, CardActionArea, Chip, Typography } from "@mui/material";
 import { SituacionCochera, colorOf, labelOf } from "../../constants/enums";
 import { COLOR_TONE } from "../../theme/theme";
-import { lineaHorario, situacionCochera, tarjetaInfo } from "../../utils/cocheras";
+import { claveCochera, lineaHorario, situacionCochera, tarjetaInfo } from "../../utils/cocheras";
 import { useTenantDates } from "../../utils/useTenantDates";
 
 /**
@@ -13,9 +14,10 @@ import { useTenantDates } from "../../utils/useTenantDates";
  *   now: Date,
  *   deudaIds: Set<number> | null,
  *   onClick: (id: number) => void,
+ *   resalte?: "resaltado" | "atenuado",
  * }} props
  */
-export default function CocheraMosaico({ cochera, now, deudaIds, onClick }) {
+export default function CocheraMosaico({ cochera, now, deudaIds, onClick, resalte }) {
   const { formatInstantTime } = useTenantDates();
   const info = tarjetaInfo(cochera, now);
   const situacion = situacionCochera(cochera, now, deudaIds);
@@ -24,10 +26,27 @@ export default function CocheraMosaico({ cochera, now, deudaIds, onClick }) {
 
   return (
     <Card
-      sx={(theme) => ({
-        bgcolor: theme.palette.pc.tone[tone].bg,
-        borderColor: theme.palette.pc.tone[tone].border,
-      })}
+      sx={(theme) => {
+        const color = theme.palette.pc.cochera[claveCochera(situacion)];
+        return {
+          position: "relative",
+          bgcolor: theme.palette.pc.tone[tone].bg,
+          borderColor: theme.palette.pc.tone[tone].border,
+          // Leyenda-filtro (detalles 6.3): el estado elegido en tono suave y los demás con el velo encima.
+          ...(resalte && {
+            "&::after": {
+              content: '""',
+              position: "absolute",
+              inset: 0,
+              borderRadius: "inherit",
+              pointerEvents: "none",
+              ...(resalte === "resaltado"
+                ? { backgroundColor: alpha(color, 0.32), border: `1.5px solid ${alpha(color, 0.7)}` }
+                : { backgroundColor: theme.palette.pc.veil }),
+            },
+          }),
+        };
+      }}
     >
       <CardActionArea
         onClick={() => onClick(cochera.id)}

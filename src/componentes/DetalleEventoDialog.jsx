@@ -36,7 +36,7 @@ const PRE_SX = {
   m: 0,
   p: 1.5,
   bgcolor: "action.hover",
-  fontSize: 12.5,
+  fontSize: "1rem",
   whiteSpace: "pre-wrap",
   wordBreak: "break-word",
   maxHeight: 320,

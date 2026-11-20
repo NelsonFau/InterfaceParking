@@ -9,6 +9,7 @@ import { Link } from "react-router-dom";
 import { useMe } from "../../auth/usePermissions.js";
 import { useColorMode } from "../../theme/useColorMode.js";
 import Segmentado from "../ui/Segmentado.jsx";
+import { NAV_ICONS } from "./navIcons.js";
 
 /** Ancho del menú en desktop. */
 export const SIDEBAR_WIDTH = 260;
@@ -28,15 +29,15 @@ function Contenido({ groups, pathname, mobile, onNavigate }) {
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0 }}>
-      <Box sx={{ px: 2.5, pt: 3, pb: 1.5 }}>
-        <Typography component="div" noWrap sx={{ fontSize: "1.5rem", fontWeight: 600, lineHeight: 1.2 }}>
+      {/* Encabezado (detalles de Claude Design 3): padding 26/12/20/24, margen 0 12 y línea inferior. */}
+      <Box sx={{ pt: "26px", pr: "12px", pb: "20px", pl: "24px", mx: 1.5, borderBottom: 1, borderColor: "pc.sideDivider" }}>
+        <Typography variant="logo" noWrap>
           ParkingControl
         </Typography>
-        <Typography component="div" noWrap variant="body2" sx={{ mt: 0.5 }}>
+        <Typography component="div" noWrap variant="body1" sx={{ mt: 0.5 }}>
           {me?.tenant?.nombre}
         </Typography>
       </Box>
-      <Divider sx={{ mx: 1.5, borderColor: "pc.sideDivider" }} />
 
       <Box component="nav" aria-label="Menú principal" sx={{ flex: 1, overflowY: "auto", px: 1.5, pt: 1, pb: 1 }}>
         {groups.map((g) => {
@@ -46,9 +47,9 @@ function Contenido({ groups, pathname, mobile, onNavigate }) {
               <ListItemButton
                 onClick={() => toggle(g.label)}
                 aria-expanded={abierto}
-                sx={{ display: "flex", justifyContent: "space-between", px: 0.5, py: 1.25 }}
+                sx={{ display: "flex", justifyContent: "space-between", px: 0.5 }}
               >
-                <Typography component="span" sx={{ fontSize: "0.9375rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.15em" }}>
+                <Typography component="span" sx={{ fontSize: "1rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.15em" }}>
                   {g.label}
                 </Typography>
                 <ExpandMoreIcon fontSize="small" sx={{ transition: "transform .15s", transform: abierto ? "none" : "rotate(-90deg)" }} />
@@ -58,6 +59,7 @@ function Contenido({ groups, pathname, mobile, onNavigate }) {
                 <Box sx={{ display: "grid", gap: 0.25, pt: 0.75 }}>
                   {g.items.map((it) => {
                     const activo = pathname === it.path;
+                    const Icono = NAV_ICONS[it.path];
                     return (
                       <ListItemButton
                         key={it.path}
@@ -66,8 +68,9 @@ function Contenido({ groups, pathname, mobile, onNavigate }) {
                         selected={activo}
                         aria-current={activo ? "page" : undefined}
                         onClick={mobile ? onNavigate : undefined}
-                        sx={{ px: 2, py: 1.25, fontSize: "1rem", color: activo ? "pc.sideOnAct" : "inherit" }}
+                        sx={{ color: activo ? "pc.sideOnAct" : "inherit" }}
                       >
+                        {Icono ? <Icono sx={{ fontSize: 20, flex: "none" }} /> : null}
                         {it.label}
                       </ListItemButton>
                     );

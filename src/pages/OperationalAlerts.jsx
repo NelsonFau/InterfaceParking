@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link as RouterLink, useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
+import { alpha } from "@mui/material/styles";
 import {
   Alert,
   Box,
@@ -32,7 +33,8 @@ import Campo from "../componentes/ui/Campo";
 import EncabezadoPagina from "../componentes/ui/EncabezadoPagina";
 import PaginacionTexto from "../componentes/ui/PaginacionTexto";
 import Tarjeta from "../componentes/ui/Tarjeta";
-import { SeveridadAlerta, TipoAlertaOperativa, labelOf, optionsOf } from "../constants/enums";
+import { SeveridadAlerta, TipoAlertaOperativa, colorOf, labelOf, optionsOf } from "../constants/enums";
+import { COLOR_TONE, DOT_RADIUS, RADIUS } from "../theme/theme";
 import {
   ALERTS_REFRESH_MS,
   DEFAULT_ALERT_FILTERS,
@@ -72,20 +74,29 @@ function AlertRow({ alerta, formatInstant, can, onResolve }) {
   const otherLinks = links.filter((l) => l.key !== "ocupacion");
   const resolucion = resolutionSummary(alerta, formatInstant);
   const critica = !alerta.resuelta && alerta.severidad === SeveridadAlerta.CRITICA;
-  // Panel lateral: rosa en Crítica y Alta, gris en Media y Baja (guía visual 2, Alertas).
-  const alta = alerta.severidad === SeveridadAlerta.CRITICA || alerta.severidad === SeveridadAlerta.ALTA;
-  const tono = alta ? "er" : "de";
+  // Tono de la franja lateral: el de la severidad (Baja en gris, `gr`).
+  const tono = COLOR_TONE[colorOf(SeveridadAlerta, alerta.severidad)] ?? "de";
 
   const resolveButton = (
-    <Button variant="pill" color="error" disabled={!resolve.enabled} onClick={() => onResolve(alerta)}>
+    <Button variant="contained" color="error" disabled={!resolve.enabled} onClick={() => onResolve(alerta)}>
       Resolver alerta
     </Button>
   );
 
   return (
-    <Tarjeta sx={{ overflow: "hidden", ...(critica && { borderColor: "error.main" }) }} relleno={false}>
+    <Tarjeta
+      relleno={false}
+      sx={(theme) => ({
+        bgcolor: "background.paper",
+        borderRadius: `${RADIUS}px`,
+        overflow: "hidden",
+        boxShadow: theme.palette.pc.alertShadow,
+        borderColor: critica ? alpha(theme.palette.pc.tone.er.text, 0.55) : "divider",
+        opacity: alerta.resuelta ? 0.92 : 1,
+      })}
+    >
       <Stack direction={{ xs: "column", md: "row" }}>
-        {/* Panel lateral de severidad: a la izquierda en desktop y arriba en mobile */}
+        {/* Franja lateral de severidad: a la izquierda en desktop y arriba, en fila, en mobile */}
         <Stack
           direction={{ xs: "row", md: "column" }}
           spacing={0.75}
@@ -95,44 +106,58 @@ function AlertRow({ alerta, formatInstant, can, onResolve }) {
           sx={(t) => {
             const tone = t.palette.pc.tone[tono];
             return {
-              p: 2,
+              p: 2.25,
               flexShrink: 0,
-              width: { md: 134 },
+              width: { md: 150 },
               bgcolor: tone.bg,
               borderBottom: { xs: `1px solid ${tone.border}`, md: "none" },
               borderRight: { md: `1px solid ${tone.border}` },
             };
           }}
         >
-          <Typography
-            sx={(t) => ({ color: t.palette.pc.tone[tono].text, fontSize: "1.0625rem", fontWeight: 500 })}
-          >
+          <Typography sx={(t) => ({ color: t.palette.pc.tone[tono].text, fontSize: "1.25rem", fontWeight: 800 })}>
             {labelOf(SeveridadAlerta, alerta.severidad)}
           </Typography>
-          <Typography variant="body2" component="div">
-            <Typography component="span" variant="body2" color={alerta.resuelta ? "success.main" : "error.main"}>
-              ●
-            </Typography>{" "}
-            {alerta.resuelta ? "Resuelta" : "Abierta"}
-          </Typography>
-          {alerta.esDeDinero && <Chip size="small" variant="outlined" label="Dinero" />}
+          <Stack direction="row" alignItems="center" spacing={1} useFlexGap>
+            <Box
+              component="span"
+              aria-hidden
+              sx={(t) => {
+                const color = alerta.resuelta ? t.palette.pc.tone.ok.text : t.palette.pc.tone[tono].text;
+                return {
+                  width: 9,
+                  height: 9,
+                  flexShrink: 0,
+                  borderRadius: DOT_RADIUS,
+                  bgcolor: color,
+                  ...(!alerta.resuelta && {
+                    boxShadow: `0 0 0 4px ${alpha(color, 0.18)}`,
+                    animation: critica ? "pcBlink 1s ease-in-out infinite" : "pcBlink 1.8s ease-in-out infinite",
+                  }),
+                };
+              }}
+            />
+            <Typography variant="body2" component="span">
+              {alerta.resuelta ? "Resuelta" : "Abierta"}
+            </Typography>
+          </Stack>
         </Stack>
 
-        <Box sx={{ flex: 1, minWidth: 0, p: { xs: 2, sm: 3 } }}>
+        <Box sx={{ flex: 1, minWidth: 0, py: 2, px: 2.75 }}>
           <Stack spacing={1.25}>
             <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={1}>
               <Box sx={{ minWidth: 0 }}>
-                <Typography variant="subtitle1">{labelOf(TipoAlertaOperativa, alerta.tipo)}</Typography>
-                <Typography variant="body2" sx={{ mt: 0.5 }}>
+                <Typography variant="h6">{labelOf(TipoAlertaOperativa, alerta.tipo)}</Typography>
+                <Typography variant="body1" sx={{ mt: 0.5 }}>
                   {alerta.mensaje}
                 </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                <Typography variant="meta" color="text.secondary" sx={{ mt: 0.5 }}>
                   {alerta.ocupacionId != null ? `Ocupación #${alerta.ocupacionId} · ` : ""}
                   {alerta.cajaSesionId != null ? `Caja #${alerta.cajaSesionId} · ` : ""}
                   Creada {formatInstant(alerta.fechaCreacion)}
                 </Typography>
+                {alerta.esDeDinero && <Chip size="small" variant="outlined" label="Dinero" sx={{ mt: 1 }} />}
               </Box>
-              {resolve.visible && !resolve.enabled ? <Chip size="small" variant="outlined" label={resolve.reason} /> : null}
             </Stack>
 
             {resolucion && (
@@ -147,26 +172,34 @@ function AlertRow({ alerta, formatInstant, can, onResolve }) {
             <Stack direction="row" spacing={2} useFlexGap flexWrap="wrap" alignItems="center" justifyContent="space-between">
               <Stack direction="row" spacing={2} useFlexGap flexWrap="wrap" alignItems="center">
                 {ocupacionLink && (
-                  <Button variant="pill" component={RouterLink} to={ocupacionLink.to}>
+                  <Button variant="neutro" component={RouterLink} to={ocupacionLink.to}>
                     {ocupacionLink.label}
                   </Button>
                 )}
                 {otherLinks.map((l) => (
-                  <Link key={l.key} component={RouterLink} to={l.to} underline="always">
+                  <Link key={l.key} component={RouterLink} to={l.to}>
                     {l.label}
                   </Link>
                 ))}
               </Stack>
 
-              {resolve.visible &&
-                (resolve.enabled ? (
-                  resolveButton
-                ) : (
-                  <Tooltip title={resolve.reason}>
-                    {/* El botón deshabilitado no dispara eventos: el Tooltip se ancla al contenedor. */}
-                    <Box component="span">{resolveButton}</Box>
-                  </Tooltip>
-                ))}
+              {resolve.visible && (
+                <Stack direction="row" spacing={1.5} useFlexGap alignItems="center" flexWrap="wrap">
+                  {resolve.enabled ? (
+                    resolveButton
+                  ) : (
+                    <>
+                      <Tooltip title={resolve.reason}>
+                        {/* El botón deshabilitado no dispara eventos: el Tooltip se ancla al contenedor. */}
+                        <Box component="span">{resolveButton}</Box>
+                      </Tooltip>
+                      <Typography variant="meta" color="text.secondary">
+                        {resolve.reason}
+                      </Typography>
+                    </>
+                  )}
+                </Stack>
+              )}
             </Stack>
           </Stack>
         </Box>

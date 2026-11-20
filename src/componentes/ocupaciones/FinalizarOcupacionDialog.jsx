@@ -204,7 +204,7 @@ export default function FinalizarOcupacionDialog({ ocupacionId, now, onClose, on
           Volver
         </Button>
         <Button
-          color="success"
+          color="info"
           variant="contained"
           onClick={confirmar}
           disabled={saving || detalle.status !== "ready"}

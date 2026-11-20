@@ -288,6 +288,26 @@ export function situacionCochera(cochera, now, deudaIds = null) {
   return SituacionCochera.POR_HORA;
 }
 
+// Clave de `palette.pc.cochera` (colores del plano y la leyenda) de cada situación. Por día se pinta como por hora.
+const CLAVE_COCHERA = {
+  [SituacionCochera.LIBRE]: "libre",
+  [SituacionCochera.POR_MES]: "porMes",
+  [SituacionCochera.POR_HORA]: "porHora",
+  [SituacionCochera.POR_DIA]: "porHora",
+  [SituacionCochera.RESERVADA]: "reservado",
+  [SituacionCochera.CON_DEUDA]: "deuda",
+  [SituacionCochera.BLOQUEADA]: "bloqueado",
+};
+
+/**
+ * Clave de `palette.pc.cochera` de una situación.
+ * @param {number} situacion un valor de `SituacionCochera`
+ * @returns {string}
+ */
+export function claveCochera(situacion) {
+  return CLAVE_COCHERA[situacion] ?? "bloqueado";
+}
+
 /**
  * Cantidad de cocheras por situación, para la leyenda-filtro del Panel.
  * @param {number[]} situaciones una situación por cochera

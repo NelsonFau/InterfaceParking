@@ -1,4 +1,4 @@
-// Botón circular arena con el ícono de refrescar (guía visual 1.3). Va junto a las acciones de la página.
+// Botón redondo de refrescar (detalles de Claude Design 4: 42 px, ícono de 22 px). Va junto a las acciones de la página.
 import RefreshIcon from "@mui/icons-material/Refresh";
 import { Button } from "@mui/material";
 
@@ -6,7 +6,7 @@ import { Button } from "@mui/material";
 export default function BotonRefrescar({ etiqueta = "Actualizar", ...props }) {
   return (
     <Button variant="refrescar" aria-label={etiqueta} title={etiqueta} {...props}>
-      <RefreshIcon fontSize="small" />
+      <RefreshIcon sx={{ fontSize: 22 }} />
     </Button>
   );
 }

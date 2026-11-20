@@ -58,11 +58,11 @@ function toView(settled) {
 // Mosaico de indicador (guía visual 2, Monitor): fondo hundido, etiqueta, número grande y texto chico gris.
 function KpiCard({ title, value, subtitle }) {
   return (
-    <Paper variant="tile" sx={{ p: 2 }}>
-      <Typography variant="body2" color="text.secondary">
+    <Paper variant="tile">
+      <Typography variant="kpiLabel" color="text.secondary">
         {title}
       </Typography>
-      <Typography variant="kpiSm" component="div" sx={{ my: 0.5 }}>
+      <Typography variant="kpiSm" component="div">
         {formatNumber(value)}
       </Typography>
       {subtitle ? (
@@ -157,7 +157,7 @@ export default function OperationalDashboard() {
     return (
       <Box sx={{ display: "grid", gap: 1.5, gridTemplateColumns: { xs: "1fr", md: "repeat(2, 1fr)" } }}>
         {view.criticasRecientes.map((a) => (
-          <Paper key={a.id} variant="tile" sx={{ p: 2 }}>
+          <Paper key={a.id} variant="tile">
             <Typography variant="body2" color="text.secondary">
               {labelOf(SeveridadAlerta, a.severidad)} · {formatInstant(a.fechaCreacion)}
             </Typography>
