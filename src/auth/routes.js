@@ -31,7 +31,7 @@ export const PRIVATE_ROUTES = [
   // de caja del Monitor se oculta por su cuenta con can("caja.ver"), así que no hace falta exigir los dos.
   { path: "/operaciones", label: "Monitor operativo", permiso: "alertas.ver", group: OPERACION },
   { path: OCUPACIONES_PATH, label: "Ocupaciones", permiso: "ocupaciones.ver", group: OPERACION },
-  { path: ALERTAS_PATH, label: "Alertas operativas", permiso: "alertas.ver", group: OPERACION },
+  { path: ALERTAS_PATH, label: "Alertas", permiso: "alertas.ver", group: OPERACION },
   { path: "/cocheras", label: "Cocheras", permiso: "cocheras.ver", group: GESTION },
   { path: "/clientes", label: "Clientes", permiso: "clientes.ver", group: GESTION },
   { path: "/tarifas", label: "Tarifas", permiso: "tarifas.ver", group: GESTION },

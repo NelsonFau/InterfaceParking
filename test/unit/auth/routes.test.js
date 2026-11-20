@@ -55,7 +55,7 @@ describe("routes", () => {
       "Registrar ingreso",
       "Monitor operativo",
       "Ocupaciones",
-      "Alertas operativas",
+      "Alertas",
     ]);
     expect(grupos[0].items[1]).toMatchObject({ path: "/registrar-ingreso" });
     expect(grupos[1].items.map((i) => i.label)).toEqual(["Cocheras", "Clientes", "Tarifas", "Caja"]);
