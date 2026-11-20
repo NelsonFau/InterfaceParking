@@ -3,10 +3,13 @@
 // `src/utils/caja.js` y cada pieza vive en `src/componentes/caja/`. Cómo funciona: docs/manual/frontend/09-caja.md.
 import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Box, Stack, Tab, Tabs, Typography } from "@mui/material";
+import { Box, Stack } from "@mui/material";
 import CajaActualPanel from "../componentes/caja/CajaActualPanel";
 import CajaHistorialPanel from "../componentes/caja/CajaHistorialPanel";
 import SesionDetalleDialog from "../componentes/caja/SesionDetalleDialog";
+import BotonRefrescar from "../componentes/ui/BotonRefrescar";
+import EncabezadoPagina from "../componentes/ui/EncabezadoPagina";
+import Segmentado from "../componentes/ui/Segmentado";
 import { CAJA_PATH } from "../auth/routes";
 import { buildCajaPath, parseCajaSesionId } from "../utils/cajaLink";
 
@@ -27,27 +30,31 @@ export default function Caja() {
   const verDetalle = (id) => navigate(buildCajaPath(id), { replace: true });
   const cerrarDetalle = () => navigate(CAJA_PATH, { replace: true });
 
-  function cambiarTab(_event, value) {
+  function cambiarTab(value) {
     setTab(value);
     if (value === "historial") setHistorialVisto(true);
   }
 
   return (
     <Box>
+      <EncabezadoPagina
+        titulo="Caja"
+        subtitulo="Abrí y cerrá la caja con arqueo, y revisá las sesiones anteriores."
+        acciones={<BotonRefrescar onClick={cambioLaCaja} />}
+      />
+
       <Stack spacing={2.5}>
         <Box>
-          <Typography variant="h4">
-            Caja
-          </Typography>
-          <Typography sx={{ color: "text.secondary", mt: 0.5 }}>
-            Abrí y cerrá la caja con arqueo, y revisá las sesiones anteriores.
-          </Typography>
+          <Segmentado
+            value={tab}
+            onChange={cambiarTab}
+            ariaLabel="Vista de caja"
+            options={[
+              { value: "actual", label: "Caja actual" },
+              { value: "historial", label: "Historial" },
+            ]}
+          />
         </Box>
-
-        <Tabs value={tab} onChange={cambiarTab}>
-          <Tab value="actual" label="Caja actual" />
-          <Tab value="historial" label="Historial" />
-        </Tabs>
 
         <Box hidden={tab !== "actual"}>
           <CajaActualPanel refreshKey={refreshKey} onChanged={cambioLaCaja} onVerDetalle={verDetalle} />

@@ -1,7 +1,7 @@
 // Único ThemeProvider de la app (spec 13, D-FM5): envuelve todo de BrowserRouter hacia adentro, así Splash,
 // Login, Callback y AccountBlocked (que están fuera del Layout) también toman el tema.
 // Incluye CssBaseline, el estado del modo (en memoria, D-FM6) y el Toaster de react-hot-toast con el estilo del tema.
-import { CssBaseline, ThemeProvider, useMediaQuery, useTheme } from "@mui/material";
+import { CssBaseline, ThemeProvider, useTheme } from "@mui/material";
 import { useMemo, useState } from "react";
 import { Toaster } from "react-hot-toast";
 import { ColorModeContext } from "./ColorModeContext.js";
@@ -30,13 +30,11 @@ function ThemedToaster() {
 }
 
 export default function ThemeRoot({ children }) {
-  const prefersDark = useMediaQuery("(prefers-color-scheme: dark)");
-  // "auto" sigue al sistema; claro y oscuro lo fijan. No se guarda en ningún lado (ARQ-1).
-  const [preference, setPreference] = useState("auto");
-  const mode = preference === "auto" ? (prefersDark ? "dark" : "light") : preference;
+  // Modo claro por defecto; el oscuro solo con el selector. No se guarda en ningún lado (ARQ-1).
+  const [mode, setMode] = useState("light");
 
   const theme = useMemo(() => getTheme(mode), [mode]);
-  const value = useMemo(() => ({ preference, mode, setPreference }), [preference, mode]);
+  const value = useMemo(() => ({ mode, setMode }), [mode]);
 
   return (
     <ColorModeContext.Provider value={value}>

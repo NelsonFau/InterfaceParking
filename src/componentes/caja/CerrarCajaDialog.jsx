@@ -139,7 +139,7 @@ export default function CerrarCajaDialog({ sesion, onClose, onChanged, onError }
               {cierre.observacion ? <Fila label="Observación">{cierre.observacion}</Fila> : null}
             </Stack>
             <Box>
-              <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 0.5 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
                 Totales por método
               </Typography>
               <TotalesPorMetodo totales={cierre.totales} />
@@ -147,7 +147,7 @@ export default function CerrarCajaDialog({ sesion, onClose, onChanged, onError }
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button variant="contained" onClick={cerrarResultado}>
+          <Button variant="marron" onClick={cerrarResultado}>
             Cerrar
           </Button>
         </DialogActions>
@@ -169,7 +169,7 @@ export default function CerrarCajaDialog({ sesion, onClose, onChanged, onError }
           {verEsperado ? (
             <Box>
               <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 0.5 }}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
                   Antes de contar
                 </Typography>
                 <Button size="small" onClick={esperado.reload} disabled={esperado.status === "loading" || saving}>
@@ -207,7 +207,7 @@ export default function CerrarCajaDialog({ sesion, onClose, onChanged, onError }
           />
 
           {infoDif ? (
-            <Typography variant="body2" sx={{ color: difColor(infoDif), fontWeight: 700 }}>
+            <Typography variant="body2" sx={{ color: difColor(infoDif), fontWeight: 600 }}>
               {infoDif.tipo === "cero"
                 ? "Diferencia: sin diferencia"
                 : `Diferencia: ${formatMoney(Math.abs(diferencia))} (${infoDif.label})`}
@@ -252,10 +252,10 @@ export default function CerrarCajaDialog({ sesion, onClose, onChanged, onError }
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose} disabled={saving}>
+        <Button variant="contorno" onClick={onClose} disabled={saving}>
           Cancelar
         </Button>
-        <Button variant="contained" onClick={enviar} disabled={saving}>
+        <Button variant="marron" onClick={enviar} disabled={saving}>
           Cerrar caja
         </Button>
       </DialogActions>

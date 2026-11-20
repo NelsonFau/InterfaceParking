@@ -9,10 +9,8 @@ import {
   DialogContent,
   DialogTitle,
   MenuItem,
-  Paper,
   Skeleton,
   Stack,
-  TextField,
   Typography,
 } from "@mui/material";
 import { getConfiguracion, updateConfiguracion } from "../api/configuracionApi";
@@ -21,6 +19,9 @@ import { useMe, usePermissions } from "../auth/usePermissions";
 import { FraccionMes, ModoCaja, ModoMes, labelOf, optionsOf } from "../constants/enums";
 import { ZONAS_HORARIAS, labelOfZona } from "../constants/zonasHorarias";
 import { useDialogFullScreen } from "../componentes/useDialogFullScreen";
+import Campo from "../componentes/ui/Campo";
+import EncabezadoPagina from "../componentes/ui/EncabezadoPagina";
+import Tarjeta from "../componentes/ui/Tarjeta";
 import {
   CONFIG_AYUDA,
   afterSaveError,
@@ -30,6 +31,9 @@ import {
   toForm,
   validateConfiguracionForm,
 } from "../utils/configuracion";
+
+// Campos de cada tarjeta en dos columnas en desktop.
+const GRID_CAMPOS = { display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", md: "repeat(2, 1fr)" }, alignItems: "start" };
 
 const MODO_CAJA_OPTIONS = optionsOf(ModoCaja);
 const MODO_MES_OPTIONS = optionsOf(ModoMes);
@@ -168,7 +172,7 @@ export default function Configuracion() {
   }
 
   const campoNumero = (campo, label) => (
-    <TextField
+    <Campo
       key={campo}
       label={label}
       value={draft[campo]}
@@ -177,12 +181,11 @@ export default function Configuracion() {
       error={Boolean(errors[campo])}
       helperText={errors[campo] ?? CONFIG_AYUDA[campo]}
       slotProps={{ htmlInput: { inputMode: "numeric" } }}
-      fullWidth
     />
   );
 
   const campoSelect = (campo, label, options, extra = []) => (
-    <TextField
+    <Campo
       select
       label={label}
       value={draft[campo]}
@@ -190,14 +193,13 @@ export default function Configuracion() {
       disabled={!canEdit || saving}
       error={Boolean(errors[campo])}
       helperText={errors[campo] ?? CONFIG_AYUDA[campo]}
-      fullWidth
     >
       {[...extra, ...options].map((o) => (
         <MenuItem key={o.value} value={o.value}>
           {o.label}
         </MenuItem>
       ))}
-    </TextField>
+    </Campo>
   );
 
   let contenido;
@@ -248,59 +250,48 @@ export default function Configuracion() {
           </Alert>
         ) : null}
 
-        <Paper variant="outlined" sx={{ p: 2 }}>
-          <Stack spacing={2.5}>
-            <Typography variant="subtitle1">
-              Local
-            </Typography>
-            {campoSelect("zonaHoraria", "Zona horaria", ZONAS_HORARIAS, zonaExtra)}
+        <Tarjeta titulo="Local">
+          <Box sx={GRID_CAMPOS}>{campoSelect("zonaHoraria", "Zona horaria", ZONAS_HORARIAS, zonaExtra)}</Box>
+        </Tarjeta>
 
-            <Typography variant="subtitle1">
-              Caja
-            </Typography>
-            {campoSelect("modoCaja", "Modo de caja", MODO_CAJA_OPTIONS)}
+        <Tarjeta titulo="Caja">
+          <Box sx={GRID_CAMPOS}>{campoSelect("modoCaja", "Modo de caja", MODO_CAJA_OPTIONS)}</Box>
+        </Tarjeta>
 
-            <Typography variant="subtitle1">
-              Ocupaciones
-            </Typography>
+        <Tarjeta titulo="Ocupaciones">
+          <Box sx={GRID_CAMPOS}>
             {campoNumero("toleranciaInicioHoras", "Tolerancia de inicio (horas)")}
             {campoNumero("topePasadoDias", "Tope hacia atrás (días)")}
             {campoNumero("techoFuturoMeses", "Techo hacia adelante (meses)")}
             {campoNumero("graciaHoraMinutos", "Gracia por hora (minutos)")}
+          </Box>
+        </Tarjeta>
 
-            <Typography variant="subtitle1">
-              Contratos mensuales
-            </Typography>
+        <Tarjeta titulo="Contratos mensuales">
+          <Box sx={GRID_CAMPOS}>
             {campoSelect("modoMes", "Modo del mes", MODO_MES_OPTIONS)}
             {campoSelect("fraccionMes", "Fracción del mes", FRACCION_MES_OPTIONS)}
             {campoNumero("diasGraciaMora", "Días de gracia de mora")}
+          </Box>
+        </Tarjeta>
 
-            <Typography variant="subtitle1">
-              Alertas
-            </Typography>
-            <Box>
-              <Typography variant="body2" sx={{ color: "text.secondary" }}>
-                Ventana de alertas
-              </Typography>
-              <Typography>{original.ventanaAlertasDias} días</Typography>
-              <Typography variant="caption" sx={{ color: "text.secondary" }}>
-                {CONFIG_AYUDA.ventanaAlertasDias}
-              </Typography>
-            </Box>
-          </Stack>
-        </Paper>
+        <Tarjeta titulo="Alertas">
+          <Typography variant="body2" sx={{ color: "text.secondary" }}>
+            Ventana de alertas
+          </Typography>
+          <Typography>{original.ventanaAlertasDias} días</Typography>
+          <Typography variant="caption" sx={{ color: "text.secondary" }}>
+            {CONFIG_AYUDA.ventanaAlertasDias}
+          </Typography>
+        </Tarjeta>
 
         {canEdit ? (
-          <Stack direction="row" spacing={1.25}>
-            <Button
-              variant="contained"
-              onClick={onGuardar}
-              disabled={saving || !hayCambios || !validation?.ok}
-            >
-              Guardar
-            </Button>
-            <Button onClick={() => setDraft(toForm(original))} disabled={saving || !hayCambios}>
+          <Stack direction="row" spacing={1.25} justifyContent="flex-end">
+            <Button variant="contorno" onClick={() => setDraft(toForm(original))} disabled={saving || !hayCambios}>
               Descartar cambios
+            </Button>
+            <Button variant="marron" onClick={onGuardar} disabled={saving || !hayCambios || !validation?.ok}>
+              Guardar
             </Button>
           </Stack>
         ) : null}
@@ -309,15 +300,8 @@ export default function Configuracion() {
   }
 
   return (
-    <Box sx={{ maxWidth: 800, mx: "auto", px: { xs: 2, sm: 3 }, py: 2 }}>
-      <Stack spacing={0.5} sx={{ mb: 2 }}>
-        <Typography variant="h5" sx={{ letterSpacing: -0.3 }}>
-          Configuración
-        </Typography>
-        <Typography variant="body2" sx={{ color: "text.secondary" }}>
-          Parámetros del local.
-        </Typography>
-      </Stack>
+    <Box>
+      <EncabezadoPagina titulo="Configuración" subtitulo="Parámetros del local." />
 
       {contenido}
 
@@ -328,10 +312,10 @@ export default function Configuracion() {
             <ConfirmParagraphs cambios={confirmando} />
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setConfirmando(null)} disabled={saving}>
+            <Button variant="contorno" onClick={() => setConfirmando(null)} disabled={saving}>
               Cancelar
             </Button>
-            <Button variant="contained" onClick={guardar} disabled={saving}>
+            <Button variant="marron" onClick={guardar} disabled={saving}>
               Confirmar
             </Button>
           </DialogActions>

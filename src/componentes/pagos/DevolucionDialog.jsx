@@ -313,11 +313,11 @@ export default function DevolucionDialog({ ocupacionId, pagoId = null, onClose, 
       <DialogTitle>Registrar devolución</DialogTitle>
       <DialogContent dividers>{cuerpo}</DialogContent>
       <DialogActions>
-        <Button onClick={onClose} disabled={saving}>
+        <Button variant="contorno" onClick={onClose} disabled={saving}>
           {exito ? "Cerrar" : "Cancelar"}
         </Button>
         {exito && hayQueDevolver ? (
-          <Button variant="contained" onClick={() => setExito(null)}>
+          <Button variant="marron" onClick={() => setExito(null)}>
             Registrar otra devolución
           </Button>
         ) : null}

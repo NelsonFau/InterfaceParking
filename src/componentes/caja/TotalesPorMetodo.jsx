@@ -21,18 +21,18 @@ export default function TotalesPorMetodo({ totales }) {
       <TableHead>
         <TableRow>
           <TableCell>Método</TableCell>
-          <TableCell align="right">Cobros</TableCell>
-          <TableCell align="right">Anulaciones</TableCell>
-          <TableCell align="right">Devoluciones</TableCell>
+          <TableCell>Cobros</TableCell>
+          <TableCell>Anulaciones</TableCell>
+          <TableCell>Devoluciones</TableCell>
         </TableRow>
       </TableHead>
       <TableBody>
         {totales.map((t) => (
           <TableRow key={t.metodo}>
             <TableCell>{labelOf(MetodoPago, t.metodo)}</TableCell>
-            <TableCell align="right">{formatMoney(t.cobros)}</TableCell>
-            <TableCell align="right">{formatMoney(t.anulaciones)}</TableCell>
-            <TableCell align="right">{formatMoney(t.devoluciones)}</TableCell>
+            <TableCell>{formatMoney(t.cobros)}</TableCell>
+            <TableCell>{formatMoney(t.anulaciones)}</TableCell>
+            <TableCell>{formatMoney(t.devoluciones)}</TableCell>
           </TableRow>
         ))}
       </TableBody>

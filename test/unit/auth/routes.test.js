@@ -13,23 +13,24 @@ import { AUDITOR, OPERADOR, SUPERADMIN } from "./rolePermissions.fixture.js";
 const paths = (routes) => routes.map((r) => r.path);
 const TODOS = PRIVATE_ROUTES.map((r) => r.permiso).concat("ocupaciones.crear");
 
-// El atajo "Registrar ingreso" (D-FM10), tal como lo arma el menú.
+// Atajo genérico del menú (`menuGroups` sigue aceptándolos); "Registrar ingreso" ya es una ruta propia.
 const SHORTCUTS = [
   {
     path: buildNuevaOcupacionPath(),
-    label: "Registrar ingreso",
+    label: "Atajo de prueba",
     permiso: "ocupaciones.crear",
-    group: "Operación",
-    after: "/dashboard",
+    group: "Gestión",
+    after: "/caja",
   },
 ];
 
 describe("routes", () => {
-  it("1: el mapa tiene las 11 rutas privadas con su permiso y un grupo válido", () => {
-    expect(PRIVATE_ROUTES).toHaveLength(11);
+  it("1: el mapa tiene las 12 rutas privadas con su permiso y un grupo válido", () => {
+    expect(PRIVATE_ROUTES).toHaveLength(12);
     expect(PRIVATE_ROUTES.map((r) => [r.path, r.permiso]).sort()).toEqual(
       [
         ["/dashboard", "panel.ver"],
+        ["/registrar-ingreso", "ocupaciones.crear"],
         ["/operaciones", "alertas.ver"],
         ["/cocheras", "cocheras.ver"],
         ["/ocupaciones", "ocupaciones.ver"],
@@ -46,19 +47,32 @@ describe("routes", () => {
     expect(MENU_GROUPS).toEqual(["Operación", "Gestión", "Administración"]);
   });
 
-  it("2: menuGroups con todos los permisos: tres grupos en orden y el atajo entre Dashboard y Monitor", () => {
-    const grupos = menuGroups(TODOS, SHORTCUTS);
+  it("2: menuGroups con todos los permisos: tres grupos en orden del diseño y sin Configuración", () => {
+    const grupos = menuGroups(TODOS);
     expect(grupos.map((g) => g.label)).toEqual(["Operación", "Gestión", "Administración"]);
     expect(grupos[0].items.map((i) => i.label)).toEqual([
-      "Dashboard",
+      "Panel",
       "Registrar ingreso",
       "Monitor operativo",
       "Ocupaciones",
       "Alertas operativas",
     ]);
-    expect(grupos[0].items[1]).toMatchObject({ path: "/ocupaciones?nueva=1", shortcut: true });
+    expect(grupos[0].items[1]).toMatchObject({ path: "/registrar-ingreso" });
     expect(grupos[1].items.map((i) => i.label)).toEqual(["Cocheras", "Clientes", "Tarifas", "Caja"]);
-    expect(grupos[2].items.map((i) => i.label)).toEqual(["Usuarios", "Trazabilidad", "Configuración"]);
+    expect(grupos[2].items.map((i) => i.label)).toEqual(["Usuarios", "Trazabilidad"]);
+  });
+
+  it("Configuración es una ruta pero no un ítem del menú (se llega desde el menú de usuario)", () => {
+    expect(paths(PRIVATE_ROUTES)).toContain("/configuracion");
+    const items = menuGroups(TODOS).flatMap((g) => g.items);
+    expect(items.map((i) => i.path)).not.toContain("/configuracion");
+  });
+
+  it("un atajo se ve con su permiso y va después del ítem indicado", () => {
+    const grupos = menuGroups(TODOS, SHORTCUTS);
+    const gestion = grupos.find((g) => g.label === "Gestión");
+    expect(gestion.items.map((i) => i.label)).toEqual(["Cocheras", "Clientes", "Tarifas", "Caja", "Atajo de prueba"]);
+    expect(gestion.items[4]).toMatchObject({ path: "/ocupaciones?nueva=1", shortcut: true });
   });
 
   it("3: OPERADOR no ve Administración; Operación y Gestión sí", () => {
@@ -66,8 +80,8 @@ describe("routes", () => {
     expect(grupos.map((g) => g.label)).toEqual(["Operación", "Gestión"]);
   });
 
-  it("4: AUDITOR (sin ocupaciones.crear) no ve el atajo pero sí Ocupaciones", () => {
-    const items = menuGroups(AUDITOR, SHORTCUTS).flatMap((g) => g.items);
+  it("4: AUDITOR (sin ocupaciones.crear) no ve Registrar ingreso pero sí Ocupaciones", () => {
+    const items = menuGroups(AUDITOR).flatMap((g) => g.items);
     expect(items.map((i) => i.label)).not.toContain("Registrar ingreso");
     expect(items.map((i) => i.label)).toContain("Ocupaciones");
   });
@@ -91,8 +105,8 @@ describe("routes", () => {
   });
 
   it("si el ítem 'after' no es visible, el atajo va al principio de su grupo", () => {
-    const grupos = menuGroups(["ocupaciones.ver", "ocupaciones.crear"], SHORTCUTS);
-    expect(grupos[0].items.map((i) => i.label)).toEqual(["Registrar ingreso", "Ocupaciones"]);
+    const grupos = menuGroups(["caja.ver", "ocupaciones.crear", "clientes.ver"], [{ ...SHORTCUTS[0], after: "/tarifas" }]);
+    expect(grupos[grupos.length - 1].items.map((i) => i.label)[0]).toBe("Atajo de prueba");
   });
 
   it("Configuración y Usuarios son ítems de Administración y los ven los que tienen su permiso", () => {
@@ -113,8 +127,8 @@ describe("routes", () => {
     );
   });
 
-  it("AUDITOR accede a todas las rutas pero no puede gestionar clientes", () => {
-    expect(paths(accessibleRoutes(AUDITOR))).toEqual(paths(PRIVATE_ROUTES));
+  it("AUDITOR accede a todas las rutas menos /registrar-ingreso y no puede gestionar clientes", () => {
+    expect(paths(accessibleRoutes(AUDITOR))).toEqual(paths(PRIVATE_ROUTES).filter((p) => p !== "/registrar-ingreso"));
     expect(can(AUDITOR, "clientes.gestionar")).toBe(false);
   });
 

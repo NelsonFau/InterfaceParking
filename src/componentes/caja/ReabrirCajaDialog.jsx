@@ -75,7 +75,7 @@ export default function ReabrirCajaDialog({ sesion, modo, onClose, onChanged, on
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose} disabled={saving}>
+        <Button variant="contorno" onClick={onClose} disabled={saving}>
           Cancelar
         </Button>
         <Button color="warning" variant="contained" onClick={enviar} disabled={saving}>

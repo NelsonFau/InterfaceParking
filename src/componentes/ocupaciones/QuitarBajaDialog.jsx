@@ -60,15 +60,15 @@ export default function QuitarBajaDialog({ ocupacion, onClose, onChanged }) {
       </DialogContent>
       <DialogActions>
         {hecho ? (
-          <Button variant="contained" onClick={cerrar}>
+          <Button variant="marron" onClick={cerrar}>
             Cerrar
           </Button>
         ) : (
           <>
-            <Button onClick={onClose} disabled={saving}>
+            <Button variant="contorno" onClick={onClose} disabled={saving}>
               Volver
             </Button>
-            <Button variant="contained" onClick={confirmar} disabled={saving}>
+            <Button variant="marron" onClick={confirmar} disabled={saving}>
               Quitar baja
             </Button>
           </>

@@ -1,6 +1,6 @@
 // Lógica pura de la pantalla de Cocheras (spec 06, D-FF3 y D-FF13). Sin React ni estado:
 // el reloj (`now`) y la lista de números existentes entran siempre como parámetros.
-import { EstadoCochera } from "../constants/enums.js";
+import { EstadoCochera, EstadoOcupacion, SituacionCochera, TipoOcupacion } from "../constants/enums.js";
 
 export const MIN_NUMERO = 1;
 export const MAX_NUMERO = 999;
@@ -248,4 +248,66 @@ export function shouldReloadAfter(code) {
  */
 export function shouldCloseDetailAfter(code) {
   return code === "cochera_no_encontrada";
+}
+
+/**
+ * Ids de las ocupaciones que se marcan "con deuda" en el mosaico (P-FM10 de la spec 13): solo las de tipo Mes con
+ * saldo y las Vencidas con saldo. En una de hora o de día en curso el saldo "hasta ahora" es normal, no deuda.
+ * El front no calcula el saldo: compara el `saldo` que manda `GET /Ocupacion` con cero.
+ * @param {{ id: number, tipo: number, estado?: number, estadoCalculado?: number, saldo?: number }[]} ocupaciones
+ * @returns {Set<number>}
+ */
+export function ocupacionesConDeuda(ocupaciones) {
+  const ids = new Set();
+  for (const o of ocupaciones ?? []) {
+    const saldo = typeof o?.saldo === "number" ? o.saldo : 0;
+    if (saldo <= 0) continue;
+    const vencida = (o.estadoCalculado ?? o.estado) === EstadoOcupacion.VENCIDA;
+    if (o.tipo === TipoOcupacion.MES || vencida) ids.add(o.id);
+  }
+  return ids;
+}
+
+/**
+ * Situación de una cochera para el mosaico. `deudaIds` es el resultado de `ocupacionesConDeuda`, o `null` si no
+ * se pudo saber (sin permiso para ver ocupaciones, la lista llegó al tope o falló): entonces nunca se marca deuda.
+ * @param {Parameters<typeof tarjetaInfo>[0]} cochera
+ * @param {Date | string | number} now
+ * @param {Set<number> | null} [deudaIds]
+ * @returns {number} un valor de `SituacionCochera`
+ */
+export function situacionCochera(cochera, now, deudaIds = null) {
+  const info = tarjetaInfo(cochera, now);
+  if (info.bloqueada) return SituacionCochera.BLOQUEADA;
+  if (info.modo === "ninguno") return SituacionCochera.LIBRE;
+  if (info.modo === "reservada") return SituacionCochera.RESERVADA;
+  const ocupa = cochera?.ocupacionActiva;
+  if (deudaIds && deudaIds.has(ocupa?.ocupacionId)) return SituacionCochera.CON_DEUDA;
+  if (ocupa?.tipo === TipoOcupacion.MES) return SituacionCochera.POR_MES;
+  if (ocupa?.tipo === TipoOcupacion.DIA) return SituacionCochera.POR_DIA;
+  return SituacionCochera.POR_HORA;
+}
+
+/**
+ * Cantidad de cocheras por situación, para la leyenda-filtro del Panel.
+ * @param {number[]} situaciones una situación por cochera
+ * @returns {Map<number, number>}
+ */
+export function contarSituaciones(situaciones) {
+  const cuenta = new Map();
+  for (const s of situaciones) cuenta.set(s, (cuenta.get(s) ?? 0) + 1);
+  return cuenta;
+}
+
+/**
+ * Segunda y tercera línea del mosaico (guía visual 2, Cocheras): "Desde HH:mm" (inicio), "Desde HH:mm · Hasta HH:mm"
+ * en una reserva, o `null`. El formato de la hora lo pone quien llama (`formatHora`, zona del tenant).
+ * @param {ReturnType<typeof tarjetaInfo>} info
+ * @param {(instant: string) => string} formatHora
+ * @returns {string | null}
+ */
+export function lineaHorario(info, formatHora) {
+  if (info.modo === "ninguno" || !info.inicio) return null;
+  const desde = `Desde ${formatHora(info.inicio)}`;
+  return info.modo === "reservada" && info.fin ? `${desde} · Hasta ${formatHora(info.fin)}` : desde;
 }

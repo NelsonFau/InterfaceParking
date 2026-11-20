@@ -337,10 +337,10 @@ export default function AltaOcupacionDialog({ onClose, onDone, onError }) {
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose} disabled={saving}>
+        <Button variant="contorno" onClick={onClose} disabled={saving}>
           Cancelar
         </Button>
-        <Button variant="contained" onClick={enviar} disabled={saving}>
+        <Button variant="marron" onClick={enviar} disabled={saving}>
           Crear
         </Button>
       </DialogActions>

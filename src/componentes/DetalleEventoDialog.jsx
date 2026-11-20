@@ -80,7 +80,7 @@ function TablaDiferencias({ filas, soloCambiados, timeZone }) {
           return (
             <TableRow key={f.campo} sx={color ? { bgcolor: (t) => t.palette.pc.tone[color].bg } : undefined}>
               <TableCell sx={{ verticalAlign: "top" }}>
-                <Typography variant="body2" fontWeight={color ? 700 : 400}>
+                <Typography variant="body2" fontWeight={color ? 600 : 400}>
                   {humanizeKey(f.campo)}
                 </Typography>
                 {color && (
@@ -232,7 +232,7 @@ export default function DetalleEventoDialog({ evento, onClose }) {
         )}
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>Cerrar</Button>
+        <Button variant="contorno" onClick={onClose}>Cerrar</Button>
       </DialogActions>
     </Dialog>
   );

@@ -37,7 +37,7 @@ export default function ConfirmDialog({
         <DialogContentText sx={{ color: "text.primary" }}>{message}</DialogContentText>
       </DialogContent>
       <DialogActions>
-        <Button onClick={() => onClose?.()} disabled={loading}>
+        <Button variant="contorno" onClick={() => onClose?.()} disabled={loading}>
           Cancelar
         </Button>
         <Button variant="contained" color={confirmColor} onClick={onConfirm} disabled={loading}>

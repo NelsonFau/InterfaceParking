@@ -206,3 +206,25 @@ export const AccionTrazabilidad = defineEnum("AccionTrazabilidad", {
   RESOLUCION: { value: "RESOLUCION", label: "Alerta resuelta", color: "success" },
   RESOLUCION_AUTOMATICA: { value: "RESOLUCION_AUTOMATICA", label: "Alerta resuelta automáticamente" },
 });
+
+// Situación de una cochera en el mosaico (guía visual 2, Cocheras y Panel): se deriva de `EstadoCochera`, del tipo
+// de la ocupación activa y de si tiene deuda (ver `situacionCochera` en utils/cocheras.js). El `color` es el nombre
+// de color de MUI que el tema pinta con el tono de la captura (libre verde, por mes pizarra, por hora y día azul,
+// reservada violeta, con deuda rojo; bloqueada usa el tono neutro "de", sin captura).
+export const SituacionCochera = defineEnum("SituacionCochera", {
+  LIBRE: { value: 1, label: "Libre", color: "success" },
+  POR_MES: { value: 2, label: "Por mes", color: "oc" },
+  POR_HORA: { value: 3, label: "Por hora", color: "info" },
+  POR_DIA: { value: 4, label: "Por día", color: "info" },
+  RESERVADA: { value: 5, label: "Reservado", color: "secondary" },
+  CON_DEUDA: { value: 6, label: "Con deuda", color: "error" },
+  BLOQUEADA: { value: 7, label: "Bloqueada", color: "default" },
+});
+
+// Estado de una tarifa, derivado en el front de sus fechas (`tarifaEstado` en utils/tarifas.js, D-FC4). Valores de
+// texto: no existe en el backend.
+export const EstadoTarifa = defineEnum("EstadoTarifa", {
+  VIGENTE: { value: "vigente", label: "Vigente", color: "success" },
+  PROGRAMADA: { value: "programada", label: "Programada", color: "info" },
+  FINALIZADA: { value: "finalizada", label: "Finalizada", color: "default" },
+});

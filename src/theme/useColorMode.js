@@ -1,7 +1,7 @@
 import { useContext } from "react";
 import { ColorModeContext } from "./ColorModeContext.js";
 
-/** `{ preference, mode, setPreference }` del modo de color (D-FM6). */
+/** `{ mode, setMode }` del modo de color: "light" (por defecto) o "dark". */
 export function useColorMode() {
   return useContext(ColorModeContext);
 }

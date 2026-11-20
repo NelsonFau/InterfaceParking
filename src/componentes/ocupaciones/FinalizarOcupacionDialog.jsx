@@ -200,7 +200,7 @@ export default function FinalizarOcupacionDialog({ ocupacionId, now, onClose, on
       <DialogTitle>Finalizar ocupación</DialogTitle>
       <DialogContent dividers>{contenido}</DialogContent>
       <DialogActions>
-        <Button onClick={onClose} disabled={saving}>
+        <Button variant="contorno" onClick={onClose} disabled={saving}>
           Volver
         </Button>
         <Button

@@ -90,3 +90,15 @@ export function toTablePaginationProps(
     labelDisplayedRows: ({ from, to, count }) => `${from}–${to} de ${count}`,
   };
 }
+
+/**
+ * Rango "desde-hasta" (de 1 en 1) de la pagina actual para el texto de paginacion "1-3 de 3".
+ * `count` es la cantidad de filas que trae la pagina; sin filas o sin total da `{ from: 0, to: 0 }`.
+ * @param {{ page: number, pageSize: number, total: number, count: number }} p
+ * @returns {{ from: number, to: number }}
+ */
+export function rangoPagina({ page, pageSize, total, count }) {
+  if (!isCount(total) || total <= 0 || !isCount(count) || count <= 0) return { from: 0, to: 0 };
+  const from = (toPage(page) - 1) * pageSize + 1;
+  return { from, to: Math.min(from + count - 1, total) };
+}

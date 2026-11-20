@@ -1,11 +1,10 @@
-// Contexto del modo de color (spec 13, D-FM6). El estado vive solo en memoria (ARQ-1): al recargar vuelve al
-// del sistema. `preference` es lo que eligió el usuario ("auto" | "light" | "dark"); `mode` es el modo efectivo.
+// Contexto del modo de color (spec 13, D-FM6 y guía visual 1.1). El estado vive solo en memoria (ARQ-1): al
+// recargar vuelve al modo claro, que es el de arranque. Ya no se sigue al sistema operativo.
 import { createContext } from "react";
 
-export const COLOR_PREFERENCES = ["auto", "light", "dark"];
+export const COLOR_MODES = ["light", "dark"];
 
 export const ColorModeContext = createContext({
-  preference: "auto",
   mode: "light",
-  setPreference: () => {},
+  setMode: () => {},
 });

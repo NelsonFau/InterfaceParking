@@ -7,7 +7,7 @@ import {
   Box,
   Button,
   Chip,
-  Paper,
+  Link,
   Skeleton,
   Stack,
   Table,
@@ -15,9 +15,7 @@ import {
   TableCell,
   TableContainer,
   TableHead,
-  TablePagination,
   TableRow,
-  TextField,
   Typography,
 } from "@mui/material";
 import { listCajaSesiones } from "../../api/cajaApi";
@@ -25,9 +23,11 @@ import { showApiError } from "../../api/errors";
 import { EstadoCajaSesion, colorOf, labelOf } from "../../constants/enums";
 import { cajaFieldErrors, rangoPorDefecto, validateRango } from "../../utils/caja";
 import { formatMoney } from "../../utils/formato";
-import { toTablePaginationProps } from "../../utils/paginacion";
 import { usePagination } from "../../utils/usePagination";
 import { useTenantDates } from "../../utils/useTenantDates";
+import Campo from "../ui/Campo";
+import PaginacionTexto from "../ui/PaginacionTexto";
+import Tarjeta from "../ui/Tarjeta";
 
 /**
  * @param {{ refreshKey?: number, onVerDetalle: (sesionId: number) => void }} props
@@ -102,7 +102,7 @@ export default function CajaHistorialPanel({ refreshKey = 0, onVerDetalle }) {
       return <Typography color="text.secondary">No hay sesiones de caja en ese rango</Typography>;
     }
     return (
-      <Paper variant="outlined">
+      <Tarjeta>
         <TableContainer>
           <Table size="small">
             <TableHead>
@@ -128,67 +128,68 @@ export default function CajaHistorialPanel({ refreshKey = 0, onVerDetalle }) {
                   <TableCell>{formatInstant(s.fechaApertura)}</TableCell>
                   <TableCell align="right">{formatMoney(s.fondoInicial)}</TableCell>
                   <TableCell align="right">
-                    <Button
-                      size="small"
+                    <Link
+                      component="button"
+                      type="button"
                       onClick={(e) => {
                         e.stopPropagation();
                         onVerDetalle(s.id);
                       }}
                     >
                       Ver
-                    </Button>
+                    </Link>
                   </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
         </TableContainer>
-        <TablePagination
-          component="div"
-          {...toTablePaginationProps(
-            { page, pageSize, total: data.total },
-            { onPageChange: pagination.setPage, onPageSizeChange: pagination.setPageSize },
-          )}
-        />
-      </Paper>
+        <Box sx={{ pt: 2 }}>
+          <PaginacionTexto
+            page={page}
+            pageSize={pageSize}
+            total={data.total}
+            count={data.items.length}
+            onPageChange={pagination.setPage}
+          />
+        </Box>
+      </Tarjeta>
     );
   }
 
   return (
     <Stack spacing={2}>
-      <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} alignItems={{ sm: "flex-start" }}>
-        <TextField
-          label="Desde"
-          type="date"
-          value={filters.desde}
-          onChange={(e) => {
-            setFilters((f) => ({ ...f, desde: e.target.value }));
-            setErrors((prev) => ({ ...prev, desde: undefined }));
-          }}
-          error={Boolean(errors.desde)}
-          helperText={errors.desde}
-          slotProps={{ inputLabel: { shrink: true } }}
-          size="small"
-        />
-        <TextField
-          label="Hasta"
-          type="date"
-          value={filters.hasta}
-          onChange={(e) => {
-            setFilters((f) => ({ ...f, hasta: e.target.value }));
-            setErrors((prev) => ({ ...prev, hasta: undefined }));
-          }}
-          error={Boolean(errors.hasta)}
-          helperText={errors.hasta}
-          slotProps={{ inputLabel: { shrink: true } }}
-          size="small"
-        />
-        <Box>
-          <Button variant="contained" onClick={buscar} disabled={cargando && result !== null}>
-            Buscar
-          </Button>
-        </Box>
-      </Stack>
+      <Tarjeta>
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} alignItems={{ sm: "flex-end" }}>
+          <Campo
+            label="Desde"
+            type="date"
+            value={filters.desde}
+            onChange={(e) => {
+              setFilters((f) => ({ ...f, desde: e.target.value }));
+              setErrors((prev) => ({ ...prev, desde: undefined }));
+            }}
+            error={Boolean(errors.desde)}
+            helperText={errors.desde}
+          />
+          <Campo
+            label="Hasta"
+            type="date"
+            value={filters.hasta}
+            onChange={(e) => {
+              setFilters((f) => ({ ...f, hasta: e.target.value }));
+              setErrors((prev) => ({ ...prev, hasta: undefined }));
+            }}
+            error={Boolean(errors.hasta)}
+            helperText={errors.hasta}
+          />
+          <Box>
+            <Button variant="arena" onClick={buscar} disabled={cargando && result !== null}>
+              Buscar
+            </Button>
+          </Box>
+        </Stack>
+      </Tarjeta>
 
       {renderCuerpo()}
     </Stack>

@@ -253,7 +253,7 @@ export default function PagoDetalleDialog({ pagoId, onClose, onChanged, ocupacio
               Devolver
             </Button>
           ) : null}
-          <Button onClick={onClose}>Cerrar</Button>
+          <Button variant="contorno" onClick={onClose}>Cerrar</Button>
         </DialogActions>
       </Dialog>
 

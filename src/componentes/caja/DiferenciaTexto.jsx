@@ -11,7 +11,7 @@ export default function DiferenciaTexto({ diferencia }) {
   const info = diferenciaInfo(diferencia);
   if (!info) return "—";
   return (
-    <Box component="span" sx={{ color: difColor(info), fontWeight: 800 }}>
+    <Box component="span" sx={{ color: difColor(info), fontWeight: 600 }}>
       {info.tipo === "cero" ? info.label : `${formatMoney(Math.abs(diferencia))} (${info.label})`}
     </Box>
   );

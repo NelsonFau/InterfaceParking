@@ -1,82 +1,78 @@
+// Panel (`/dashboard`, guía visual 2 y capturas panel.png / panel-plano.png): una sola tarjeta con los 6 indicadores
+// de `GET /Panel/resumen` y, debajo, el área del plano. Hasta que esté el PB-24 (plano posicional y niveles) el
+// área es la grilla de mosaicos de cocheras, con la leyenda-filtro funcionando con los datos reales. Se omiten el
+// selector de nivel y el zoom.
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Alert, Box, Button, Chip, Paper, Skeleton, Stack, Typography } from "@mui/material";
 import { http } from "../api/http";
 import { showApiError } from "../api/errors";
-import {
-  Box,
-  Card,
-  Typography,
-  Stack,
-  Skeleton,
-  Chip,
-  Divider,
-} from "@mui/material";
+import { usePermissions } from "../auth/usePermissions";
+import CocheraMosaico from "../componentes/cocheras/CocheraMosaico";
+import { useCocherasMosaico } from "../componentes/cocheras/useCocherasMosaico";
+import EncabezadoPagina from "../componentes/ui/EncabezadoPagina";
+import Tarjeta from "../componentes/ui/Tarjeta";
+import { SituacionCochera, colorOf, entriesOf, labelOf } from "../constants/enums";
+import { COLOR_TONE } from "../theme/theme";
+import { contarSituaciones, situacionCochera } from "../utils/cocheras";
+import { buildCocheraPath } from "../utils/cocheraLink";
+import { formatNumber } from "../utils/formato";
 
-// Cada tarjeta toma el tono de su estado del tema (spec 13, tanda 4): fondo, borde y texto salen de `palette.pc.tone`.
-function StatCard({ title, value, hint, tone }) {
+const TODOS = "todos";
+const GRID_COLUMNS = { xs: "repeat(2, 1fr)", sm: "repeat(3, 1fr)", md: "repeat(4, 1fr)", lg: "repeat(6, 1fr)" };
+
+function Indicador({ titulo, valor }) {
   return (
-    <Card
-      sx={(t) => ({
-        p: 2.25,
-        bgcolor: t.palette.pc.tone[tone].bg,
-        borderColor: t.palette.pc.tone[tone].border,
-        color: t.palette.pc.tone[tone].text,
-        minHeight: 118,
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "space-between",
-      })}
-    >
-      <Stack direction="row" alignItems="flex-start" justifyContent="space-between" gap={1}>
-        <Typography variant="body2" sx={{ color: "inherit", fontWeight: 600 }}>
-          {title}
-        </Typography>
-
-        {hint ? <Chip size="small" label={hint} variant="outlined" /> : null}
-      </Stack>
-
-      <Typography variant="h3" sx={{ mt: 1, fontWeight: 800, letterSpacing: -0.5, lineHeight: 1, color: "inherit" }}>
-        {value}
+    <Paper variant="tile" sx={{ p: 2 }}>
+      <Typography variant="body1" color="text.secondary">
+        {titulo}
       </Typography>
-    </Card>
+      <Typography variant="kpi" component="div" sx={{ mt: 0.5 }}>
+        {formatNumber(valor)}
+      </Typography>
+    </Paper>
   );
 }
 
-function LoadingDashboard() {
+// Chip de la leyenda-filtro: un cuadradito del color de la situación y el conteo. El elegido va con borde oscuro.
+function ChipLeyenda({ etiqueta, cantidad, tono, activo, onClick }) {
   return (
-    <Box
-      sx={{
-        maxWidth: 980,
-        mx: "auto",
-        px: { xs: 2, sm: 3 },
-        py: 2,
-      }}
-    >
-      <Stack spacing={2}>
-        <Skeleton variant="text" width={240} height={36} />
-        <Skeleton variant="text" width={320} height={22} />
+    <Chip
+      variant="outlined"
+      clickable
+      onClick={onClick}
+      aria-pressed={activo}
+      icon={
+        tono ? (
+          <Box
+            component="span"
+            sx={(theme) => ({ width: 12, height: 12, ml: 1, flexShrink: 0, bgcolor: theme.palette.pc.tone[tono].text })}
+          />
+        ) : undefined
+      }
+      label={`${etiqueta} · ${formatNumber(cantidad)}`}
+      sx={{ height: 32, borderColor: activo ? "text.primary" : undefined }}
+    />
+  );
+}
 
-        <Box
-          sx={{
-            display: "grid",
-            gap: 2,
-            gridTemplateColumns: {
-              xs: "1fr",
-              sm: "repeat(2, 1fr)",
-              md: "repeat(4, 1fr)",
-            },
-          }}
-        >
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} variant="rounded" height={118} />
-          ))}
-        </Box>
-      </Stack>
-    </Box>
+function CargandoPanel() {
+  return (
+    <Stack spacing={2}>
+      <Skeleton variant="text" width={240} height={44} />
+      <Skeleton variant="text" width={320} height={24} />
+      <Skeleton variant="rounded" height={420} />
+    </Stack>
   );
 }
 
 export default function Dashboard() {
+  const navigate = useNavigate();
+  const { can } = usePermissions();
+  const puedeVerCocheras = can("cocheras.ver");
   const [data, setData] = useState(null);
+  const [filtro, setFiltro] = useState(TODOS);
+  const { items, deudaIds, loading, error, now, reload } = useCocherasMosaico();
 
   useEffect(() => {
     (async () => {
@@ -89,79 +85,111 @@ export default function Dashboard() {
     })();
   }, []);
 
-  const stats = useMemo(() => {
+  const indicadores = useMemo(() => {
     if (!data) return [];
     return [
-      { title: "Total cocheras", value: data.totalCocheras, hint: "Inventario", tone: "de" },
-      { title: "Disponibles", value: data.disponiblesAhora, hint: "Ahora", tone: "ok" },
-      { title: "Ocupadas", value: data.ocupadasAhora, hint: "Ahora", tone: "oc" },
-      { title: "Bloqueadas", value: data.bloqueadas, hint: "Restringidas", tone: "er" },
-      { title: "Vencen hoy", value: data.vencenHoy, hint: "Urgente", tone: "wa" },
-      { title: "Vencen en 7 días", value: data.vencenEn7Dias, hint: "Próximas", tone: "in" },
+      { titulo: "Total cocheras", valor: data.totalCocheras },
+      { titulo: "Disponibles", valor: data.disponiblesAhora },
+      { titulo: "Ocupadas", valor: data.ocupadasAhora },
+      { titulo: "Bloqueadas", valor: data.bloqueadas },
+      { titulo: "Vencen hoy", valor: data.vencenHoy },
+      { titulo: "Vencen en 7 días", valor: data.vencenEn7Dias },
     ];
   }, [data]);
 
-  if (!data) return <LoadingDashboard />;
+  // Situación de cada cochera, una sola vez: la usan la leyenda y el filtro.
+  const conSituacion = useMemo(
+    () =>
+      (items ?? [])
+        .map((c) => ({ c, situacion: situacionCochera(c, now, deudaIds) }))
+        .sort((a, b) => a.c.numero - b.c.numero),
+    [items, now, deudaIds],
+  );
+  const cuenta = useMemo(() => contarSituaciones(conSituacion.map((x) => x.situacion)), [conSituacion]);
+  const visibles = filtro === TODOS ? conSituacion : conSituacion.filter((x) => x.situacion === filtro);
 
-  return (
-    <Box
-      sx={{
-        maxWidth: 980,
-        mx: "auto",
-        px: { xs: 2, sm: 3 },
-        py: 2,
-      }}
-    >
-      {/* Header */}
-      <Stack spacing={0.5} sx={{ mb: 2 }}>
-        <Typography variant="h5" sx={{ fontWeight: 800, letterSpacing: -0.3 }}>
-          Dashboard
-        </Typography>
-        <Typography variant="body2" sx={{ color: "text.secondary" }}>
-          Estado general del garage en tiempo real.
-        </Typography>
-      </Stack>
+  if (!data) return <CargandoPanel />;
 
-      <Divider sx={{ mb: 2 }} />
-
-      {/* Cards */}
-      <Box
-        sx={{
-          display: "grid",
-          gap: 2,
-          gridTemplateColumns: {
-            xs: "1fr",
-            sm: "repeat(2, 1fr)",
-            md: "repeat(4, 1fr)",
-          },
-        }}
-      >
-        {stats.slice(0, 4).map((s) => (
-          <StatCard key={s.title} title={s.title} value={s.value} hint={s.hint} tone={s.tone} />
-        ))}
-
-        {/* Segunda fila: centrada y más prolija */}
-        <Box
-          sx={{
-            gridColumn: { xs: "auto", sm: "1 / -1", md: "2 / span 2" },
-            display: "grid",
-            gap: 2,
-            gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)" },
-          }}
-        >
-          {stats.slice(4).map((s) => (
-            <StatCard key={s.title} title={s.title} value={s.value} hint={s.hint} tone={s.tone} />
+  let plano = null;
+  if (puedeVerCocheras) {
+    let grilla;
+    if (loading) {
+      grilla = (
+        <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: GRID_COLUMNS }}>
+          {Array.from({ length: 12 }).map((_, i) => (
+            <Skeleton key={i} variant="rounded" height={104} />
           ))}
         </Box>
-      </Box>
+      );
+    } else if (error || !items) {
+      grilla = (
+        <Alert
+          severity="error"
+          action={
+            <Button color="inherit" size="small" onClick={reload}>
+              Reintentar
+            </Button>
+          }
+        >
+          No pudimos cargar las cocheras
+        </Alert>
+      );
+    } else if (items.length === 0) {
+      grilla = <Typography color="text.secondary">Todavía no hay cocheras.</Typography>;
+    } else {
+      grilla = (
+        <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: GRID_COLUMNS }}>
+          {visibles.map(({ c }) => (
+            <CocheraMosaico key={c.id} cochera={c} now={now} deudaIds={deudaIds} onClick={(id) => navigate(buildCocheraPath(id))} />
+          ))}
+        </Box>
+      );
+    }
 
-      {/* Footer mini */}
-      <Typography
-        variant="caption"
-        sx={{ display: "block", mt: 2, color: "text.secondary" }}
-      >
-        Tip: si ves valores inesperados, revisá Ocupaciones activas y bloqueos.
-      </Typography>
+    plano = (
+      <Paper variant="hundido" sx={{ mt: 2, p: 2.5 }}>
+        <Stack spacing={2.5}>
+          {grilla}
+          {items && items.length > 0 ? (
+            <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: "wrap" }} aria-label="Leyenda y filtro de cocheras">
+              <ChipLeyenda etiqueta="Todos" cantidad={items.length} activo={filtro === TODOS} onClick={() => setFiltro(TODOS)} />
+              {entriesOf(SituacionCochera)
+                .filter((e) => (cuenta.get(e.value) ?? 0) > 0)
+                .map((e) => (
+                  <ChipLeyenda
+                    key={e.value}
+                    etiqueta={labelOf(SituacionCochera, e.value)}
+                    cantidad={cuenta.get(e.value)}
+                    tono={COLOR_TONE[colorOf(SituacionCochera, e.value)]}
+                    activo={filtro === e.value}
+                    onClick={() => setFiltro(e.value)}
+                  />
+                ))}
+            </Stack>
+          ) : null}
+        </Stack>
+      </Paper>
+    );
+  }
+
+  return (
+    <Box>
+      <EncabezadoPagina titulo="Panel" subtitulo="Estado general del garage en tiempo real." />
+
+      <Tarjeta>
+        <Box
+          sx={{
+            display: "grid",
+            gap: 2,
+            gridTemplateColumns: { xs: "repeat(2, 1fr)", md: "repeat(3, 1fr)", lg: "repeat(6, 1fr)" },
+          }}
+        >
+          {indicadores.map((i) => (
+            <Indicador key={i.titulo} titulo={i.titulo} valor={i.valor} />
+          ))}
+        </Box>
+        {plano}
+      </Tarjeta>
     </Box>
   );
 }

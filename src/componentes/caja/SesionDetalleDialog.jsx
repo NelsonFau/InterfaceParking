@@ -57,7 +57,7 @@ import { useCajaEsperado } from "./useCajaEsperado";
 function Section({ titulo, children }) {
   return (
     <Box component="section">
-      <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 0.5 }}>
+      <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
         {titulo}
       </Typography>
       {children}
@@ -198,7 +198,7 @@ export default function SesionDetalleDialog({ sesionId, onClose, onChanged }) {
           return (
             <Box key={`${h.tipo}-${h.fecha}-${i}`}>
               <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
-                <Typography variant="body2" sx={{ fontWeight: 800 }}>
+                <Typography variant="body2" sx={{ fontWeight: 600 }}>
                   {labelOf(TipoEventoCaja, h.tipo)}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
@@ -332,22 +332,22 @@ export default function SesionDetalleDialog({ sesionId, onClose, onChanged }) {
         <DialogContent dividers>{renderCuerpo()}</DialogContent>
         <DialogActions>
           {detalle && acciones.trazabilidad ? (
-            <Button component={RouterLink} to={buildTrazabilidadPath({ cajaSesionId: sesionId })}>
+            <Button variant="contorno" component={RouterLink} to={buildTrazabilidadPath({ cajaSesionId: sesionId })}>
               Ver trazabilidad
             </Button>
           ) : null}
           {detalle && acciones.reabrir ? (
-            <Button color="warning" onClick={() => setAccion("reabrir")}>
+            <Button variant="contorno" color="warning" onClick={() => setAccion("reabrir")}>
               Reabrir
             </Button>
           ) : null}
           {detalle && acciones.cerrar ? (
-            <Button variant="contained" onClick={() => setAccion("cerrar")}>
+            <Button variant="marron" onClick={() => setAccion("cerrar")}>
               Cerrar caja
             </Button>
           ) : null}
           <Box sx={{ flex: 1 }} />
-          <Button onClick={onClose}>Cerrar</Button>
+          <Button variant="contorno" onClick={onClose}>Cerrar</Button>
         </DialogActions>
       </Dialog>
 

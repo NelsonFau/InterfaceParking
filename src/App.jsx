@@ -13,6 +13,7 @@ import Login from "./pages/Login.jsx";
 import Splash from "./pages/Splash.jsx";
 import OperationalDashboard from "./pages/OperationalDashboard.jsx";
 import Caja from "./pages/Caja.jsx";
+import RegistrarIngreso from "./pages/RegistrarIngreso.jsx";
 import Callback from "./pages/Callback.jsx";
 import RequireAuth from "./auth/RequireAuth.jsx";
 import RequirePermission from "./auth/RequirePermission.jsx";
@@ -21,6 +22,7 @@ import { PRIVATE_ROUTES } from "./auth/routes.js";
 // Pantalla de cada ruta privada. La ruta, su permiso y su ítem de menú salen de PRIVATE_ROUTES (D-FA8).
 const PAGES = {
   "/dashboard": Dashboard,
+  "/registrar-ingreso": RegistrarIngreso,
   "/operaciones": OperationalDashboard,
   "/cocheras": Cocheras,
   "/ocupaciones": Ocupaciones,

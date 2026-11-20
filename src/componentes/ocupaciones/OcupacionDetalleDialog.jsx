@@ -229,7 +229,7 @@ export default function OcupacionDetalleDialog({ id, reloadKey, now, can, onClos
             Finalizar
           </Button>
         ) : null}
-        <Button onClick={onClose}>Cerrar</Button>
+        <Button variant="contorno" onClick={onClose}>Cerrar</Button>
       </DialogActions>
     </Dialog>
   );

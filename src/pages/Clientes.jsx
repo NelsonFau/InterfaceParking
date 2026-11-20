@@ -5,100 +5,80 @@ import { usePermissions } from "../auth/usePermissions";
 import toast from "react-hot-toast";
 import ConfirmDialog from "../componentes/ConfirmDialog";
 import { useDialogFullScreen } from "../componentes/useDialogFullScreen";
+import AvatarTono from "../componentes/ui/AvatarTono";
+import BotonRefrescar from "../componentes/ui/BotonRefrescar";
+import Campo from "../componentes/ui/Campo";
+import EncabezadoPagina from "../componentes/ui/EncabezadoPagina";
+import Tarjeta from "../componentes/ui/Tarjeta";
+import { TONE_KEYS } from "../theme/theme";
+import { iniciales } from "../utils/iniciales";
 import {
   Box,
   Button,
-  Card,
-  CardContent,
   Chip,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
   Divider,
+  Link,
   Stack,
-  TextField,
   Typography,
   Skeleton,
 } from "@mui/material";
 
 function ActivoChip({ activo }) {
-  return (
-    <Chip
-      size="small"
-      label={activo ? "Activo" : "Inactivo"}
-      color={activo ? "success" : "default"}
-      variant={activo ? "filled" : "outlined"}
-    />
-  );
+  return <Chip size="small" label={activo ? "Activo" : "Inactivo"} color={activo ? "success" : "default"} />;
 }
+
+const GRID_2 = { xs: "1fr", md: "repeat(2, 1fr)" };
 
 function LoadingList() {
   return (
-    <Stack spacing={1.25}>
+    <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: GRID_2 }}>
       {Array.from({ length: 6 }).map((_, i) => (
-        <Skeleton key={i} variant="rounded" height={92} />
+        <Skeleton key={i} variant="rounded" height={150} />
       ))}
-    </Stack>
+    </Box>
   );
 }
 
 function ClienteCard({ c, onEdit, onToggle, canManage }) {
+  // Un tono por cliente, derivado del id: el mismo cliente siempre sale con el mismo color.
+  const tono = TONE_KEYS[Math.abs(Number(c.id) || 0) % TONE_KEYS.length];
   return (
-    <Card>
-      <CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
-        <Stack
-          direction={{ xs: "column", sm: "row" }}
-          spacing={1.5}
-          alignItems={{ xs: "stretch", sm: "center" }}
-          justifyContent="space-between"
-        >
-          {/* Info */}
-          <Box sx={{ minWidth: 0 }}>
-            <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 0.5 }}>
-              <Typography
-                variant="subtitle1"
-                sx={{ letterSpacing: -0.2 }}
-                noWrap
-                title={c.nombreCompleto}
-              >
-                {c.nombreCompleto}
-              </Typography>
-
-              <ActivoChip activo={c.activo} />
-            </Stack>
-
-            <Typography variant="body2" sx={{ color: "text.secondary" }}>
-              Doc: <b>{c.documento}</b> · Tel: <b>{c.telefono}</b>
-              {c.email ? (
-                <>
-                  {" "}
-                  · Email: <b>{c.email}</b>
-                </>
-              ) : null}
+    <Tarjeta>
+      <Stack spacing={1.75}>
+        <Stack direction="row" spacing={1.5} alignItems="center" justifyContent="space-between">
+          <Stack direction="row" spacing={1.5} alignItems="center" sx={{ minWidth: 0 }}>
+            <AvatarTono tone={tono} size={48}>
+              {iniciales(c.nombreCompleto)}
+            </AvatarTono>
+            <Typography variant="h6" component="h2" noWrap title={c.nombreCompleto}>
+              {c.nombreCompleto}
             </Typography>
-          </Box>
+          </Stack>
+          <ActivoChip activo={c.activo} />
+        </Stack>
 
-          {/* Actions (solo con clientes.gestionar, D-FA10) */}
-          {canManage ? (
-          <Stack
-            direction="row"
-            spacing={1}
-            justifyContent={{ xs: "flex-start", sm: "flex-end" }}
-            sx={{ flexWrap: "wrap" }}
-          >
-            <Button variant="outlined" onClick={onEdit}>
+        <Typography variant="body2" color="text.secondary">
+          Doc: {c.documento} · Tel: {c.telefono}
+          {c.email ? ` · Email: ${c.email}` : ""}
+        </Typography>
+
+        {/* Acciones (solo con clientes.gestionar, D-FA10) */}
+        {canManage ? (
+          <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap" }} useFlexGap>
+            <Button variant="pill" color="inherit" onClick={onEdit}>
               Editar
             </Button>
-
-            <Button variant="contained" color={c.activo ? "error" : "success"} onClick={onToggle}>
+            <Button variant="pill" color={c.activo ? "error" : "success"} onClick={onToggle}>
               {c.activo ? "Desactivar" : "Reactivar"}
             </Button>
           </Stack>
-          ) : null}
-        </Stack>
-      </CardContent>
-    </Card>
+        ) : null}
+      </Stack>
+    </Tarjeta>
   );
 }
 
@@ -272,90 +252,59 @@ export default function Clientes() {
     }
   }
 
+  const hayAnterior = page > 1;
+  const haySiguiente = page < totalPages;
+  const enlace = (activo, texto, onClick) => (
+    <Link
+      component="button"
+      type="button"
+      underline={activo ? "hover" : "none"}
+      disabled={!activo}
+      onClick={() => activo && onClick()}
+      sx={{ color: activo ? "text.primary" : "text.disabled", cursor: activo ? "pointer" : "default", font: "inherit", verticalAlign: "baseline" }}
+    >
+      {texto}
+    </Link>
+  );
+
   return (
-    <Box sx={{ maxWidth: 1100, mx: "auto", px: { xs: 2, sm: 3 }, py: 2 }}>
-      {/* Header */}
-      <Stack spacing={0.5} sx={{ mb: 2 }}>
-        <Typography variant="h5" sx={{ letterSpacing: -0.3 }}>
-          Clientes (Activos)
-        </Typography>
-        <Typography variant="body2" sx={{ color: "text.secondary" }}>
-          Gestión de clientes activos. Buscá por nombre, documento o teléfono.
-        </Typography>
+    <Box>
+      <EncabezadoPagina titulo="Clientes (Activos)" subtitulo="Gestión de clientes activos. Buscá por nombre, documento o teléfono." />
+
+      {/* Acciones */}
+      <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} alignItems={{ xs: "stretch", sm: "flex-end" }} sx={{ mb: 2 }}>
+        <Stack direction="row" spacing={1.5} alignItems="center">
+          {canManage ? (
+            <Button variant="arena" onClick={abrirCrear}>
+              Nuevo cliente
+            </Button>
+          ) : null}
+          <BotonRefrescar onClick={() => cargar(page)} disabled={loading} />
+        </Stack>
+        <Campo label="Buscar (nombre/doc/tel)" value={q} onChange={(e) => setQ(e.target.value)} />
       </Stack>
 
-      {/* Actions */}
-      <Stack
-        direction={{ xs: "column", sm: "row" }}
-        spacing={1.25}
-        alignItems={{ xs: "stretch", sm: "center" }}
-        sx={{ mb: 2 }}
-      >
-        {canManage ? (
-          <Button variant="contained" onClick={abrirCrear}>
-            Nuevo cliente
-          </Button>
-        ) : null}
-
-        <Button variant="outlined" onClick={() => cargar(page)} disabled={loading}>
-          Refrescar
-        </Button>
-
-        <TextField
-          size="small"
-          label="Buscar (nombre/doc/tel)"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          sx={{ width: { xs: "100%", sm: 320 } }}
-        />
-      </Stack>
-
-      {/* Pagination toolbar */}
+      {/* Paginación */}
       {!loading && (
-        <Card sx={{ mb: 2 }}>
-          <CardContent sx={{ py: 1.5, "&:last-child": { pb: 1.5 } }}>
-            <Stack
-              direction={{ xs: "column", sm: "row" }}
-              spacing={1}
-              alignItems={{ xs: "stretch", sm: "center" }}
-              justifyContent="space-between"
-            >
-              <Typography variant="body2" color="text.secondary">
-                Mostrando <b>{items.length}</b> de <b>{total}</b> · Página{" "}
-                <b>{page}</b> / <b>{totalPages}</b>
-              </Typography>
+        <Tarjeta sx={{ mb: 2 }}>
+          <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, alignItems: "center" }}>
+            <Typography variant="body2" color="text.secondary">
+              Mostrando {items.length} de {total} · Página {page} / {totalPages}{" "}
+              {enlace(hayAnterior, "‹ Anterior", () => setPage((p) => Math.max(1, p - 1)))}
+              {" · "}
+              {enlace(haySiguiente, "Siguiente ›", () => setPage((p) => Math.min(totalPages, p + 1)))}
+            </Typography>
 
-              <Stack direction="row" spacing={1} alignItems="center" sx={{ flexWrap: "wrap" }}>
-                <Button variant="outlined" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
-                  Anterior
-                </Button>
-
-                <Button
-                  variant="outlined"
-                  disabled={page >= totalPages}
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                >
-                  Siguiente
-                </Button>
-
-                <TextField
-                  size="small"
-                  label="Page size"
-                  value={pageSize}
-                  onChange={(e) => setPageSize(Number(e.target.value) || 10)}
-                  sx={{ width: 130 }}
-                />
-              </Stack>
-            </Stack>
-          </CardContent>
-        </Card>
+            <Campo label="Page size" value={pageSize} onChange={(e) => setPageSize(Number(e.target.value) || 10)} />
+          </Box>
+        </Tarjeta>
       )}
 
-      {/* List */}
+      {/* Lista */}
       {loading ? (
         <LoadingList />
       ) : (
-        <Stack spacing={1.25}>
+        <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: GRID_2 }}>
           {items.map((c) => (
             <ClienteCard
               key={c.id}
@@ -371,7 +320,7 @@ export default function Clientes() {
               No hay clientes activos para mostrar.
             </Typography>
           )}
-        </Stack>
+        </Box>
       )}
 
       {/* Dialog */}
@@ -382,35 +331,14 @@ export default function Clientes() {
 
         <DialogContent dividers>
           <Stack spacing={2}>
-            <TextField
-              label="Nombre completo"
-              value={nombreCompleto}
-              onChange={(e) => setNombreCompleto(e.target.value)}
-              fullWidth
-            />
+            <Campo label="Nombre completo" value={nombreCompleto} onChange={(e) => setNombreCompleto(e.target.value)} />
 
             <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-              <TextField
-                label="Documento"
-                value={documento}
-                onChange={(e) => setDocumento(e.target.value)}
-                fullWidth
-              />
-
-              <TextField
-                label="Teléfono"
-                value={telefono}
-                onChange={(e) => setTelefono(e.target.value)}
-                fullWidth
-              />
+              <Campo label="Documento" value={documento} onChange={(e) => setDocumento(e.target.value)} />
+              <Campo label="Teléfono" value={telefono} onChange={(e) => setTelefono(e.target.value)} />
             </Stack>
 
-            <TextField
-              label="Email (opcional)"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              fullWidth
-            />
+            <Campo label="Email (opcional)" value={email} onChange={(e) => setEmail(e.target.value)} />
 
             {edit && (
               <>
@@ -427,10 +355,10 @@ export default function Clientes() {
         </DialogContent>
 
         <DialogActions>
-          <Button onClick={() => setOpen(false)}>
+          <Button variant="contorno" onClick={() => setOpen(false)}>
             Cancelar
           </Button>
-          <Button variant="contained" onClick={guardar} disabled={saving}>
+          <Button variant="marron" onClick={guardar} disabled={saving}>
             Guardar
           </Button>
         </DialogActions>

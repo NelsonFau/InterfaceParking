@@ -48,7 +48,7 @@ export default function Login() {
         <CardContent sx={{ p: 3 }}>
           <Stack spacing={2}>
             <Box>
-              <Typography variant="h5" fontWeight={800}>
+              <Typography variant="h5" fontWeight={600}>
                 Iniciar sesión
               </Typography>
               <Typography variant="body2" color="text.secondary">

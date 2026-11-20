@@ -82,7 +82,7 @@ export default function AjustePrecioDialog({ ocupacion, onClose, onChanged }) {
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button variant="contained" onClick={cerrar}>
+          <Button variant="marron" onClick={cerrar}>
             Cerrar
           </Button>
         </DialogActions>
@@ -134,10 +134,10 @@ export default function AjustePrecioDialog({ ocupacion, onClose, onChanged }) {
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose} disabled={saving}>
+        <Button variant="contorno" onClick={onClose} disabled={saving}>
           Volver
         </Button>
-        <Button variant="contained" onClick={enviar} disabled={saving}>
+        <Button variant="marron" onClick={enviar} disabled={saving}>
           Ajustar precio
         </Button>
       </DialogActions>

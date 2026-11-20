@@ -77,7 +77,7 @@ export default function CancelarReservaDialog({ ocupacion, onClose, onDone, onEr
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose} disabled={saving}>
+        <Button variant="contorno" onClick={onClose} disabled={saving}>
           Volver
         </Button>
         <Button color="error" variant="contained" onClick={enviar} disabled={saving}>

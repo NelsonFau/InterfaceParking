@@ -11,6 +11,9 @@ export const OCUPACIONES_PATH = "/ocupaciones";
 // Alertas operativas: la ruta la comparten el mapa, alertas.js y los enlaces de Ocupaciones (D-FG15).
 export const ALERTAS_PATH = "/alertas-operativas";
 
+// Registrar ingreso (guía visual 2): página propia del flujo rápido de alta de ocupaciones.
+export const REGISTRAR_INGRESO_PATH = "/registrar-ingreso";
+
 // Caja con sesiones (spec 09, D-FI3): una constante para el mapa y para el contrato de enlace `/caja?sesion=N`.
 export const CAJA_PATH = "/caja";
 
@@ -21,7 +24,9 @@ const [OPERACION, GESTION, ADMINISTRACION] = MENU_GROUPS;
 // El orden de este arreglo es el del menú (grupo por grupo): DV-FM2. `initialRoute` sigue siendo la primera
 // accesible y todos los roles reales tienen `panel.ver`, así que la ruta inicial no cambia.
 export const PRIVATE_ROUTES = [
-  { path: "/dashboard", label: "Dashboard", permiso: "panel.ver", group: OPERACION },
+  // El ítem se llama "Panel" (guía visual 1.2): es el mismo /dashboard.
+  { path: "/dashboard", label: "Panel", permiso: "panel.ver", group: OPERACION },
+  { path: REGISTRAR_INGRESO_PATH, label: "Registrar ingreso", permiso: "ocupaciones.crear", group: OPERACION },
   // P-FA4 cerrado (spec 09, D-FI12): alertas.ver alcanza. Todo rol con alertas.ver tiene caja.ver, y el widget
   // de caja del Monitor se oculta por su cuenta con can("caja.ver"), así que no hace falta exigir los dos.
   { path: "/operaciones", label: "Monitor operativo", permiso: "alertas.ver", group: OPERACION },
@@ -34,8 +39,9 @@ export const PRIVATE_ROUTES = [
   // Spec 12 (D-FL3).
   { path: "/usuarios", label: "Usuarios", permiso: "usuarios.ver", group: ADMINISTRACION },
   { path: TRAZABILIDAD_PATH, label: "Trazabilidad", permiso: "auditoria.ver", group: ADMINISTRACION },
-  // Spec 11: pantalla de configuración (contrato de rutas de brechas-front.md).
-  { path: "/configuracion", label: "Configuración", permiso: "configuracion.ver", group: ADMINISTRACION },
+  // Spec 11: pantalla de configuración (contrato de rutas de brechas-front.md). No va en el menú lateral: se llega
+  // desde el menú de usuario (guía visual 1.2), por eso `menu: false`.
+  { path: "/configuracion", label: "Configuración", permiso: "configuracion.ver", group: ADMINISTRACION, menu: false },
 ];
 
 // Rutas a las que el usuario tiene acceso, en el orden del mapa. La primera es la ruta inicial.
@@ -49,7 +55,8 @@ export function initialRoute(permisos) {
 }
 
 /**
- * Menú agrupado (D-FM9): `[{ label, items }]` solo con lo que el usuario puede ver y sin grupos vacíos.
+ * Menú agrupado (D-FM9): `[{ label, items }]` solo con lo que el usuario puede ver y sin grupos vacíos. Las rutas con
+ * `menu: false` (Configuración) no son ítems del menú.
  * `shortcuts` son atajos del menú que no son rutas (D-FM10): `{ path, label, permiso, group, after }`. Un atajo
  * se ve solo si el usuario tiene su permiso, va justo después del ítem `after` (o al principio de su grupo si
  * ese ítem no es visible) y sale marcado con `shortcut: true`.
@@ -60,7 +67,7 @@ export function initialRoute(permisos) {
 export function menuGroups(permisos, shortcuts = []) {
   const visibles = shortcuts.filter((s) => can(permisos, s.permiso));
   return MENU_GROUPS.map((label) => {
-    const items = accessibleRoutes(permisos).filter((route) => route.group === label);
+    const items = accessibleRoutes(permisos).filter((route) => route.group === label && route.menu !== false);
     for (const s of visibles.filter((x) => x.group === label)) {
       const idx = items.findIndex((it) => it.path === s.after);
       items.splice(idx + 1, 0, { ...s, shortcut: true });

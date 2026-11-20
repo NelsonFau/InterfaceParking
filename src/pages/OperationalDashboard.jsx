@@ -4,13 +4,16 @@
 // esa tarjeta muestra "—" y las demás siguen.
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Alert, Box, Button, Card, CardContent, Chip, Divider, Grid, LinearProgress, Skeleton, Stack, Typography } from "@mui/material";
+import { Alert, Box, Button, LinearProgress, Paper, Skeleton, Stack, Typography } from "@mui/material";
 
 import { showApiError } from "../api/errors";
 import { usePermissions } from "../auth/usePermissions";
 import CajaWidget from "../componentes/caja/CajaWidget";
+import BotonRefrescar from "../componentes/ui/BotonRefrescar";
+import EncabezadoPagina from "../componentes/ui/EncabezadoPagina";
+import Tarjeta from "../componentes/ui/Tarjeta";
 import { countAlertas, listAlertas } from "../api/operationalAlertsApi";
-import { SeveridadAlerta, TipoAlertaOperativa, colorOf, labelOf } from "../constants/enums";
+import { SeveridadAlerta, TipoAlertaOperativa, labelOf } from "../constants/enums";
 import {
   ALERTAS_PATH,
   ALERTS_REFRESH_MS,
@@ -52,27 +55,22 @@ function toView(settled) {
   };
 }
 
-function KpiCard({ title, value, subtitle, danger }) {
-  const active = danger && typeof value === "number" && value > 0;
+// Mosaico de indicador (guía visual 2, Monitor): fondo hundido, etiqueta, número grande y texto chico gris.
+function KpiCard({ title, value, subtitle }) {
   return (
-    // Se resalta en `error` con la variante de borde del tema; si no, la `Card` outlined por defecto.
-    <Card sx={{ height: "100%", ...(active && { borderColor: "error.main" }) }}>
-      <CardContent>
-        <Typography color="text.secondary" variant="body2">
-          {title}
+    <Paper variant="tile" sx={{ p: 2 }}>
+      <Typography variant="body2" color="text.secondary">
+        {title}
+      </Typography>
+      <Typography variant="kpiSm" component="div" sx={{ my: 0.5 }}>
+        {formatNumber(value)}
+      </Typography>
+      {subtitle ? (
+        <Typography variant="body2" color="text.secondary">
+          {subtitle}
         </Typography>
-
-        <Typography variant="h4" sx={{ fontWeight: 800, mt: 0.5, color: active ? "error.main" : "text.primary" }}>
-          {formatNumber(value)}
-        </Typography>
-
-        {subtitle && (
-          <Typography color="text.secondary" variant="body2" sx={{ mt: 0.5 }}>
-            {subtitle}
-          </Typography>
-        )}
-      </CardContent>
-    </Card>
+      ) : null}
+    </Paper>
   );
 }
 
@@ -133,7 +131,7 @@ export default function OperationalDashboard() {
     if (firstLoad) {
       return (
         <Stack spacing={1}>
-          {Array.from({ length: 4 }).map((_, i) => (
+          {Array.from({ length: 2 }).map((_, i) => (
             <Skeleton key={i} variant="rounded" height={72} />
           ))}
         </Stack>
@@ -157,44 +155,21 @@ export default function OperationalDashboard() {
       return <Typography color="text.secondary">No hay alertas críticas abiertas.</Typography>;
     }
     return (
-      <Stack spacing={1.5}>
+      <Box sx={{ display: "grid", gap: 1.5, gridTemplateColumns: { xs: "1fr", md: "repeat(2, 1fr)" } }}>
         {view.criticasRecientes.map((a) => (
-          <Card key={a.id} variant="outlined" sx={{ borderColor: "error.main" }}>
-            <CardContent sx={{ py: 1.5 }}>
-              <Stack spacing={1}>
-                <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between">
-                  <Chip
-                    size="small"
-                    label={labelOf(SeveridadAlerta, a.severidad)}
-                    color={colorOf(SeveridadAlerta, a.severidad)}
-                    sx={{ fontWeight: 800 }}
-                  />
-                  <Typography variant="caption" color="text.secondary">
-                    {formatInstant(a.fechaCreacion)}
-                  </Typography>
-                </Stack>
-
-                <Box>
-                  <Typography sx={{ fontWeight: 800 }}>{labelOf(TipoAlertaOperativa, a.tipo)}</Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ mt: 0.3 }}>
-                    {a.mensaje}
-                  </Typography>
-                </Box>
-
-                <Button
-                  size="small"
-                  variant="contained"
-                  color="error"
-                  onClick={() => navigate(criticasPath)}
-                  sx={{ alignSelf: "flex-start" }}
-                >
-                  Revisar
-                </Button>
-              </Stack>
-            </CardContent>
-          </Card>
+          <Paper key={a.id} variant="tile" sx={{ p: 2 }}>
+            <Typography variant="body2" color="text.secondary">
+              {labelOf(SeveridadAlerta, a.severidad)} · {formatInstant(a.fechaCreacion)}
+            </Typography>
+            <Typography variant="body2" sx={{ mt: 0.75, fontWeight: 500 }}>
+              {labelOf(TipoAlertaOperativa, a.tipo)}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+              {a.mensaje}
+            </Typography>
+          </Paper>
         ))}
-      </Stack>
+      </Box>
     );
   }
 
@@ -208,80 +183,51 @@ export default function OperationalDashboard() {
 
   return (
     <Box>
-      <Stack spacing={2.5}>
-        <Stack direction={{ xs: "column", md: "row" }} justifyContent="space-between" spacing={2}>
-          <Box>
-            <Typography variant="h4">
-              Monitor operativo
-            </Typography>
+      <EncabezadoPagina
+        titulo="Monitor operativo"
+        subtitulo="Centro de control de alertas y riesgo operativo del garage."
+        acciones={
+          <>
+            <BotonRefrescar onClick={reload} disabled={loading} />
+            <Button variant="arena" onClick={() => navigate(ALERTAS_PATH)}>
+              Ver alertas
+            </Button>
+          </>
+        }
+        pie={lastLoadedAt !== null ? `Actualizado: ${formatInstant(new Date(lastLoadedAt).toISOString())}` : null}
+      >
+        {!firstLoad && !loading && result.failed && (
+          <Typography variant="body2" color="error" sx={{ mt: 1 }}>
+            No se pudo actualizar. Reintentá con 'Actualizar'
+          </Typography>
+        )}
+      </EncabezadoPagina>
 
-            <Typography sx={{ color: "text.secondary", mt: 0.5 }}>
-              Centro de control de alertas y riesgo operativo del garage.
-            </Typography>
-          </Box>
-
-          <Stack alignItems={{ xs: "flex-start", md: "flex-end" }} spacing={0.5}>
-            <Stack direction="row" spacing={1}>
-              <Button variant="outlined" onClick={reload} disabled={loading}>
-                Actualizar
-              </Button>
-
-              <Button variant="contained" onClick={() => navigate(ALERTAS_PATH)}>
-                Ver alertas
-              </Button>
-            </Stack>
-            {lastLoadedAt !== null && (
-              <Typography variant="caption" color="text.secondary">
-                Actualizado: {formatInstant(new Date(lastLoadedAt).toISOString())}
-              </Typography>
-            )}
-            {!firstLoad && !loading && result.failed && (
-              <Typography variant="caption" color="error">
-                No se pudo actualizar. Reintentá con 'Actualizar'
-              </Typography>
-            )}
-          </Stack>
-        </Stack>
-
+      <Stack spacing={1.5}>
         {!firstLoad && loading && <LinearProgress />}
 
-        <Grid container spacing={2}>
-          {kpis.map(({ title, key, subtitle }) => (
-            <Grid size={{ xs: 12, md: 2.4 }} key={key}>
-              {firstLoad ? (
-                <Skeleton variant="rounded" height={120} />
+        <Tarjeta titulo="Indicadores" subtitulo="Alertas y riesgo operativo">
+          <Box sx={{ display: "grid", gap: 1.5, gridTemplateColumns: { xs: "1fr", md: "repeat(3, 1fr)" } }}>
+            {kpis.map(({ title, key, subtitle }) =>
+              firstLoad ? (
+                <Skeleton key={key} variant="rounded" height={110} />
               ) : (
-                <KpiCard title={title} value={view[key]} subtitle={subtitle} danger />
-              )}
-            </Grid>
-          ))}
-        </Grid>
+                <KpiCard key={key} title={title} value={view[key]} subtitle={subtitle} />
+              ),
+            )}
+          </Box>
+        </Tarjeta>
+
+        <Tarjeta titulo="Alertas críticas recientes" subtitulo="Casos que deberían revisarse primero.">
+          {renderCriticas()}
+          <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 2 }}>
+            <Button variant="pill" onClick={() => navigate(criticasPath)}>
+              Ver todas
+            </Button>
+          </Box>
+        </Tarjeta>
 
         {can("caja.ver") ? <CajaWidget reloadKey={reloadKey} /> : null}
-
-        <Card sx={{ borderColor: "error.main" }}>
-          <CardContent>
-            <Stack direction="row" justifyContent="space-between" alignItems="center">
-              <Box>
-                <Typography variant="h6">
-                  Alertas críticas recientes
-                </Typography>
-
-                <Typography variant="body2" color="text.secondary">
-                  Casos que deberían revisarse primero.
-                </Typography>
-              </Box>
-
-              <Button size="small" onClick={() => navigate(criticasPath)}>
-                Ver todas
-              </Button>
-            </Stack>
-
-            <Divider sx={{ my: 2 }} />
-
-            {renderCriticas()}
-          </CardContent>
-        </Card>
       </Stack>
     </Box>
   );

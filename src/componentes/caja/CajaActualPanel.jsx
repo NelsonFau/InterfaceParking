@@ -2,14 +2,15 @@
 // vivo, y abrir o cerrar según permiso. El modo sale SOLO de `GET /Caja/actual`. El aviso de "día anterior" es de
 // solo lectura: el backend es la autoridad (`caja_dia_anterior_abierta`) y acá no se bloquea nada.
 import { useEffect, useState } from "react";
-import { Alert, Box, Button, Card, CardContent, Chip, Divider, Skeleton, Stack, Typography } from "@mui/material";
+import { Alert, Box, Button, Chip, Skeleton, Stack, Typography } from "@mui/material";
 import { getCajaActual } from "../../api/cajaApi";
 import { showApiError } from "../../api/errors";
 import { usePermissions } from "../../auth/usePermissions";
-import { ModoCaja, labelOf } from "../../constants/enums";
+import { EstadoCajaSesion, ModoCaja, labelOf } from "../../constants/enums";
 import { CAJA_ESTADO, accionesDeCaja, avisoDiaAnterior, cajaVista } from "../../utils/caja";
 import { formatMoney } from "../../utils/formato";
 import { useTenantDates } from "../../utils/useTenantDates";
+import Tarjeta from "../ui/Tarjeta";
 import AbrirCajaDialog from "./AbrirCajaDialog";
 import CerrarCajaDialog from "./CerrarCajaDialog";
 import TotalesPorMetodo from "./TotalesPorMetodo";
@@ -88,114 +89,101 @@ export default function CajaActualPanel({ refreshKey = 0, onChanged, onVerDetall
   }
 
   const sinCaja = vista.estado === CAJA_ESTADO.SIN_CAJA;
+  const chipModo = <Chip size="small" variant="outlined" label={labelOf(ModoCaja, vista.modo)} />;
 
   return (
     <Stack spacing={2}>
-      <Stack direction="row" justifyContent="space-between" alignItems="center" gap={1} flexWrap="wrap">
-        <Stack direction="row" spacing={1} alignItems="center">
-          <Typography variant="h6">
-            Caja actual
-          </Typography>
-          <Chip size="small" label={labelOf(ModoCaja, vista.modo)} />
-        </Stack>
-        <Button variant="outlined" size="small" onClick={reload} disabled={cargando}>
-          Actualizar
-        </Button>
-      </Stack>
-
       {result.status === "error" ? (
-        <Alert severity="warning">No pudimos actualizar la caja. Reintentá con 'Actualizar'.</Alert>
+        <Alert severity="warning">No pudimos actualizar la caja. Reintentá con el botón de actualizar.</Alert>
       ) : null}
 
       {sinCaja ? (
-        <Card>
-          <CardContent>
-            <Stack spacing={1.5}>
-              <Typography>
-                {vista.modo === ModoCaja.DIARIA
-                  ? "Todavía no hay caja hoy. Se abre sola con el primer cobro; abrila a mano si querés declarar el fondo."
-                  : "No hay un turno abierto. Abrí la caja para poder cobrar."}
-              </Typography>
-              {vista.fondoPropuesto !== null && vista.fondoPropuesto !== undefined ? (
-                <Typography variant="body2" color="text.secondary">
-                  Fondo propuesto (el que quedó del último cierre): {formatMoney(vista.fondoPropuesto)}
-                </Typography>
-              ) : null}
-              {acciones.abrir ? (
-                <Box>
-                  <Button variant="contained" onClick={() => setDialogo("abrir")}>
-                    Abrir caja
-                  </Button>
-                </Box>
-              ) : null}
+        <Tarjeta
+          titulo={
+            <Stack direction="row" spacing={1.5} alignItems="center">
+              <span>{vista.modo === ModoCaja.DIARIA ? "Diaria · sin sesión" : "Por turno · sin sesión"}</span>
+              {chipModo}
             </Stack>
-          </CardContent>
-        </Card>
+          }
+          acciones={<Chip size="small" label="Sin sesión" />}
+        >
+          <Stack spacing={1.5}>
+            <Typography>
+              {vista.modo === ModoCaja.DIARIA
+                ? "Todavía no hay caja hoy. Se abre sola con el primer cobro; abrila a mano si querés declarar el fondo."
+                : "No hay un turno abierto. Abrí la caja para poder cobrar."}
+            </Typography>
+            {vista.fondoPropuesto !== null && vista.fondoPropuesto !== undefined ? (
+              <Typography>Fondo propuesto: {formatMoney(vista.fondoPropuesto)}</Typography>
+            ) : null}
+            {acciones.abrir ? (
+              <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
+                <Button variant="arena" onClick={() => setDialogo("abrir")}>
+                  Abrir caja
+                </Button>
+              </Box>
+            ) : null}
+          </Stack>
+        </Tarjeta>
       ) : (
-        <Card>
-          <CardContent>
-            <Stack spacing={1.5}>
-              {vista.estado === CAJA_ESTADO.ABIERTA_DIA_ANTERIOR ? (
-                <Alert
-                  severity="warning"
-                  action={
-                    acciones.cerrar ? (
-                      <Button color="inherit" size="small" onClick={() => setDialogo("cerrar")}>
-                        Cerrar caja
-                      </Button>
-                    ) : undefined
-                  }
-                >
-                  {avisoDiaAnterior(vista.diaAnterior)}
-                </Alert>
-              ) : null}
-
-              <Stack direction="row" justifyContent="space-between" alignItems="center" gap={1} flexWrap="wrap">
-                <Box>
-                  <Typography sx={{ fontWeight: 800 }}>
-                    Caja #{vista.sesion.id} · Abierta desde {formatInstant(vista.sesion.fechaApertura)}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Fondo inicial: {formatMoney(vista.sesion.fondoInicial)}
-                  </Typography>
-                </Box>
-                <Stack direction="row" spacing={1}>
-                  <Button size="small" onClick={() => onVerDetalle(vista.sesion.id)}>
-                    Ver detalle
-                  </Button>
-                  {acciones.cerrar ? (
-                    <Button variant="contained" onClick={() => setDialogo("cerrar")}>
+        <Tarjeta
+          titulo={
+            <Stack direction="row" spacing={1.5} alignItems="center">
+              <span>Caja actual</span>
+              {chipModo}
+            </Stack>
+          }
+          acciones={<Chip size="small" color="success" label={labelOf(EstadoCajaSesion, EstadoCajaSesion.ABIERTA)} />}
+        >
+          <Stack spacing={2}>
+            {vista.estado === CAJA_ESTADO.ABIERTA_DIA_ANTERIOR ? (
+              <Alert
+                severity="warning"
+                action={
+                  acciones.cerrar ? (
+                    <Button color="inherit" size="small" onClick={() => setDialogo("cerrar")}>
                       Cerrar caja
                     </Button>
-                  ) : null}
-                </Stack>
-              </Stack>
+                  ) : undefined
+                }
+              >
+                {avisoDiaAnterior(vista.diaAnterior)}
+              </Alert>
+            ) : null}
 
-              {acciones.verEsperado ? (
-                <>
-                  <Divider />
-                  {esperado.status === "error" ? (
-                    <Typography variant="body2" color="warning.main">
-                      No pudimos cargar el esperado
-                    </Typography>
-                  ) : esperado.data === null ? (
-                    <Skeleton variant="rounded" height={90} />
-                  ) : (
-                    <Stack spacing={1}>
-                      <Typography variant="body2" color="text.secondary">
-                        Efectivo esperado
-                      </Typography>
-                      <Typography variant="h5" sx={{ fontWeight: 800 }}>
-                        {formatMoney(esperado.data.efectivoEsperado)}
-                      </Typography>
-                      <TotalesPorMetodo totales={esperado.data.totales} />
-                    </Stack>
-                  )}
-                </>
+            {acciones.verEsperado ? (
+              esperado.status === "error" ? (
+                <Typography variant="body2" color="warning.main">
+                  No pudimos cargar el esperado
+                </Typography>
+              ) : esperado.data === null ? (
+                <Skeleton variant="rounded" height={90} />
+              ) : (
+                <TotalesPorMetodo totales={esperado.data.totales} />
+              )
+            ) : null}
+
+            <Typography variant="body2">
+              Caja #{vista.sesion.id} · Abierta desde {formatInstant(vista.sesion.fechaApertura)} · Fondo inicial{" "}
+              {formatMoney(vista.sesion.fondoInicial)}
+            </Typography>
+
+            {acciones.verEsperado && esperado.data ? (
+              <Typography variant="body2">Efectivo esperado: {formatMoney(esperado.data.efectivoEsperado)}</Typography>
+            ) : null}
+
+            <Stack direction="row" spacing={1} justifyContent="flex-end">
+              <Button variant="pill" onClick={() => onVerDetalle(vista.sesion.id)}>
+                Ver detalle
+              </Button>
+              {acciones.cerrar ? (
+                <Button variant="pill" color="info" onClick={() => setDialogo("cerrar")}>
+                  Cerrar caja
+                </Button>
               ) : null}
             </Stack>
-          </CardContent>
-        </Card>
+          </Stack>
+        </Tarjeta>
       )}
 
       {dialogo === "abrir" ? (

@@ -13,7 +13,7 @@ export default function AccountBlocked({ message }) {
       <Card sx={{ width: "100%", maxWidth: 460 }}>
         <CardContent sx={{ p: 3 }}>
           <Stack spacing={2}>
-            <Typography variant="h5" fontWeight={800}>
+            <Typography variant="h5" fontWeight={600}>
               No podés acceder
             </Typography>
             <Alert severity="error">{message || "Tu cuenta no tiene acceso a la aplicación."}</Alert>

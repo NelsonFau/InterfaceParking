@@ -10,7 +10,7 @@ function Row({ label, children, strong = false }) {
       <Typography variant="body2" color="text.secondary">
         {label}
       </Typography>
-      <Typography variant="body2" sx={{ fontWeight: strong ? 800 : 500, textAlign: "right" }}>
+      <Typography variant="body2" sx={{ fontWeight: strong ? 600 : 400, textAlign: "right" }}>
         {children}
       </Typography>
     </Stack>
