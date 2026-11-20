@@ -4,6 +4,7 @@
 // detalle de nuevo para avisar si quedó saldo a favor (la respuesta del PUT no lo trae).
 import { useState } from "react";
 import { Alert, Button, Dialog, DialogActions, DialogContent, DialogTitle, Stack, TextField, Typography } from "@mui/material";
+import { useDialogFullScreen } from "../useDialogFullScreen";
 import toast from "react-hot-toast";
 import { normalizeError, showApiError } from "../../api/errors";
 import { getOcupacion, setOcupacionFin } from "../../api/ocupacionApi";
@@ -21,6 +22,7 @@ import { useTenantDates } from "../../utils/useTenantDates";
  *   can: (permiso: string) => boolean, onClose: () => void, onChanged: () => void }} props
  */
 export default function ProgramarBajaDialog({ ocupacion, vencido, can, onClose, onChanged }) {
+  const fullScreen = useDialogFullScreen();
   const { localInputToInstant, instantToInput, formatInstant } = useTenantDates();
   const conFin = Boolean(ocupacion.fin);
   const [fin, setFin] = useState(() => (ocupacion.fin ? instantToInput(ocupacion.fin) : ""));
@@ -73,7 +75,7 @@ export default function ProgramarBajaDialog({ ocupacion, vencido, can, onClose, 
 
   if (resultado) {
     return (
-      <Dialog open onClose={cerrar} fullWidth maxWidth="xs">
+      <Dialog open onClose={cerrar} fullWidth maxWidth="xs" fullScreen={fullScreen}>
         <DialogTitle>{conFin ? "Cambiar fecha de fin" : "Programar baja"}</DialogTitle>
         <DialogContent dividers>
           <Stack spacing={1.5} sx={{ pt: 1 }}>
@@ -83,7 +85,7 @@ export default function ProgramarBajaDialog({ ocupacion, vencido, can, onClose, 
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button variant="contained" onClick={cerrar}>
+          <Button variant="marron" onClick={cerrar}>
             Cerrar
           </Button>
         </DialogActions>
@@ -92,7 +94,7 @@ export default function ProgramarBajaDialog({ ocupacion, vencido, can, onClose, 
   }
 
   return (
-    <Dialog open onClose={saving ? undefined : onClose} fullWidth maxWidth="xs">
+    <Dialog open onClose={saving ? undefined : onClose} fullWidth maxWidth="xs" fullScreen={fullScreen}>
       <DialogTitle>{conFin ? "Cambiar fecha de fin" : "Programar baja"}</DialogTitle>
       <DialogContent dividers>
         <Stack spacing={2} sx={{ pt: 1 }}>
@@ -118,10 +120,10 @@ export default function ProgramarBajaDialog({ ocupacion, vencido, can, onClose, 
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose} disabled={saving}>
+        <Button variant="contorno" onClick={onClose} disabled={saving}>
           Volver
         </Button>
-        <Button variant="contained" onClick={enviar} disabled={saving} sx={{ fontWeight: 900 }}>
+        <Button variant="marron" onClick={enviar} disabled={saving}>
           {conFin ? "Guardar fecha" : "Programar baja"}
         </Button>
       </DialogActions>

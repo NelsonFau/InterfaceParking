@@ -20,6 +20,7 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
+import { useDialogFullScreen } from "../useDialogFullScreen";
 import { showApiError } from "../../api/errors";
 import { getOcupacion } from "../../api/ocupacionApi";
 import { createDevolucion, getPago, listPagosByOcupacion } from "../../api/pagosApi";
@@ -68,6 +69,7 @@ function formDesde({ pagos, ocupacion }, pagoFijo) {
  *   quien lo abrió (después de escribir, o de un error por estado viejo); `onError` le deja cerrar su detalle.
  */
 export default function DevolucionDialog({ ocupacionId, pagoId = null, onClose, onChanged, onError }) {
+  const fullScreen = useDialogFullScreen();
   const { formatInstant } = useTenantDates();
   const pagoFijo = pagoId != null;
   const [data, setData] = useState(null); // { pagos, ocupacion }
@@ -204,7 +206,7 @@ export default function DevolucionDialog({ ocupacionId, pagoId = null, onClose, 
         <Stack direction="row" alignItems="center" gap={1} flexWrap="wrap" useFlexGap>
           <Typography>Ocupación #{ocupacionId}</Typography>
           {data.ocupacion && Number(saldoAFavor) > 0 ? (
-            <Chip size="small" color="warning" label={`Saldo a favor ${formatMoney(saldoAFavor)}`} sx={{ fontWeight: 700 }} />
+            <Chip size="small" color="warning" label={`Saldo a favor ${formatMoney(saldoAFavor)}`} />
           ) : null}
         </Stack>
 
@@ -307,20 +309,20 @@ export default function DevolucionDialog({ ocupacionId, pagoId = null, onClose, 
   }
 
   return (
-    <Dialog open onClose={saving ? undefined : onClose} fullWidth maxWidth="sm">
+    <Dialog open onClose={saving ? undefined : onClose} fullWidth maxWidth="sm" fullScreen={fullScreen}>
       <DialogTitle>Registrar devolución</DialogTitle>
       <DialogContent dividers>{cuerpo}</DialogContent>
       <DialogActions>
-        <Button onClick={onClose} disabled={saving}>
+        <Button variant="contorno" onClick={onClose} disabled={saving}>
           {exito ? "Cerrar" : "Cancelar"}
         </Button>
         {exito && hayQueDevolver ? (
-          <Button variant="contained" onClick={() => setExito(null)} sx={{ fontWeight: 900 }}>
+          <Button variant="marron" onClick={() => setExito(null)}>
             Registrar otra devolución
           </Button>
         ) : null}
         {!exito && data && hayQueDevolver ? (
-          <Button color="warning" variant="contained" onClick={enviar} disabled={saving} sx={{ fontWeight: 900 }}>
+          <Button color="warning" variant="contained" onClick={enviar} disabled={saving}>
             Registrar devolución
           </Button>
         ) : null}

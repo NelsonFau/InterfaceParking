@@ -219,6 +219,16 @@ export function formatInstantDate(instant, timeZone) {
   return `${f.day}/${f.month}/${f.year}`;
 }
 
+/** `UtcInstant` -> `HH:mm` de la hora en la zona (el mosaico de Cocheras muestra solo la hora). */
+export function formatInstantTime(instant, timeZone) {
+  assertZone(timeZone);
+  if (instant == null || instant === "") return "";
+  const ms = parseInstant(instant);
+  if (ms === null) return String(instant);
+  const f = zonedFields(ms, timeZone);
+  return `${f.hour}:${f.minute}`;
+}
+
 /** `UtcInstant` -> `DateOnly`: el día de calendario que ese instante tiene en la zona. Inválido -> "". */
 export function instantToDateOnly(instant, timeZone) {
   assertZone(timeZone);

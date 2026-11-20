@@ -5,7 +5,7 @@ import { Alert, Box, Typography } from "@mui/material";
 export default function NoAccess() {
   return (
     <Box sx={{ maxWidth: 520 }}>
-      <Typography variant="h5" fontWeight={800} sx={{ mb: 2 }}>
+      <Typography variant="h5" fontWeight={600} sx={{ mb: 2 }}>
         Sin acceso
       </Typography>
       <Alert severity="info">

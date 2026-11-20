@@ -2,6 +2,7 @@
 // lo ignora). Si la reserva tiene pagos, avisa antes de confirmar que queda una devolución pendiente.
 import { useState } from "react";
 import { Alert, Button, Dialog, DialogActions, DialogContent, DialogTitle, Stack, TextField, Typography } from "@mui/material";
+import { useDialogFullScreen } from "../useDialogFullScreen";
 import { showApiError } from "../../api/errors";
 import { cancelOcupacion } from "../../api/ocupacionApi";
 import { formatMoney } from "../../utils/formato";
@@ -14,6 +15,7 @@ const RECORDATORIO = "Quedó una devolución pendiente; registrala desde Pagos";
  *   onClose: () => void, onDone: (mensaje: string) => void, onError: (apiError: import("../../api/errors").ApiError) => void }} props
  */
 export default function CancelarReservaDialog({ ocupacion, onClose, onDone, onError }) {
+  const fullScreen = useDialogFullScreen();
   const [motivo, setMotivo] = useState("");
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -42,7 +44,7 @@ export default function CancelarReservaDialog({ ocupacion, onClose, onDone, onEr
   }
 
   return (
-    <Dialog open onClose={saving ? undefined : onClose} fullWidth maxWidth="xs">
+    <Dialog open onClose={saving ? undefined : onClose} fullWidth maxWidth="xs" fullScreen={fullScreen}>
       <DialogTitle>Cancelar reserva</DialogTitle>
       <DialogContent dividers>
         <Stack spacing={2} sx={{ pt: 1 }}>
@@ -75,10 +77,10 @@ export default function CancelarReservaDialog({ ocupacion, onClose, onDone, onEr
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose} disabled={saving}>
+        <Button variant="contorno" onClick={onClose} disabled={saving}>
           Volver
         </Button>
-        <Button color="error" variant="contained" onClick={enviar} disabled={saving} sx={{ fontWeight: 900 }}>
+        <Button color="error" variant="contained" onClick={enviar} disabled={saving}>
           Cancelar reserva
         </Button>
       </DialogActions>

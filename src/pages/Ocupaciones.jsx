@@ -6,12 +6,17 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
-import { Alert, Box, Button, Card, CardContent, Chip, MenuItem, Skeleton, Stack, TextField, Typography } from "@mui/material";
+import { Alert, Box, Button, Chip, MenuItem, Skeleton, Stack, Typography } from "@mui/material";
 import { listCocheras } from "../api/cocheraApi";
 import { showApiError } from "../api/errors";
 import { listOcupaciones } from "../api/ocupacionApi";
 import { usePermissions } from "../auth/usePermissions";
 import ClienteAutocomplete from "../componentes/ClienteAutocomplete";
+import AvatarTono from "../componentes/ui/AvatarTono";
+import BotonRefrescar from "../componentes/ui/BotonRefrescar";
+import Campo from "../componentes/ui/Campo";
+import EncabezadoPagina from "../componentes/ui/EncabezadoPagina";
+import Tarjeta from "../componentes/ui/Tarjeta";
 import AjusteMasivoDialog from "../componentes/ocupaciones/AjusteMasivoDialog";
 import AltaOcupacionDialog from "../componentes/ocupaciones/AltaOcupacionDialog";
 import CancelarReservaDialog from "../componentes/ocupaciones/CancelarReservaDialog";
@@ -37,7 +42,7 @@ import {
   shouldReloadAfter,
   takeOf,
 } from "../utils/ocupaciones";
-import { parseOcupacionId } from "../utils/ocupacionLink";
+import { hasNuevaFlag, parseOcupacionId } from "../utils/ocupacionLink";
 import { useTenantDates } from "../utils/useTenantDates";
 
 // Cada cuánto se refresca el reloj de la pantalla (fase y botones), sin pedir nada al servidor.
@@ -49,85 +54,57 @@ function OcupacionCard({ o, now, can, formatInstant, onVer, onAction }) {
   const acciones = accionesDeOcupacion(o, now, can);
   const rotulos = cuentaRotulos(o);
   const topeValor = fase === FASE.FINALIZADA ? (o.precioTotal ?? o.topeDeCobro) : o.topeDeCobro;
+  // El círculo del número va ámbar si está vencida, azul si es reserva, verde si está en curso y gris si terminó.
+  const colorCirculo = fase === FASE.FINALIZADA || fase === FASE.CANCELADA ? "default" : chip.color;
 
   return (
-    <Card
-      variant="outlined"
-      sx={{ borderRadius: 3, borderColor: "divider", boxShadow: "0 6px 18px rgba(0,0,0,.06)" }}
-    >
-      <CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
-        <Stack
-          direction={{ xs: "column", sm: "row" }}
-          spacing={1.5}
-          alignItems={{ xs: "stretch", sm: "center" }}
-          justifyContent="space-between"
-        >
-          <Box sx={{ minWidth: 0 }}>
-            <Stack direction="row" spacing={1} alignItems="center" sx={{ flexWrap: "wrap", mb: 0.5 }} useFlexGap>
-              <Typography sx={{ fontWeight: 900 }} noWrap>
-                Cochera #{o.cocheraNumero ?? o.cocheraId}
-              </Typography>
-              <Chip size="small" label={chip.label} color={chip.color} sx={{ fontWeight: 700 }} />
-              <Chip size="small" variant="outlined" label={labelOf(TipoOcupacion, o.tipo)} sx={{ fontWeight: 700 }} />
-            </Stack>
-
-            <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.35 }}>
-              Cliente: <b>{o.clienteNombre ?? o.clienteId}</b>
-              {" · "}
-              {fase === FASE.RESERVA ? `Empieza ${formatInstant(o.inicio)}` : `Inicio ${formatInstant(o.inicio)}`}
-              {" · "}
-              {o.fin ? `Fin ${formatInstant(o.fin)}` : "Sin hora de fin"}
-              {fase === FASE.FINALIZADA && o.finReal ? ` · Fin real ${formatInstant(o.finReal)}` : ""}
-            </Typography>
-
-            <Typography variant="body2" sx={{ mt: 0.75 }}>
-              {rotulos.tope !== null ? (
-                <>
-                  {rotulos.tope}: <b>{formatMoney(topeValor)}</b> ·{" "}
-                </>
-              ) : null}
-              {rotulos.pagado}: <b>{formatMoney(o.pagado)}</b> · {rotulos.saldo}: <b>{formatMoney(o.saldo)}</b>
-            </Typography>
-          </Box>
-
-          <Stack direction="row" spacing={1} justifyContent="flex-end" useFlexGap sx={{ flexWrap: "wrap" }}>
-            <Button variant="outlined" onClick={() => onVer(o.id)} sx={{ borderRadius: 2, fontWeight: 800 }}>
-              Ver
-            </Button>
-            {acciones.registrarPago ? (
-              <Button
-                color="success"
-                variant="contained"
-                onClick={() => onAction("pago", o)}
-                sx={{ borderRadius: 2, fontWeight: 900 }}
-              >
-                Registrar pago
-              </Button>
-            ) : null}
-            {acciones.cancelarReserva ? (
-              <Button
-                color="error"
-                variant="contained"
-                onClick={() => onAction("cancelar", o)}
-                sx={{ borderRadius: 2, fontWeight: 900 }}
-              >
-                Cancelar reserva
-              </Button>
-            ) : null}
-            {acciones.finalizar ? (
-              <Button
-                color="success"
-                variant="contained"
-                onClick={() => onAction("finalizar", o)}
-                sx={{ borderRadius: 2, fontWeight: 900 }}
-              >
-                Finalizar
-              </Button>
-            ) : null}
-          </Stack>
+    <Tarjeta>
+      <Stack spacing={1.25}>
+        <Stack direction="row" spacing={1.25} alignItems="center" sx={{ flexWrap: "wrap" }} useFlexGap>
+          <AvatarTono color={colorCirculo}>{o.cocheraNumero ?? o.cocheraId}</AvatarTono>
+          <Typography variant="subtitle1" noWrap>
+            Cochera #{o.cocheraNumero ?? o.cocheraId}
+          </Typography>
+          <Chip size="small" label={chip.label} color={chip.color} />
+          <Chip size="small" variant="outlined" label={labelOf(TipoOcupacion, o.tipo)} />
         </Stack>
-      </CardContent>
-    </Card>
+
+        <Typography variant="body2" color="text.secondary">
+          Cliente: {o.clienteNombre ?? o.clienteId}
+          {" · "}
+          {fase === FASE.RESERVA ? `Empieza ${formatInstant(o.inicio)}` : `Inicio ${formatInstant(o.inicio)}`}
+          {" · "}
+          {o.fin ? `Fin ${formatInstant(o.fin)}` : "Sin hora de fin"}
+          {fase === FASE.FINALIZADA && o.finReal ? ` · Fin real ${formatInstant(o.finReal)}` : ""}
+        </Typography>
+
+        <Typography variant="body2">
+          {rotulos.tope !== null ? `${rotulos.tope}: ${formatMoney(topeValor)} · ` : ""}
+          {rotulos.pagado}: {formatMoney(o.pagado)} · {rotulos.saldo}: {formatMoney(o.saldo)}
+        </Typography>
+
+        <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: "wrap" }}>
+          <Button variant="pill" color="inherit" onClick={() => onVer(o.id)}>
+            Ver
+          </Button>
+          {acciones.registrarPago ? (
+            <Button variant="pill" color="success" onClick={() => onAction("pago", o)}>
+              Registrar pago
+            </Button>
+          ) : null}
+          {acciones.finalizar ? (
+            <Button variant="pill" color="info" onClick={() => onAction("finalizar", o)}>
+              Finalizar
+            </Button>
+          ) : null}
+          {acciones.cancelarReserva ? (
+            <Button variant="pill" color="error" onClick={() => onAction("cancelar", o)}>
+              Cancelar reserva
+            </Button>
+          ) : null}
+        </Stack>
+      </Stack>
+    </Tarjeta>
   );
 }
 
@@ -171,6 +148,23 @@ export default function Ocupaciones() {
   const [ajusteMasivo, setAjusteMasivo] = useState(false);
 
   const detailId = parseOcupacionId(searchParams);
+
+  // Atajo "Registrar ingreso" (spec 13, D-FM10, DV-FM1): `?nueva=1` abre el alta y se limpia con replace,
+  // así "atrás" y recargar no la reabren (mismo patrón que `?id=N`). Sin `ocupaciones.crear` solo se limpia.
+  const quiereAlta = hasNuevaFlag(searchParams);
+  const puedeCrear = can("ocupaciones.crear");
+  useEffect(() => {
+    if (!quiereAlta) return;
+    if (puedeCrear) setDialog({ type: "alta" });
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete("nueva");
+        return next;
+      },
+      { replace: true },
+    );
+  }, [quiereAlta, puedeCrear, setSearchParams]);
 
   const reloadList = useCallback(() => {
     setLoading(true);
@@ -318,9 +312,9 @@ export default function Ocupaciones() {
   let cuerpo;
   if (loading) {
     cuerpo = (
-      <Stack spacing={1.25}>
-        {Array.from({ length: 6 }).map((_, i) => (
-          <Skeleton key={i} variant="rounded" height={108} />
+      <Stack spacing={1.5}>
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Skeleton key={i} variant="rounded" height={150} />
         ))}
       </Stack>
     );
@@ -339,9 +333,12 @@ export default function Ocupaciones() {
     );
   } else {
     cuerpo = (
-      <Stack spacing={1.25}>
+      <Stack spacing={1.5}>
         <Typography variant="body2" color="text.secondary">
-          Resultados: <b>{formatNumber(resumen.total)}</b>
+          Resultados:{" "}
+          <Typography component="span" variant="body2" color="primary.main">
+            {formatNumber(resumen.total)}
+          </Typography>
           {resumen.vencidas ? ` · Vencidas: ${formatNumber(resumen.vencidas)}` : ""}
         </Typography>
 
@@ -371,171 +368,132 @@ export default function Ocupaciones() {
   }
 
   return (
-    <Box sx={{ maxWidth: 1100, mx: "auto", px: { xs: 2, sm: 3 }, py: 2 }}>
-      <Stack spacing={0.5} sx={{ mb: 2 }}>
-        <Typography variant="h5" sx={{ fontWeight: 900, letterSpacing: -0.3 }}>
-          Ocupaciones
-        </Typography>
-        <Typography variant="body2" sx={{ color: "text.secondary" }}>
-          Control de ocupaciones, reservas, vencimientos y saldos.
-        </Typography>
-      </Stack>
+    <Box>
+      <EncabezadoPagina
+        titulo="Ocupaciones"
+        subtitulo="Control de ocupaciones, reservas, vencimientos y saldos."
+        acciones={
+          <>
+            {can("ocupaciones.crear") ? (
+              <Button variant="arena" onClick={() => setDialog({ type: "alta" })}>
+                Nueva ocupación
+              </Button>
+            ) : null}
+            {can("tarifas.editar") ? (
+              <Button variant="arena" onClick={() => setAjusteMasivo(true)}>
+                Ajustar precios mensuales
+              </Button>
+            ) : null}
+            <BotonRefrescar onClick={reloadList} disabled={loading} />
+          </>
+        }
+      />
 
-      <Stack
-        direction={{ xs: "column", sm: "row" }}
-        spacing={1.25}
-        alignItems={{ xs: "stretch", sm: "center" }}
+      <Tarjeta
+        titulo="Filtros"
         sx={{ mb: 2 }}
+        acciones={
+          <>
+            <Button variant="contorno" onClick={limpiar} disabled={loading}>
+              Limpiar
+            </Button>
+            <Button variant="arena" onClick={aplicar} disabled={loading}>
+              Aplicar
+            </Button>
+          </>
+        }
       >
-        {can("ocupaciones.crear") ? (
-          <Button
-            variant="contained"
-            onClick={() => setDialog({ type: "alta" })}
-            sx={{ borderRadius: 2, fontWeight: 900 }}
+        <Box
+          sx={{
+            display: "grid",
+            gap: 2,
+            gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)", md: "repeat(4, 1fr)", xl: "repeat(7, 1fr)" },
+            alignItems: "start",
+          }}
+        >
+          <Campo select label="Estado" value={filters.estado} onChange={(e) => setFilter("estado", e.target.value)}>
+            {ESTADO_FILTRO_OPTIONS.map((x) => (
+              <MenuItem key={x.value} value={x.value}>
+                {x.label}
+              </MenuItem>
+            ))}
+          </Campo>
+
+          <Campo
+            select
+            label="Cochera"
+            value={filters.cocheraId}
+            onChange={(e) => setFilter("cocheraId", e.target.value)}
+            disabled={cocheras === null}
           >
-            Nueva ocupación
-          </Button>
-        ) : null}
+            <MenuItem value="">Todas</MenuItem>
+            {(cocheras ?? []).map((c) => (
+              <MenuItem key={c.id} value={String(c.id)}>
+                Cochera #{c.numero}
+              </MenuItem>
+            ))}
+          </Campo>
 
-        {can("tarifas.editar") ? (
-          <Button variant="outlined" onClick={() => setAjusteMasivo(true)} sx={{ borderRadius: 2, fontWeight: 800 }}>
-            Ajustar precios mensuales
-          </Button>
-        ) : null}
-
-        <Button variant="outlined" onClick={reloadList} disabled={loading} sx={{ borderRadius: 2, fontWeight: 800 }}>
-          Refrescar
-        </Button>
-      </Stack>
-
-      <Card
-        variant="outlined"
-        sx={{ mb: 2, borderRadius: 3, borderColor: "divider", boxShadow: "0 6px 18px rgba(0,0,0,.06)" }}
-      >
-        <CardContent>
-          <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }} gap={1}>
-            <Typography fontWeight={900}>Filtros</Typography>
-            <Stack direction="row" gap={1}>
-              <Button onClick={limpiar} disabled={loading} sx={{ borderRadius: 2, fontWeight: 800 }}>
-                Limpiar
-              </Button>
-              <Button variant="outlined" onClick={aplicar} disabled={loading} sx={{ borderRadius: 2, fontWeight: 800 }}>
-                Aplicar
-              </Button>
-            </Stack>
-          </Stack>
-
-          <Box
-            sx={{
-              display: "grid",
-              gap: 1.5,
-              gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)", md: "repeat(4, 1fr)" },
-              alignItems: "start",
+          <ClienteAutocomplete
+            key={clienteKey}
+            size="small"
+            label="Filtrar por cliente"
+            value={filterCliente}
+            onChange={(c) => {
+              setFilterCliente(c);
+              setFilter("clienteId", c?.id ? String(c.id) : "");
             }}
+          />
+
+          <Campo
+            label="Vence en (días)"
+            value={filters.venceEnDias}
+            onChange={(e) => setFilter("venceEnDias", e.target.value)}
+            error={filterError?.field === "venceEnDias"}
+            helperText={
+              filterError?.field === "venceEnDias"
+                ? filterError.message
+                : "Activas con fin dentro de ese plazo. No incluye vencidas ni abiertas"
+            }
+            slotProps={{ htmlInput: { inputMode: "numeric" } }}
+          />
+
+          <Campo
+            label="Inicio desde"
+            type="date"
+            value={filters.desde}
+            onChange={(e) => setFilter("desde", e.target.value)}
+            error={filterError?.field === "desde"}
+            helperText={filterError?.field === "desde" ? filterError.message : undefined}
+          />
+
+          <Campo
+            label="Fin hasta"
+            type="date"
+            value={filters.hasta}
+            onChange={(e) => setFilter("hasta", e.target.value)}
+            error={filterError?.field === "hasta"}
+            helperText={
+              filterError?.field === "hasta"
+                ? filterError.message
+                : "Con este filtro no aparecen las ocupaciones abiertas (sin hora de fin)"
+            }
+          />
+
+          <Campo
+            select
+            label="Cantidad máxima"
+            value={takeOf(filters.take)}
+            onChange={(e) => setFilter("take", Number(e.target.value))}
           >
-            <TextField
-              select
-              size="small"
-              label="Estado"
-              value={filters.estado}
-              onChange={(e) => setFilter("estado", e.target.value)}
-              fullWidth
-            >
-              {ESTADO_FILTRO_OPTIONS.map((x) => (
-                <MenuItem key={x.value} value={x.value}>
-                  {x.label}
-                </MenuItem>
-              ))}
-            </TextField>
-
-            <TextField
-              select
-              size="small"
-              label="Cochera"
-              value={filters.cocheraId}
-              onChange={(e) => setFilter("cocheraId", e.target.value)}
-              disabled={cocheras === null}
-              fullWidth
-            >
-              <MenuItem value="">Todas</MenuItem>
-              {(cocheras ?? []).map((c) => (
-                <MenuItem key={c.id} value={String(c.id)}>
-                  Cochera #{c.numero}
-                </MenuItem>
-              ))}
-            </TextField>
-
-            <ClienteAutocomplete
-              key={clienteKey}
-              size="small"
-              label="Filtrar por cliente"
-              value={filterCliente}
-              onChange={(c) => {
-                setFilterCliente(c);
-                setFilter("clienteId", c?.id ? String(c.id) : "");
-              }}
-            />
-
-            <TextField
-              size="small"
-              label="Vence en (días)"
-              value={filters.venceEnDias}
-              onChange={(e) => setFilter("venceEnDias", e.target.value)}
-              error={filterError?.field === "venceEnDias"}
-              helperText={
-                filterError?.field === "venceEnDias"
-                  ? filterError.message
-                  : "Activas con fin dentro de ese plazo. No incluye vencidas ni abiertas"
-              }
-              slotProps={{ htmlInput: { inputMode: "numeric" } }}
-              fullWidth
-            />
-
-            <TextField
-              size="small"
-              label="Inicio desde"
-              type="date"
-              value={filters.desde}
-              onChange={(e) => setFilter("desde", e.target.value)}
-              error={filterError?.field === "desde"}
-              helperText={filterError?.field === "desde" ? filterError.message : undefined}
-              slotProps={{ inputLabel: { shrink: true } }}
-              fullWidth
-            />
-
-            <TextField
-              size="small"
-              label="Fin hasta"
-              type="date"
-              value={filters.hasta}
-              onChange={(e) => setFilter("hasta", e.target.value)}
-              error={filterError?.field === "hasta"}
-              helperText={
-                filterError?.field === "hasta"
-                  ? filterError.message
-                  : "Con este filtro no aparecen las ocupaciones abiertas (sin hora de fin)"
-              }
-              slotProps={{ inputLabel: { shrink: true } }}
-              fullWidth
-            />
-
-            <TextField
-              select
-              size="small"
-              label="Cantidad máxima"
-              value={takeOf(filters.take)}
-              onChange={(e) => setFilter("take", Number(e.target.value))}
-              fullWidth
-            >
-              {TAKE_OPTIONS.map((n) => (
-                <MenuItem key={n} value={n}>
-                  {n}
-                </MenuItem>
-              ))}
-            </TextField>
-          </Box>
-        </CardContent>
-      </Card>
+            {TAKE_OPTIONS.map((n) => (
+              <MenuItem key={n} value={n}>
+                {n}
+              </MenuItem>
+            ))}
+          </Campo>
+        </Box>
+      </Tarjeta>
 
       {cuerpo}
 

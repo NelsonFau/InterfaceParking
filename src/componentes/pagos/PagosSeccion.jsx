@@ -103,7 +103,7 @@ export default function PagosSeccion({ ocupacion, reloadKey = 0, onChanged }) {
                     {info.devuelto !== null ? formatMoney(info.devuelto) : ""}
                   </TableCell>
                   <TableCell>
-                    <Chip size="small" label={info.label} color={info.color} sx={{ fontWeight: 700 }} />
+                    <Chip size="small" label={info.label} color={info.color} />
                   </TableCell>
                   <TableCell sx={{ ...SOLO_ANCHAS, ...atenuado }}>{p.referencia ?? ""}</TableCell>
                 </TableRow>

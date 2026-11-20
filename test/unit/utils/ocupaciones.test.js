@@ -80,7 +80,7 @@ describe("ocupacionFase", () => {
 
 describe("faseChip", () => {
   it("7: reserva con color propio; el resto con la etiqueta y el color del enum", () => {
-    expect(faseChip("reserva")).toEqual({ label: "Reserva", color: "secondary" });
+    expect(faseChip("reserva")).toEqual({ label: "Reserva", color: "info" });
     expect(faseChip("en_curso")).toEqual({ label: "En curso", color: "success" });
     expect(faseChip("vencida")).toEqual({ label: "Vencida", color: "warning" });
     expect(faseChip("finalizada")).toEqual({ label: "Finalizada", color: "info" });

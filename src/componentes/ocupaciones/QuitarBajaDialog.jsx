@@ -2,6 +2,7 @@
 // Si otra ocupación ya tomó la cochera después del fin, el backend lo rechaza con `cochera_no_disponible`.
 import { useState } from "react";
 import { Alert, Button, Dialog, DialogActions, DialogContent, DialogTitle, Stack, Typography } from "@mui/material";
+import { useDialogFullScreen } from "../useDialogFullScreen";
 import toast from "react-hot-toast";
 import { normalizeError, showApiError } from "../../api/errors";
 import { setOcupacionFin } from "../../api/ocupacionApi";
@@ -11,6 +12,7 @@ import { buildQuitarBajaBody, contratoErrorOverride, shouldCloseActionAfterContr
  * @param {{ ocupacion: { id: number }, onClose: () => void, onChanged: () => void }} props
  */
 export default function QuitarBajaDialog({ ocupacion, onClose, onChanged }) {
+  const fullScreen = useDialogFullScreen();
   const [saving, setSaving] = useState(false);
   const [hecho, setHecho] = useState(false);
 
@@ -40,7 +42,7 @@ export default function QuitarBajaDialog({ ocupacion, onClose, onChanged }) {
   }
 
   return (
-    <Dialog open onClose={saving ? undefined : cerrar} fullWidth maxWidth="xs">
+    <Dialog open onClose={saving ? undefined : cerrar} fullWidth maxWidth="xs" fullScreen={fullScreen}>
       <DialogTitle>Quitar baja</DialogTitle>
       <DialogContent dividers>
         <Stack spacing={1.5} sx={{ pt: 1 }}>
@@ -58,15 +60,15 @@ export default function QuitarBajaDialog({ ocupacion, onClose, onChanged }) {
       </DialogContent>
       <DialogActions>
         {hecho ? (
-          <Button variant="contained" onClick={cerrar}>
+          <Button variant="marron" onClick={cerrar}>
             Cerrar
           </Button>
         ) : (
           <>
-            <Button onClick={onClose} disabled={saving}>
+            <Button variant="contorno" onClick={onClose} disabled={saving}>
               Volver
             </Button>
-            <Button variant="contained" onClick={confirmar} disabled={saving} sx={{ fontWeight: 900 }}>
+            <Button variant="marron" onClick={confirmar} disabled={saving}>
               Quitar baja
             </Button>
           </>

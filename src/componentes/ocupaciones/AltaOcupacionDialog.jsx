@@ -40,6 +40,7 @@ import {
 } from "../../utils/ocupaciones";
 import { useTenantDates } from "../../utils/useTenantDates";
 import ClienteAutocomplete from "../ClienteAutocomplete";
+import { useDialogFullScreen } from "../useDialogFullScreen";
 
 const TIPO_OPTIONS = optionsOf(TipoOcupacion);
 const DISPONIBLES_DEBOUNCE_MS = 400;
@@ -52,6 +53,7 @@ const TICK_MS = 30_000;
 export default function AltaOcupacionDialog({ onClose, onDone, onError }) {
   const { can } = usePermissions();
   const { timeZone, localInputToInstant, formatInstant } = useTenantDates();
+  const fullScreen = useDialogFullScreen();
 
   // El reloj del diálogo: decide si el inicio es futuro o retroactivo. Entra como parámetro a la lógica pura.
   const [now, setNow] = useState(() => new Date());
@@ -193,8 +195,8 @@ export default function AltaOcupacionDialog({ onClose, onDone, onError }) {
   }
 
   return (
-    <Dialog open onClose={saving ? undefined : onClose} fullWidth maxWidth="sm">
-      <DialogTitle sx={{ fontWeight: 900 }}>Nueva ocupación</DialogTitle>
+    <Dialog open onClose={saving ? undefined : onClose} fullWidth maxWidth="sm" fullScreen={fullScreen}>
+      <DialogTitle>Nueva ocupación</DialogTitle>
       <DialogContent dividers>
         <Stack spacing={2} sx={{ pt: 1 }}>
           <Box sx={{ display: "grid", gap: 1.5, gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" } }}>
@@ -335,10 +337,10 @@ export default function AltaOcupacionDialog({ onClose, onDone, onError }) {
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose} disabled={saving}>
+        <Button variant="contorno" onClick={onClose} disabled={saving}>
           Cancelar
         </Button>
-        <Button variant="contained" onClick={enviar} disabled={saving} sx={{ fontWeight: 900 }}>
+        <Button variant="marron" onClick={enviar} disabled={saving}>
           Crear
         </Button>
       </DialogActions>

@@ -1,6 +1,6 @@
 # 13 — Diseño: tema, shell y pantallas de "Parking Oficial"
 
-> Frontend · **Aprobada** (tandas 1 a 4) · **tanda 5: Aprobada, bloqueada por PB-24** · `feature/specs-etapa7` (esta spec) y `feature/front-diseno` (ejecución, en el repo principal sin worktree, a crear desde `develop`) · Última actualización 20/11/2026
+> Frontend · **En curso** (tandas 1 a 4 hechas) · **tanda 5: Aprobada, bloqueada por PB-24** · `feature/specs-etapa7` (esta spec) y `feature/front-diseno` (ejecución, en el repo principal sin worktree, a crear desde `develop`) · Última actualización 20/11/2026
 >
 > Decimotercera spec del frontend. **Replica en el código el diseño "Parking Oficial"** (proyecto "App de gestión de garage Uruguay" de Claude Design): un tema de MUI con `createTheme` (claro y oscuro), un shell nuevo (menú lateral agrupado, migas, menú de usuario, barra superior solo en mobile) y el estilo de las 11 pantallas, las pantallas de sistema y todos los diálogos, **incluido el plano del garage** (posicional, por niveles y con editor), que tiene su propia **tanda 5** y depende de un pedido de backend nuevo (PB-24, sección 4.3): las tandas 1 a 4 no lo esperan. **Salvo la tanda 5, es solo visual**: no cambia la lógica, los permisos, los textos que vienen de la API ni los endpoints. Las excepciones de comportamiento están en la sección 4.1 (DV-FM1, DV-FM2 y DV-FM7) y las pidió el desarrollador. **Depende de la 02 a la 12**, todas ejecutadas en `develop`. La spec 14 ("aprovechar lo nuevo del backend") es la siguiente y **no se mezcla** (sección 1).
 >
@@ -380,12 +380,12 @@ Nada. (Los `boxShadow`, `borderRadius` y colores sueltos de las páginas se borr
 
 **Condición de arranque:** el shell (D-FM8) ya está confirmado; conviene, si es posible, resolver P-FM1 (exportar el diseño a `diseno\`).
 
-- [ ] **1.1** Confirmar con el Orquestador que `feature/front-diseno` existe (`git branch -a`) y que `npm test`, `npm run lint` y `npm run build` pasan **antes de cambiar nada**.
-- [ ] **1.2** Pedir al usuario, por el Orquestador, el comando exacto, corrido en `C:\Users\Equipo\source\repos\FrontParking\parkingcontrol-front`: `npm install @fontsource/red-hat-display`. Esperar la confirmación.
-- [ ] **1.3** Crear `src/theme/theme.js` (D-FM3, D-FM4) con las tablas de 2.2, `ThemeRoot.jsx`, `ColorModeContext.js`, `useColorMode.js` y `navStyle.js`. Modificar `main.jsx` (D-FM5, D-FM7). Escribir `test/unit/theme/theme.test.js`.
-- [ ] **1.4** `routes.js` (D-FM9) y su test; `ocupacionLink.js` (D-FM10) y su test; `enums.js` (`EstadoCochera.OCUPADA.color = "oc"`, D-FM4) y `test/unit/constants/enums.test.js` (casos de abajo); verificar que el `Chip` toma `oc` (si no, la `variant` de `MuiChip`).
-- [ ] **1.5** Shell (D-FM8): `MenuLateral`, `CabeceraMigas`, `MenuUsuario` (con el engranaje, visible solo con `configuracion.ver`), `Layout.jsx`. Atajo "Registrar ingreso" en el menú.
-- [ ] **1.6** Pantallas de sistema (D-FM11): `Splash`, `Login`, `Waiting` y error de `/me` (en `RequireAuth`), `AccountBlocked`, `Forbidden`, `NoAccess`, `Callback`.
+- [x] **1.1** Confirmar con el Orquestador que `feature/front-diseno` existe (`git branch -a`) y que `npm test`, `npm run lint` y `npm run build` pasan **antes de cambiar nada**.
+- [x] **1.2** Pedir al usuario, por el Orquestador, el comando exacto, corrido en `C:\Users\Equipo\source\repos\FrontParking\parkingcontrol-front`: `npm install @fontsource/red-hat-display`. Esperar la confirmación.
+- [x] **1.3** Crear `src/theme/theme.js` (D-FM3, D-FM4) con las tablas de 2.2, `ThemeRoot.jsx`, `ColorModeContext.js`, `useColorMode.js` y `navStyle.js`. Modificar `main.jsx` (D-FM5, D-FM7). Escribir `test/unit/theme/theme.test.js`.
+- [x] **1.4** `routes.js` (D-FM9) y su test; `ocupacionLink.js` (D-FM10) y su test; `enums.js` (`EstadoCochera.OCUPADA.color = "oc"`, D-FM4) y `test/unit/constants/enums.test.js` (casos de abajo); verificar que el `Chip` toma `oc` (si no, la `variant` de `MuiChip`).
+- [x] **1.5** Shell (D-FM8): `MenuLateral`, `CabeceraMigas`, `MenuUsuario` (con el engranaje, visible solo con `configuracion.ver`), `Layout.jsx`. Atajo "Registrar ingreso" en el menú.
+- [x] **1.6** Pantallas de sistema (D-FM11): `Splash`, `Login`, `Waiting` y error de `/me` (en `RequireAuth`), `AccountBlocked`, `Forbidden`, `NoAccess`, `Callback`.
 
 **Tabla de casos del paso 1.4** (pura, sin React):
 
@@ -423,27 +423,27 @@ Nada. (Los `boxShadow`, `borderRadius` y colores sueltos de las páginas se borr
 
 ### Tanda 2 — Ocupaciones y Cocheras
 
-- [ ] **2.1** `Ocupaciones.jsx` y sus diálogos (`src/componentes/ocupaciones/*`): tarjeta de ocupación (`Card` outlined; `Stack direction={{ xs: "column", sm: "row" }}`; botones `size="large"`; "Registrar pago" y "Finalizar" en `success`, "Cancelar reserva" en `error`); filtros en `Grid` 1/2/4 columnas con `TextField size="small"`; `Alert warning` del tope; detalle, alta, finalizar (incluido el paso "Resolver el excedente"), cancelar reserva, registrar pago, sección Contrato mensual, ajuste de precio, programar y quitar baja, ajuste masivo (`Stepper` de 3 pasos). Pagos: `PagosSeccion`, `PagoDetalleDialog`, `AnularPagoDialog`, `DevolucionDialog`.
-- [ ] **2.2** `Cocheras.jsx`: grilla (`Grid` 2/3/4/6 columnas, tarjeta clicable con borde de 2 px del color del estado, altura de 150 px de la 06), diálogos (detalle `md` y `fullScreen` en xs; agregar, editar, bloquear, desbloquear en `xs`), `Tabs` "Tarjetas" / "Plano" y `PlanoGrilla.jsx` (D-FM14).
-- [ ] **2.3** Verificación de la tanda 2 (sección 7).
+- [x] **2.1** `Ocupaciones.jsx` y sus diálogos (`src/componentes/ocupaciones/*`): tarjeta de ocupación (`Card` outlined; `Stack direction={{ xs: "column", sm: "row" }}`; botones `size="large"`; "Registrar pago" y "Finalizar" en `success`, "Cancelar reserva" en `error`); filtros en `Grid` 1/2/4 columnas con `TextField size="small"`; `Alert warning` del tope; detalle, alta, finalizar (incluido el paso "Resolver el excedente"), cancelar reserva, registrar pago, sección Contrato mensual, ajuste de precio, programar y quitar baja, ajuste masivo (`Stepper` de 3 pasos). Pagos: `PagosSeccion`, `PagoDetalleDialog`, `AnularPagoDialog`, `DevolucionDialog`.
+- [x] **2.2** `Cocheras.jsx`: grilla (`Grid` 2/3/4/6 columnas, tarjeta clicable con borde de 2 px del color del estado, altura de 150 px de la 06), diálogos (detalle `md` y `fullScreen` en xs; agregar, editar, bloquear, desbloquear en `xs`), `Tabs` "Tarjetas" / "Plano" y `PlanoGrilla.jsx` (D-FM14).
+- [x] **2.3** Verificación de la tanda 2 (sección 7). *(Automática hecha: lint, build y test en verde; falta la visual manual.)*
 
 *Aceptación (manual):* (1) el flujo Nueva ocupación → Registrar pago → Finalizar se hace con botones grandes, también a 360 px; (2) las acciones sin permiso siguen ocultas (se prueba con `encargado@demo.test` y `operado@demo.test`); (3) el "Plano" colorea cada cochera por estado, abre el mismo detalle y no hace pedidos nuevos; (4) a 360 px la grilla de Cocheras es de 2 columnas y el detalle va a pantalla completa; (5) las dos paletas se ven bien.
 
 ### Tanda 3 — Caja, Pagos y Monitor
 
-- [ ] **3.1** `Caja.jsx` y `src/componentes/caja/*`: `Tabs`/`Tab` ("Caja actual", "Historial"), `Card` de la sesión, `Alert warning` del día anterior, `Chip` de modo y estado, `Table size="small"` + `TablePagination`, diálogos (abrir, cerrar con arqueo previa y resultado, reabrir, detalle de sesión) con `fullScreen` en xs; la diferencia con el color del tono (`ok`/`er`).
-- [ ] **3.2** `OperationalDashboard.jsx` y `CajaWidget.jsx`: indicadores (`Grid` 12 / md 2,4, `Card` que se resalta en `error` si el valor es mayor a 0), tarjeta "Alertas críticas recientes" (`Card` outlined con borde `error`), `LinearProgress` de recarga; **sin acordeones** (DV-FM4).
-- [ ] **3.3** `Pagos` (`src/componentes/pagos/*`) si algo quedó de la tanda 2.
-- [ ] **3.4** Verificación de la tanda 3.
+- [x] **3.1** `Caja.jsx` y `src/componentes/caja/*`: `Tabs`/`Tab` ("Caja actual", "Historial"), `Card` de la sesión, `Alert warning` del día anterior, `Chip` de modo y estado, `Table size="small"` + `TablePagination`, diálogos (abrir, cerrar con arqueo previa y resultado, reabrir, detalle de sesión) con `fullScreen` en xs; la diferencia con el color del tono (`ok`/`er`).
+- [x] **3.2** `OperationalDashboard.jsx` y `CajaWidget.jsx`: indicadores (`Grid` 12 / md 2,4, `Card` que se resalta en `error` si el valor es mayor a 0), tarjeta "Alertas críticas recientes" (`Card` outlined con borde `error`), `LinearProgress` de recarga; **sin acordeones** (DV-FM4).
+- [x] **3.3** `Pagos` (`src/componentes/pagos/*`) si algo quedó de la tanda 2.
+- [x] **3.4** Verificación de la tanda 3. *(Automática hecha: lint, build y test en verde; falta la visual manual.)*
 
 *Aceptación (manual):* (1) la caja del día anterior abierta destaca con `Alert warning`; (2) el cierre muestra la diferencia con color y no la calcula en el cliente; (3) el widget del Monitor muestra su falla aislada sin afectar al resto; (4) tablas con scroll propio a 360 px; (5) las dos paletas.
 
 ### Tanda 4 — El resto
 
-- [ ] **4.1** `Dashboard.jsx` (6 tarjetas con fondo del color de su estado y número grande; `Grid` 4/2/1), `Clientes.jsx` (con `ConfirmDialog`, D-FM13), `Tarifas.jsx` (dos pasos), `Trazabilidad.jsx` (tabla `size="small"` + `TablePagination`, `DetalleEventoDialog`), `OperationalAlerts.jsx` (**panel lateral** de severidad: `Card` con panel a la izquierda, arriba en mobile; borde `error` en Crítica abierta; `Tooltip` sobre el botón deshabilitado de alertas de dinero), `Configuracion.jsx` (`Paper` outlined, ancho máximo 800, campos deshabilitados sin permiso), `Usuarios.jsx` (`Table size="small"`, `IconButton` `MoreVert` + `Menu`, fila desactivada al 55 %).
-- [ ] **4.2** Búsqueda final (sección 7, caso 14) y pasada de limpieza de `sx` sueltos.
-- [ ] **4.3** `docs/manual/frontend/13-diseno.md` (qué es el tema, cómo agregar un color nuevo, cómo cambiar el radio, cómo funciona el modo, el shell, el atajo, el plano en grilla y qué queda para el plano posicional) y, con aprobación (P-FM6), la sección en `CLAUDE.md`.
-- [ ] **4.4** Actualizar el estado de esta spec en `docs/specs/README.md` y en su cabecera: **En curso** al cerrar la tanda 4 y **Terminada** una vez mergeada la tanda 5 a `develop`.
+- [x] **4.1** `Dashboard.jsx` (6 tarjetas con fondo del color de su estado y número grande; `Grid` 4/2/1), `Clientes.jsx` (con `ConfirmDialog`, D-FM13), `Tarifas.jsx` (dos pasos), `Trazabilidad.jsx` (tabla `size="small"` + `TablePagination`, `DetalleEventoDialog`), `OperationalAlerts.jsx` (**panel lateral** de severidad: `Card` con panel a la izquierda, arriba en mobile; borde `error` en Crítica abierta; `Tooltip` sobre el botón deshabilitado de alertas de dinero), `Configuracion.jsx` (`Paper` outlined, ancho máximo 800, campos deshabilitados sin permiso), `Usuarios.jsx` (`Table size="small"`, `IconButton` `MoreVert` + `Menu`, fila desactivada al 55 %).
+- [x] **4.2** Búsqueda final (sección 7, caso 14) y pasada de limpieza de `sx` sueltos.
+- [x] **4.3** `docs/manual/frontend/13-diseno.md` (qué es el tema, cómo agregar un color nuevo, cómo cambiar el radio, cómo funciona el modo, el shell, el atajo, el plano en grilla y qué queda para el plano posicional) y, con aprobación (P-FM6), la sección en `CLAUDE.md`.
+- [x] **4.4** Actualizar el estado de esta spec en `docs/specs/README.md` y en su cabecera: **En curso** al cerrar la tanda 4 y **Terminada** una vez mergeada la tanda 5 a `develop`.
 
 *Aceptación (manual):* (1) los `window.confirm` de Clientes ya no existen y el diálogo muestra el mismo texto; (2) la alerta "de dinero" sin permiso se ve deshabilitada con tooltip; (3) Configuración sin permiso muestra el aviso y los campos deshabilitados; (4) todas las pantallas y diálogos en claro y oscuro y a 360 px; (5) `npm test`, `npm run lint` y `npm run build` pasan.
 

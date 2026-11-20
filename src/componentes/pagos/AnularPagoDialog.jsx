@@ -6,6 +6,7 @@
 import { useState } from "react";
 import toast from "react-hot-toast";
 import { Alert, Button, Dialog, DialogActions, DialogContent, DialogTitle, Stack, TextField, Typography } from "@mui/material";
+import { useDialogFullScreen } from "../useDialogFullScreen";
 import { showApiError } from "../../api/errors";
 import { anularPago } from "../../api/pagosApi";
 import { MetodoPago, labelOf } from "../../constants/enums";
@@ -27,6 +28,7 @@ import {
  *   (lista, detalle del pago y de la ocupación); `onError` deja que quien lo abrió cierre su detalle.
  */
 export default function AnularPagoDialog({ pago, ocupacion, onClose, onChanged, onError }) {
+  const fullScreen = useDialogFullScreen();
   const [motivo, setMotivo] = useState("");
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -58,7 +60,7 @@ export default function AnularPagoDialog({ pago, ocupacion, onClose, onChanged, 
   }
 
   return (
-    <Dialog open onClose={saving ? undefined : onClose} fullWidth maxWidth="xs">
+    <Dialog open onClose={saving ? undefined : onClose} fullWidth maxWidth="xs" fullScreen={fullScreen}>
       <DialogTitle>Anular pago</DialogTitle>
       <DialogContent dividers>
         <Stack spacing={2} sx={{ pt: 1 }}>
@@ -87,10 +89,10 @@ export default function AnularPagoDialog({ pago, ocupacion, onClose, onChanged, 
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose} disabled={saving}>
+        <Button variant="contorno" onClick={onClose} disabled={saving}>
           Cancelar
         </Button>
-        <Button color="error" variant="contained" onClick={enviar} disabled={saving} sx={{ fontWeight: 900 }}>
+        <Button color="error" variant="contained" onClick={enviar} disabled={saving}>
           Anular pago
         </Button>
       </DialogActions>

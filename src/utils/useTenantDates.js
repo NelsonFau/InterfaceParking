@@ -8,6 +8,7 @@ import {
   dayToInstantRange,
   formatInstant,
   formatInstantDate,
+  formatInstantTime,
   instantToDateOnly,
   instantToInput,
   isValidTimeZone,
@@ -34,6 +35,7 @@ export function useTenantDates() {
       instantToInput: (instant) => instantToInput(instant, timeZone),
       formatInstant: (instant, options) => formatInstant(instant, timeZone, options),
       formatInstantDate: (instant) => formatInstantDate(instant, timeZone),
+      formatInstantTime: (instant) => formatInstantTime(instant, timeZone),
       instantToDateOnly: (instant) => instantToDateOnly(instant, timeZone),
       // `now` es para probar; por defecto, el momento actual.
       today: (now) => todayInZone(timeZone, now),

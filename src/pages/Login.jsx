@@ -39,26 +39,16 @@ export default function Login() {
         minHeight: "100vh",
         display: "grid",
         placeItems: "center",
-        bgcolor: "#f6f8fb",
+        bgcolor: "background.default",
         px: 2,
         py: 3,
       }}
     >
-      <Card
-        elevation={0}
-        sx={{
-          width: "100%",
-          maxWidth: 420,
-          borderRadius: 3,
-          border: "1px solid",
-          borderColor: "divider",
-          boxShadow: "0 18px 40px rgba(16,24,40,.08)",
-        }}
-      >
+      <Card sx={{ width: "100%", maxWidth: 420 }}>
         <CardContent sx={{ p: 3 }}>
           <Stack spacing={2}>
             <Box>
-              <Typography variant="h5" fontWeight={800}>
+              <Typography variant="h5" fontWeight={600}>
                 Iniciar sesión
               </Typography>
               <Typography variant="body2" color="text.secondary">
@@ -70,13 +60,7 @@ export default function Login() {
 
             {notice ? <Alert severity={notice.severity}>{notice.text}</Alert> : null}
 
-            <Button
-              variant="contained"
-              size="large"
-              disabled={isLoading || redirecting}
-              onClick={ingresar}
-              sx={{ borderRadius: 2, py: 1.2, fontWeight: 800 }}
-            >
+            <Button variant="contained" size="large" disabled={isLoading || redirecting} onClick={ingresar}>
               {redirecting ? "Redirigiendo..." : "Ingresar"}
             </Button>
           </Stack>

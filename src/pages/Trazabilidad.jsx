@@ -8,10 +8,9 @@ import {
   Autocomplete,
   Box,
   Button,
-  Card,
-  CardContent,
   Chip,
   LinearProgress,
+  Link,
   MenuItem,
   Skeleton,
   Stack,
@@ -20,7 +19,6 @@ import {
   TableCell,
   TableContainer,
   TableHead,
-  TablePagination,
   TableRow,
   TextField,
   Typography,
@@ -30,9 +28,12 @@ import { listTrazabilidad } from "../api/trazabilidadApi";
 import { listUsuarios } from "../api/usuariosApi";
 import { usePermissions } from "../auth/usePermissions";
 import DetalleEventoDialog from "../componentes/DetalleEventoDialog";
+import Campo from "../componentes/ui/Campo";
+import EncabezadoPagina from "../componentes/ui/EncabezadoPagina";
+import PaginacionTexto from "../componentes/ui/PaginacionTexto";
+import Tarjeta from "../componentes/ui/Tarjeta";
 import { AccionTrazabilidad, Fuente, colorOf, labelOf, optionsOf } from "../constants/enums";
 import { formatNumber } from "../utils/formato";
-import { toTablePaginationProps } from "../utils/paginacion";
 import { canonicalKey, resumenDeEvento } from "../utils/trazabilidadEvento";
 import { defaultFiltros, hasObjeto, toApiParams, validateFiltros } from "../utils/trazabilidadFiltros";
 import { buildTrazabilidadPath, parseTrazabilidadQuery } from "../utils/trazabilidadLink";
@@ -80,15 +81,13 @@ function UsuarioFilter({ value, onChange, error, usuarios, selector }) {
   if (!selector) {
     // Sin `usuarios.ver`, o si la lista no cargó: la pantalla sigue funcionando con el ID a mano.
     return (
-      <TextField
+      <Campo
         label="ID de usuario"
-        size="small"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         error={Boolean(error)}
         helperText={error}
         slotProps={{ htmlInput: { inputMode: "numeric" } }}
-        sx={{ minWidth: 160 }}
       />
     );
   }
@@ -106,7 +105,6 @@ function UsuarioFilter({ value, onChange, error, usuarios, selector }) {
       getOptionLabel={optionLabel}
       noOptionsText="Sin usuarios"
       loadingText="Cargando usuarios…"
-      sx={{ minWidth: 240 }}
       renderOption={(props, u) => {
         const { key, ...rest } = props;
         return (
@@ -147,90 +145,90 @@ function Filtros({ applied, loading, onSearch, onClear, usuarios, usuariosSelect
   }
 
   const idField = (campo, label) => (
-    <TextField
+    <Campo
       label={label}
-      size="small"
       value={draft[campo]}
       onChange={(e) => set(campo, e.target.value)}
       error={Boolean(errors[campo])}
       helperText={errors[campo]?.message}
       slotProps={{ htmlInput: { inputMode: "numeric" } }}
-      sx={{ width: 150 }}
     />
   );
 
   return (
-    <Card variant="outlined">
-      <CardContent>
-        <Box component="form" onSubmit={submit} noValidate>
-          <Stack direction="row" spacing={1.5} useFlexGap flexWrap="wrap" alignItems="flex-start">
-            <TextField
-              label="Desde"
-              type="date"
-              size="small"
-              value={draft.desde}
-              onChange={(e) => set("desde", e.target.value)}
-              error={Boolean(errors.desde)}
-              helperText={errors.desde?.message}
-              slotProps={{ inputLabel: { shrink: true } }}
-            />
-            <TextField
-              label="Hasta"
-              type="date"
-              size="small"
-              value={draft.hasta}
-              onChange={(e) => set("hasta", e.target.value)}
-              error={Boolean(errors.hasta)}
-              helperText={errors.hasta?.message}
-              slotProps={{ inputLabel: { shrink: true } }}
-            />
-            {idField("ocupacionId", "Ocupación (ID)")}
-            {idField("pagoId", "Pago (ID)")}
-            {idField("cajaSesionId", "Sesión de caja (ID)")}
-            <UsuarioFilter
-              value={draft.usuarioId}
-              onChange={(v) => set("usuarioId", v)}
-              error={errors.usuarioId?.message}
-              usuarios={usuarios}
-              selector={usuariosSelector}
-            />
-            <TextField
-              select
-              label="Fuente"
-              size="small"
-              value={draft.fuente}
-              onChange={(e) => set("fuente", e.target.value)}
-              sx={{ minWidth: 200 }}
-              slotProps={{
-                select: {
-                  multiple: true,
-                  renderValue: (sel) => (sel.length === 0 ? "Todas" : sel.map((v) => labelOf(Fuente, v)).join(", ")),
-                  displayEmpty: true,
-                },
-                inputLabel: { shrink: true },
-              }}
-            >
-              {FUENTE_OPTIONS.map((o) => (
-                <MenuItem key={o.value} value={o.value}>
-                  {o.label}
-                </MenuItem>
-              ))}
-            </TextField>
-            <Button type="submit" variant="contained" disabled={loading}>
-              Buscar
-            </Button>
-            <Button type="button" onClick={onClear} disabled={loading}>
-              Limpiar
-            </Button>
-          </Stack>
-          {errors.rango && (
-            <Alert severity="warning" sx={{ mt: 1.5 }}>
-              {errors.rango.message}
-            </Alert>
-          )}
+    <Tarjeta>
+      <Box component="form" onSubmit={submit} noValidate>
+        <Box
+          sx={{
+            display: "grid",
+            gap: 1.5,
+            gridTemplateColumns: {
+              xs: "1fr",
+              sm: "repeat(2, 1fr)",
+              lg: "repeat(4, 1fr)",
+              xl: "repeat(7, minmax(0, 1fr)) auto auto",
+            },
+            alignItems: "end",
+          }}
+        >
+          <Campo
+            label="Desde"
+            type="date"
+            value={draft.desde}
+            onChange={(e) => set("desde", e.target.value)}
+            error={Boolean(errors.desde)}
+            helperText={errors.desde?.message}
+          />
+          <Campo
+            label="Hasta"
+            type="date"
+            value={draft.hasta}
+            onChange={(e) => set("hasta", e.target.value)}
+            error={Boolean(errors.hasta)}
+            helperText={errors.hasta?.message}
+          />
+          {idField("ocupacionId", "Ocupación (ID)")}
+          {idField("pagoId", "Pago (ID)")}
+          {idField("cajaSesionId", "Sesión de caja (ID)")}
+          <UsuarioFilter
+            value={draft.usuarioId}
+            onChange={(v) => set("usuarioId", v)}
+            error={errors.usuarioId?.message}
+            usuarios={usuarios}
+            selector={usuariosSelector}
+          />
+          <Campo
+            select
+            label="Fuente"
+            value={draft.fuente}
+            onChange={(e) => set("fuente", e.target.value)}
+            slotProps={{
+              select: {
+                multiple: true,
+                renderValue: (sel) => (sel.length === 0 ? "Todas" : sel.map((v) => labelOf(Fuente, v)).join(", ")),
+              },
+            }}
+          >
+            {FUENTE_OPTIONS.map((o) => (
+              <MenuItem key={o.value} value={o.value}>
+                {o.label}
+              </MenuItem>
+            ))}
+          </Campo>
+          <Button type="submit" variant="arena" disabled={loading}>
+            Buscar
+          </Button>
+          <Button type="button" variant="arena" onClick={onClear} disabled={loading}>
+            Limpiar
+          </Button>
         </Box>
-      </CardContent>
-    </Card>
+        {errors.rango && (
+          <Alert severity="warning" sx={{ mt: 1.5 }}>
+            {errors.rango.message}
+          </Alert>
+        )}
+      </Box>
+    </Tarjeta>
   );
 }
 
@@ -380,12 +378,13 @@ function Panel({ applied, path, onNavigate, usuarios, usuariosSelector }) {
 
     return (
       <Stack spacing={1}>
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2">
           {total === 0 ? "Sin resultados" : `${formatNumber(total)} ${total === 1 ? "evento" : "eventos"}`}
         </Typography>
         {items.length === 0 ? (
           <Alert severity="info">No hay eventos para estos filtros.</Alert>
         ) : (
+          <Tarjeta>
           <TableContainer>
             <Table size="small">
               <TableHead>
@@ -424,9 +423,9 @@ function Panel({ applied, path, onNavigate, usuarios, usuariosSelector }) {
                       </TableCell>
                       <TableCell sx={{ maxWidth: 320, wordBreak: "break-word" }}>{resumenDeEvento(ev)}</TableCell>
                       <TableCell>
-                        <Button size="small" onClick={() => setSelected({ ev, i })}>
+                        <Link component="button" type="button" underline="hover" onClick={() => setSelected({ ev, i })}>
                           Ver detalle
-                        </Button>
+                        </Link>
                       </TableCell>
                     </TableRow>
                   );
@@ -434,14 +433,17 @@ function Panel({ applied, path, onNavigate, usuarios, usuariosSelector }) {
               </TableBody>
             </Table>
           </TableContainer>
+          <Box sx={{ pt: 2 }}>
+            <PaginacionTexto
+              page={page}
+              pageSize={pageSize}
+              total={total}
+              count={items.length}
+              onPageChange={pagination.setPage}
+            />
+          </Box>
+          </Tarjeta>
         )}
-        <TablePagination
-          component="div"
-          {...toTablePaginationProps(
-            { page, pageSize, total },
-            { onPageChange: pagination.setPage, onPageSizeChange: pagination.setPageSize },
-          )}
-        />
         <DetalleEventoDialog
           key={selected?.i ?? "cerrado"}
           evento={selected?.ev ?? null}
@@ -520,18 +522,14 @@ export default function Trazabilidad() {
   };
 
   return (
-    <Stack spacing={2}>
-      <Box>
-        <Typography variant="h5" fontWeight={700}>
-          Trazabilidad
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          Qué pasó, quién lo hizo y cuándo: auditoría, pagos, devoluciones, caja y alertas en una sola línea de tiempo.
-        </Typography>
-      </Box>
+    <Box>
+      <EncabezadoPagina
+        titulo="Trazabilidad"
+        subtitulo="Qué pasó, quién lo hizo y cuándo: auditoría, pagos, devoluciones, caja y alertas en una sola línea de tiempo."
+      />
 
       {ignorados.length > 0 && (
-        <Alert severity="warning" onClose={() => setIgnorados([])}>
+        <Alert severity="warning" sx={{ mb: 2 }} onClose={() => setIgnorados([])}>
           Ignoramos filtros del enlace que no eran válidos: {ignoradosTexto(ignorados)}.
         </Alert>
       )}
@@ -544,6 +542,6 @@ export default function Trazabilidad() {
         usuariosSelector={canListUsuarios && !usuariosFailed}
         onNavigate={goTo}
       />
-    </Stack>
+    </Box>
   );
 }

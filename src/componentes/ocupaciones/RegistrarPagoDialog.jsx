@@ -3,6 +3,7 @@
 // recarga y deja este diálogo abierto con el saldo nuevo (D-FG7). Los errores de caja son de la spec 09.
 import { useState } from "react";
 import { Button, Dialog, DialogActions, DialogContent, DialogTitle, MenuItem, Stack, TextField, Typography } from "@mui/material";
+import { useDialogFullScreen } from "../useDialogFullScreen";
 import { showApiError } from "../../api/errors";
 import { createPago } from "../../api/pagosApi";
 import { MetodoPago, optionsOf } from "../../constants/enums";
@@ -16,6 +17,7 @@ const METODO_OPTIONS = optionsOf(MetodoPago);
  *   onClose: () => void, onDone: (mensaje: string) => void, onError: (apiError: import("../../api/errors").ApiError) => void }} props
  */
 export default function RegistrarPagoDialog({ ocupacion, onClose, onDone, onError }) {
+  const fullScreen = useDialogFullScreen();
   const saldo = ocupacion.saldo;
   const [monto, setMonto] = useState(String(saldo ?? ""));
   const [metodo, setMetodo] = useState(MetodoPago.EFECTIVO);
@@ -53,7 +55,7 @@ export default function RegistrarPagoDialog({ ocupacion, onClose, onDone, onErro
   }
 
   return (
-    <Dialog open onClose={saving ? undefined : onClose} fullWidth maxWidth="xs">
+    <Dialog open onClose={saving ? undefined : onClose} fullWidth maxWidth="xs" fullScreen={fullScreen}>
       <DialogTitle>Registrar pago</DialogTitle>
       <DialogContent dividers>
         <Stack spacing={2} sx={{ pt: 1 }}>
@@ -107,10 +109,10 @@ export default function RegistrarPagoDialog({ ocupacion, onClose, onDone, onErro
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose} disabled={saving}>
+        <Button variant="contorno" onClick={onClose} disabled={saving}>
           Cancelar
         </Button>
-        <Button color="success" variant="contained" onClick={enviar} disabled={saving} sx={{ fontWeight: 900 }}>
+        <Button color="success" variant="contained" onClick={enviar} disabled={saving}>
           Registrar pago
         </Button>
       </DialogActions>

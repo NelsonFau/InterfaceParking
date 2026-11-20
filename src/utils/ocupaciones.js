@@ -105,7 +105,7 @@ export function ocupacionFase(o, now) {
 export function faseChip(fase) {
   switch (fase) {
     case FASE.RESERVA:
-      return { label: "Reserva", color: "secondary" };
+      return { label: "Reserva", color: "info" };
     case FASE.EN_CURSO:
       return { label: "En curso", color: colorOf(EstadoOcupacion, EstadoOcupacion.ACTIVA) };
     case FASE.VENCIDA:

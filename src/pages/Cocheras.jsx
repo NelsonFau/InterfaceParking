@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link as RouterLink } from "react-router-dom";
+import { Link as RouterLink, useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import {
   Alert,
@@ -12,21 +12,20 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
-  Divider,
   Skeleton,
   Stack,
   TextField,
   Typography,
 } from "@mui/material";
-import {
-  createCocheras,
-  getCochera,
-  listCocheras,
-  setEstadoCochera,
-  updateCochera,
-} from "../api/cocheraApi";
+import { createCocheras, getCochera, setEstadoCochera, updateCochera } from "../api/cocheraApi";
 import { showApiError } from "../api/errors";
 import { usePermissions } from "../auth/usePermissions";
+import CocheraMosaico from "../componentes/cocheras/CocheraMosaico";
+import { useCocherasMosaico } from "../componentes/cocheras/useCocherasMosaico";
+import BotonRefrescar from "../componentes/ui/BotonRefrescar";
+import Campo from "../componentes/ui/Campo";
+import EncabezadoPagina from "../componentes/ui/EncabezadoPagina";
+import { useDialogFullScreen } from "../componentes/useDialogFullScreen";
 import { EstadoCochera, EstadoOcupacion, TipoOcupacion, colorOf, labelOf } from "../constants/enums";
 import {
   MAX_NOTA,
@@ -43,6 +42,7 @@ import {
   validateEditCochera,
   vencimientoTexto,
 } from "../utils/cocheras";
+import { parseCocheraId } from "../utils/cocheraLink";
 import { formatMoney } from "../utils/formato";
 import { buildTrazabilidadPath } from "../utils/trazabilidadLink";
 import { useTenantDates } from "../utils/useTenantDates";
@@ -50,12 +50,9 @@ import { useTenantDates } from "../utils/useTenantDates";
 const ESTADOS_CON_OCUPACION = [EstadoCochera.OCUPADA, EstadoCochera.RESERVADA];
 const AVISO_EDICION =
   "Esta cochera tiene una ocupación o reserva. Si cambiás el número, cambia en todas las pantallas.";
-// Cada cuánto se refresca el "vence en…" de las tarjetas, sin pedir nada al servidor.
-const TICK_MS = 60_000;
-
 // Un único mapa de color de MUI a color del tema (D-FF4). `tono` es "light" (tarjeta) o "main" (historial).
 function borderOf(color, tono) {
-  return ["success", "warning", "error", "info"].includes(color) ? `${color}.${tono}` : "divider";
+  return ["success", "warning", "error", "info", "oc"].includes(color) ? `${color}.${tono}` : "divider";
 }
 
 const GRID_COLUMNS = {
@@ -65,92 +62,9 @@ const GRID_COLUMNS = {
   lg: "repeat(6, 1fr)",
 };
 
-function CocheraCard({ c, now, formatInstant, onClick }) {
-  const info = tarjetaInfo(c, now);
-  const color = colorOf(EstadoCochera, c.estado);
-  const ninguno = info.modo === "ninguno";
-
-  // Segunda línea (D-FF5): una BLOQUEADA con ocupación explica de qué se trata.
-  let segunda = "";
-  if (!ninguno) {
-    if (info.bloqueada) {
-      segunda =
-        info.modo === "ocupada"
-          ? `ocupada por ${info.cliente}`
-          : `reservada desde ${formatInstant(info.inicio)}`;
-    } else {
-      segunda = info.modo === "ocupada" ? info.vence : `Desde ${formatInstant(info.inicio)}`;
-    }
-  }
-  const pie = !ninguno && info.fin ? `Hasta ${formatInstant(info.fin)}` : " ";
-
-  return (
-    <Card
-      variant="outlined"
-      onClick={onClick}
-      sx={{
-        cursor: "pointer",
-        borderRadius: 3,
-        borderWidth: 2,
-        borderColor: borderOf(color, "light"),
-        height: 150, // altura fija
-        display: "flex",
-        boxShadow: "0 6px 18px rgba(0,0,0,.06)",
-        transition: "transform .08s ease, box-shadow .08s ease",
-        "&:active": { transform: "scale(0.99)" },
-        "&:hover": { boxShadow: "0 10px 22px rgba(0,0,0,.08)" },
-        overflow: "hidden",
-      }}
-    >
-      <CardContent
-        sx={{
-          p: 1.75,
-          width: "100%",
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "space-between",
-          gap: 1,
-          "&:last-child": { pb: 1.75 },
-        }}
-      >
-        <Stack direction="row" justifyContent="space-between" alignItems="center" gap={1}>
-          <Typography variant="subtitle1" sx={{ fontWeight: 900, letterSpacing: -0.2 }}>
-            #{c.numero}
-          </Typography>
-          <Chip
-            size="small"
-            label={labelOf(EstadoCochera, c.estado)}
-            color={color}
-            variant="filled"
-            sx={{ fontWeight: 700 }}
-          />
-        </Stack>
-
-        {ninguno ? (
-          <Typography variant="body2" sx={{ color: "text.secondary" }} noWrap>
-            —
-          </Typography>
-        ) : (
-          <Box sx={{ minWidth: 0 }}>
-            <Typography variant="body1" sx={{ fontWeight: 800, lineHeight: 1.15 }} noWrap title={info.cliente}>
-              {info.cliente}
-            </Typography>
-            <Typography variant="body2" sx={{ color: "text.secondary" }} noWrap title={segunda}>
-              {segunda}
-            </Typography>
-          </Box>
-        )}
-
-        <Typography variant="caption" sx={{ color: "text.secondary" }} noWrap>
-          {pie}
-        </Typography>
-      </CardContent>
-    </Card>
-  );
-}
-
 // Diálogo "Agregar cocheras" (D-FF7): la vista previa es la confirmación.
 function AltaDialog({ numeros, onClose, onDone, onError }) {
+  const fullScreen = useDialogFullScreen();
   const [desde, setDesde] = useState("");
   const [hasta, setHasta] = useState("");
   const [saving, setSaving] = useState(false);
@@ -173,7 +87,7 @@ function AltaDialog({ numeros, onClose, onDone, onError }) {
   }
 
   return (
-    <Dialog open onClose={saving ? undefined : onClose} fullWidth maxWidth="xs">
+    <Dialog open onClose={saving ? undefined : onClose} fullWidth maxWidth="xs" fullScreen={fullScreen}>
       <DialogTitle>Agregar cocheras</DialogTitle>
       <DialogContent dividers>
         <Stack spacing={2} sx={{ pt: 1 }}>
@@ -199,10 +113,10 @@ function AltaDialog({ numeros, onClose, onDone, onError }) {
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose} disabled={saving}>
+        <Button variant="contorno" onClick={onClose} disabled={saving}>
           Cancelar
         </Button>
-        <Button variant="contained" onClick={crear} disabled={saving || !preview.ok}>
+        <Button variant="marron" onClick={crear} disabled={saving || !preview.ok}>
           Crear
         </Button>
       </DialogActions>
@@ -212,6 +126,7 @@ function AltaDialog({ numeros, onClose, onDone, onError }) {
 
 // Diálogo "Editar" (D-FF8): número y nota. La nota llega precargada porque este PUT la reemplaza.
 function EditDialog({ detalle, numeros, onClose, onDone, onError }) {
+  const fullScreen = useDialogFullScreen();
   const [numero, setNumero] = useState(String(detalle.numero));
   const [nota, setNota] = useState(detalle.nota ?? "");
   const [saving, setSaving] = useState(false);
@@ -233,7 +148,7 @@ function EditDialog({ detalle, numeros, onClose, onDone, onError }) {
   }
 
   return (
-    <Dialog open onClose={saving ? undefined : onClose} fullWidth maxWidth="xs">
+    <Dialog open onClose={saving ? undefined : onClose} fullWidth maxWidth="xs" fullScreen={fullScreen}>
       <DialogTitle>{`Editar cochera #${detalle.numero}`}</DialogTitle>
       <DialogContent dividers>
         <Stack spacing={2} sx={{ pt: 1 }}>
@@ -260,10 +175,10 @@ function EditDialog({ detalle, numeros, onClose, onDone, onError }) {
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose} disabled={saving}>
+        <Button variant="contorno" onClick={onClose} disabled={saving}>
           Cancelar
         </Button>
-        <Button variant="contained" onClick={guardar} disabled={saving || !r.ok}>
+        <Button variant="marron" onClick={guardar} disabled={saving || !r.ok}>
           Guardar
         </Button>
       </DialogActions>
@@ -273,6 +188,7 @@ function EditDialog({ detalle, numeros, onClose, onDone, onError }) {
 
 // Diálogo de Bloquear (motivo obligatorio) y Desbloquear (nota opcional, precargada) (D-FF9).
 function EstadoDialog({ bloquear, detalle, onClose, onDone, onError }) {
+  const fullScreen = useDialogFullScreen();
   const [nota, setNota] = useState(bloquear ? "" : (detalle.nota ?? ""));
   const [saving, setSaving] = useState(false);
 
@@ -307,7 +223,7 @@ function EstadoDialog({ bloquear, detalle, onClose, onDone, onError }) {
   }
 
   return (
-    <Dialog open onClose={saving ? undefined : onClose} fullWidth maxWidth="xs">
+    <Dialog open onClose={saving ? undefined : onClose} fullWidth maxWidth="xs" fullScreen={fullScreen}>
       <DialogTitle>{`${bloquear ? "Bloquear" : "Desbloquear"} cochera #${detalle.numero}`}</DialogTitle>
       <DialogContent dividers>
         <Stack spacing={2} sx={{ pt: 1 }}>
@@ -333,7 +249,7 @@ function EstadoDialog({ bloquear, detalle, onClose, onDone, onError }) {
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose} disabled={saving}>
+        <Button variant="contorno" onClick={onClose} disabled={saving}>
           Cancelar
         </Button>
         <Button
@@ -356,34 +272,20 @@ export default function Cocheras() {
   const canManage = can("cocheras.gestionar");
   const canTrazabilidad = can("auditoria.ver");
   const { formatInstant } = useTenantDates();
+  const fullScreen = useDialogFullScreen();
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  // `null` = todavía no cargado: nunca se muestra como "no hay cocheras" (D-FF12).
-  const [items, setItems] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState(false);
-  const [listKey, setListKey] = useState(0);
+  // Lista de cocheras con su situación (mosaico): `items` null = todavía no cargado (D-FF12).
+  const { items, deudaIds, loading, error: loadError, now, reload: recargarLista } = useCocherasMosaico();
   const [q, setQ] = useState("");
 
-  // El reloj de la pantalla: entra como parámetro a la lógica pura y se refresca solo.
-  const [now, setNow] = useState(() => new Date());
-  useEffect(() => {
-    const id = setInterval(() => setNow(new Date()), TICK_MS);
-    return () => clearInterval(id);
-  }, []);
-
   // Detalle: `detalleId` null = cerrado; cada cambio de `detalleKey` lo vuelve a pedir.
-  const [detalleId, setDetalleId] = useState(null);
+  const [detalleId, setDetalleId] = useState(() => parseCocheraId(searchParams));
   const [detalleKey, setDetalleKey] = useState(0);
   const [detalle, setDetalle] = useState(null);
 
   // Diálogo abierto: null | "alta" | "editar" | "bloquear" | "desbloquear".
   const [dialog, setDialog] = useState(null);
-
-  const recargarLista = useCallback(() => {
-    setLoading(true);
-    setLoadError(false);
-    setListKey((k) => k + 1);
-  }, []);
 
   // La lista y el detalle se recargan después de cualquier escritura: el estado es calculado (D-FF12).
   const recargarTodo = useCallback(() => {
@@ -402,28 +304,20 @@ export default function Cocheras() {
     setDetalleId(id);
   }
 
-  // Lista. La bandera `ignore` descarta una respuesta que llegó tarde.
+  // Enlace `/cocheras?cochera=N` (el mosaico del Panel): el detalle ya arrancó abierto (estado inicial) y acá solo
+  // se limpia el query con replace, así "atrás" y recargar no lo reabren.
+  const hayEnlace = parseCocheraId(searchParams) !== null;
   useEffect(() => {
-    let ignore = false;
-    (async () => {
-      try {
-        const data = await listCocheras();
-        if (ignore) return;
-        setItems(data);
-        setNow(new Date());
-      } catch (e) {
-        if (ignore) return;
-        setItems(null);
-        setLoadError(true);
-        showApiError(e);
-      } finally {
-        if (!ignore) setLoading(false);
-      }
-    })();
-    return () => {
-      ignore = true;
-    };
-  }, [listKey]);
+    if (!hayEnlace) return;
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete("cochera");
+        return next;
+      },
+      { replace: true },
+    );
+  }, [hayEnlace, setSearchParams]);
 
   // Detalle. Dos clics seguidos dejan el detalle del último: el efecto anterior se descarta (D-FF12).
   useEffect(() => {
@@ -434,7 +328,6 @@ export default function Cocheras() {
         const data = await getCochera(detalleId, { historialTake: 20 });
         if (ignore) return;
         setDetalle(data);
-        setNow(new Date());
       } catch (e) {
         if (ignore) return;
         const err = showApiError(e);
@@ -478,7 +371,7 @@ export default function Cocheras() {
   const ocupa = detalle?.ocupacionActiva ?? null;
 
   const botonAgregar = canManage ? (
-    <Button variant="contained" onClick={() => setDialog("alta")} sx={{ borderRadius: 2, fontWeight: 800 }}>
+    <Button variant="arena" onClick={() => setDialog("alta")}>
       Agregar cocheras
     </Button>
   ) : null;
@@ -488,7 +381,7 @@ export default function Cocheras() {
     grilla = (
       <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: GRID_COLUMNS }}>
         {Array.from({ length: 12 }).map((_, i) => (
-          <Skeleton key={i} variant="rounded" height={150} />
+          <Skeleton key={i} variant="rounded" height={104} />
         ))}
       </Box>
     );
@@ -518,56 +411,35 @@ export default function Cocheras() {
     grilla = (
       <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: GRID_COLUMNS }}>
         {filtered.map((c) => (
-          <CocheraCard key={c.id} c={c} now={now} formatInstant={formatInstant} onClick={() => abrirDetalle(c.id)} />
+          <CocheraMosaico key={c.id} cochera={c} now={now} deudaIds={deudaIds} onClick={abrirDetalle} />
         ))}
       </Box>
     );
   }
 
   return (
-    <Box sx={{ maxWidth: 1100, mx: "auto", px: { xs: 2, sm: 3 }, py: 2 }}>
-      <Stack spacing={0.5} sx={{ mb: 2 }}>
-        <Typography variant="h5" sx={{ fontWeight: 900, letterSpacing: -0.3 }}>
-          Cocheras
-        </Typography>
-        <Typography variant="body2" sx={{ color: "text.secondary" }}>
-          Visualización rápida del estado de cada cochera.
-        </Typography>
+    <Box>
+      <EncabezadoPagina titulo="Cocheras" subtitulo="Visualización rápida del estado de cada cochera." />
+
+      <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} alignItems={{ xs: "stretch", sm: "flex-end" }} sx={{ mb: 2 }}>
+        <Stack direction="row" spacing={1.5} alignItems="center" sx={{ pb: { sm: 0 } }}>
+          <BotonRefrescar onClick={recargarLista} disabled={loading} />
+          {/* Con la lista vacía el botón se ofrece en el estado vacío, para no repetirlo. */}
+          {items && items.length > 0 ? botonAgregar : null}
+        </Stack>
+        <Campo label="Buscar por número" placeholder="Escribí para buscar" value={q} onChange={(e) => setQ(e.target.value)} />
       </Stack>
 
-      <Stack
-        direction={{ xs: "column", sm: "row" }}
-        spacing={1.25}
-        alignItems={{ xs: "stretch", sm: "center" }}
-        sx={{ mb: 2 }}
-      >
-        <Button
-          variant="contained"
-          onClick={recargarLista}
-          disabled={loading}
-          sx={{ borderRadius: 2, fontWeight: 800 }}
-        >
-          Refrescar
-        </Button>
-
-        {/* Con la lista vacía el botón se ofrece en el estado vacío, para no repetirlo. */}
-        {items && items.length > 0 ? botonAgregar : null}
-
-        <TextField
-          size="small"
-          label="Buscar por número"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          sx={{ width: { xs: "100%", sm: 260 } }}
-        />
-      </Stack>
-
-      <Divider sx={{ mb: 2 }} />
+      {items && items.length > 0 ? (
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          Total: {items.length} {items.length === 1 ? "cochera" : "cocheras"}
+        </Typography>
+      ) : null}
 
       {grilla}
 
       {/* DETALLE */}
-      <Dialog open={detalleId !== null} onClose={cerrarDetalle} fullWidth maxWidth="md">
+      <Dialog open={detalleId !== null} onClose={cerrarDetalle} fullWidth maxWidth="md" fullScreen={fullScreen}>
         <DialogTitle>Detalle cochera</DialogTitle>
         <DialogContent dividers>
           {!detalle ? (
@@ -620,9 +492,9 @@ export default function Cocheras() {
                 </Typography>
 
                 {ocupa ? (
-                  <Card variant="outlined" sx={{ borderRadius: 3 }}>
+                  <Card>
                     <CardContent>
-                      <Typography fontWeight={900}>{ocupa.clienteNombre}</Typography>
+                      <Typography fontWeight={600}>{ocupa.clienteNombre}</Typography>
                       <Typography variant="body2" color="text.secondary">
                         Tipo: {labelOf(TipoOcupacion, ocupa.tipo)}
                       </Typography>
@@ -666,15 +538,11 @@ export default function Cocheras() {
                     {detalle.historial.map((h) => {
                       const color = colorOf(EstadoOcupacion, h.estado);
                       return (
-                        <Card
-                          key={h.id}
-                          variant="outlined"
-                          sx={{ borderWidth: 2, borderColor: borderOf(color, "main"), borderRadius: 3 }}
-                        >
+                        <Card key={h.id} sx={{ borderWidth: 2, borderColor: borderOf(color, "main") }}>
                           <CardContent sx={{ py: 1.2 }}>
                             <Stack direction="row" justifyContent="space-between" alignItems="center" gap={1}>
                               <Typography
-                                fontWeight={800}
+                                fontWeight={600}
                                 noWrap
                                 title={`${h.id} · ${h.clienteNombre}`}
                                 sx={{ minWidth: 0 }}
@@ -719,7 +587,7 @@ export default function Cocheras() {
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={cerrarDetalle}>Cerrar</Button>
+          <Button variant="contorno" onClick={cerrarDetalle}>Cerrar</Button>
         </DialogActions>
       </Dialog>
 

@@ -10,9 +10,9 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
-  Divider,
   FormControlLabel,
   IconButton,
+  Link,
   Menu,
   MenuItem,
   Skeleton,
@@ -40,6 +40,11 @@ import { showApiError } from "../api/errors";
 import { useMe, usePermissions } from "../auth/usePermissions";
 import { RolUsuario, labelOf, optionsOf } from "../constants/enums";
 import { buildTrazabilidadPath } from "../utils/trazabilidadLink";
+import { useDialogFullScreen } from "../componentes/useDialogFullScreen";
+import BotonRefrescar from "../componentes/ui/BotonRefrescar";
+import Campo from "../componentes/ui/Campo";
+import EncabezadoPagina from "../componentes/ui/EncabezadoPagina";
+import Tarjeta from "../componentes/ui/Tarjeta";
 import { useTenantDates } from "../utils/useTenantDates";
 import {
   ROLES_INVITABLES_KEYS,
@@ -56,6 +61,7 @@ const msgReenvio = (email) => `Le enviamos de nuevo la invitación a ${email}`;
 
 // Diálogo "Invitar usuario" (D-FL5): el rol arranca sin elegir y los errores se ven al tocar el campo o al enviar.
 function InvitarDialog({ onClose, onDone, onError }) {
+  const fullScreen = useDialogFullScreen();
   const [form, setForm] = useState({ nombre: "", email: "", rol: "" });
   const [touched, setTouched] = useState({});
   const [saving, setSaving] = useState(false);
@@ -83,7 +89,7 @@ function InvitarDialog({ onClose, onDone, onError }) {
   }
 
   return (
-    <Dialog open onClose={saving ? undefined : onClose} fullWidth maxWidth="xs">
+    <Dialog open onClose={saving ? undefined : onClose} fullScreen={fullScreen} fullWidth maxWidth="xs">
       <DialogTitle>Invitar usuario</DialogTitle>
       <DialogContent dividers>
         <Stack spacing={2} sx={{ pt: 1 }}>
@@ -126,10 +132,10 @@ function InvitarDialog({ onClose, onDone, onError }) {
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose} disabled={saving}>
+        <Button variant="contorno" onClick={onClose} disabled={saving}>
           Cancelar
         </Button>
-        <Button variant="contained" onClick={enviar} disabled={saving}>
+        <Button variant="marron" onClick={enviar} disabled={saving}>
           Invitar
         </Button>
       </DialogActions>
@@ -139,6 +145,7 @@ function InvitarDialog({ onClose, onDone, onError }) {
 
 // Diálogo "Cambiar rol" (D-FL8): selector y, después, resumen "de X a Y" para confirmar.
 function RolDialog({ usuario, onClose, onDone, onError }) {
+  const fullScreen = useDialogFullScreen();
   const [rol, setRol] = useState(usuario.rol);
   const [confirmando, setConfirmando] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -158,7 +165,7 @@ function RolDialog({ usuario, onClose, onDone, onError }) {
   }
 
   return (
-    <Dialog open onClose={saving ? undefined : onClose} fullWidth maxWidth="xs">
+    <Dialog open onClose={saving ? undefined : onClose} fullScreen={fullScreen} fullWidth maxWidth="xs">
       <DialogTitle>{`Cambiar rol de ${usuario.nombre}`}</DialogTitle>
       <DialogContent dividers>
         {confirmando ? (
@@ -181,17 +188,17 @@ function RolDialog({ usuario, onClose, onDone, onError }) {
       <DialogActions>
         {confirmando ? (
           <>
-            <Button onClick={() => setConfirmando(false)} disabled={saving}>
+            <Button variant="contorno" onClick={() => setConfirmando(false)} disabled={saving}>
               Volver
             </Button>
-            <Button variant="contained" onClick={confirmar} disabled={saving}>
+            <Button variant="marron" onClick={confirmar} disabled={saving}>
               Confirmar
             </Button>
           </>
         ) : (
           <>
-            <Button onClick={onClose}>Cancelar</Button>
-            <Button variant="contained" onClick={() => setConfirmando(true)} disabled={!resumen.cambia}>
+            <Button variant="contorno" onClick={onClose}>Cancelar</Button>
+            <Button variant="marron" onClick={() => setConfirmando(true)} disabled={!resumen.cambia}>
               Guardar
             </Button>
           </>
@@ -203,6 +210,7 @@ function RolDialog({ usuario, onClose, onDone, onError }) {
 
 // Confirmación de "Desactivar" (D-FL9). Desactivar es solo local: no se promete más que eso.
 function DesactivarDialog({ usuario, onClose, onDone, onError }) {
+  const fullScreen = useDialogFullScreen();
   const [saving, setSaving] = useState(false);
 
   async function desactivar() {
@@ -218,13 +226,13 @@ function DesactivarDialog({ usuario, onClose, onDone, onError }) {
   }
 
   return (
-    <Dialog open onClose={saving ? undefined : onClose} fullWidth maxWidth="xs">
+    <Dialog open onClose={saving ? undefined : onClose} fullScreen={fullScreen} fullWidth maxWidth="xs">
       <DialogTitle>{`¿Desactivar a ${usuario.nombre}?`}</DialogTitle>
       <DialogContent dividers>
         <Typography>No va a poder ingresar al sistema hasta que lo reactives.</Typography>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose} disabled={saving}>
+        <Button variant="contorno" onClick={onClose} disabled={saving}>
           Cancelar
         </Button>
         <Button variant="contained" color="error" onClick={desactivar} disabled={saving}>
@@ -389,6 +397,7 @@ export default function Usuarios() {
     contenido = <Typography color="text.secondary">No hay usuarios con ese filtro.</Typography>;
   } else {
     contenido = (
+      <Tarjeta>
       <TableContainer>
         <Table size="small">
           <TableHead>
@@ -410,7 +419,7 @@ export default function Usuarios() {
                   <TableCell>
                     <Stack direction="row" spacing={1} alignItems="center">
                       <span>{u.nombre}</span>
-                      {acc.esPropio ? <Chip size="small" label="Vos" color="primary" variant="outlined" /> : null}
+                      {acc.esPropio ? <Chip size="small" label="Vos" variant="outlined" /> : null}
                     </Stack>
                   </TableCell>
                   <TableCell>{u.email}</TableCell>
@@ -426,10 +435,11 @@ export default function Usuarios() {
                   {canManage || canTrazabilidad ? (
                     <TableCell align="right" sx={{ whiteSpace: "nowrap" }}>
                       {canTrazabilidad ? (
-                        <Button size="small" component={RouterLink} to={buildTrazabilidadPath({ usuarioId: u.id })}>
+                        <Link component={RouterLink} to={buildTrazabilidadPath({ usuarioId: u.id })} underline="hover">
                           Ver actividad
-                        </Button>
+                        </Link>
                       ) : null}
+                      {canTrazabilidad && hayMenu ? " · " : null}
                       {hayMenu ? (
                         <IconButton
                           size="small"
@@ -448,19 +458,13 @@ export default function Usuarios() {
           </TableBody>
         </Table>
       </TableContainer>
+      </Tarjeta>
     );
   }
 
   return (
-    <Box sx={{ maxWidth: 1100, mx: "auto", px: { xs: 2, sm: 3 }, py: 2 }}>
-      <Stack spacing={0.5} sx={{ mb: 2 }}>
-        <Typography variant="h5" sx={{ fontWeight: 900, letterSpacing: -0.3 }}>
-          Usuarios
-        </Typography>
-        <Typography variant="body2" sx={{ color: "text.secondary" }}>
-          Quiénes tienen acceso al local.
-        </Typography>
-      </Stack>
+    <Box>
+      <EncabezadoPagina titulo="Usuarios" subtitulo="Quiénes tienen acceso al local." />
 
       {aviso ? (
         <Alert
@@ -481,41 +485,23 @@ export default function Usuarios() {
         </Alert>
       ) : null}
 
-      <Stack
-        direction={{ xs: "column", sm: "row" }}
-        spacing={1.25}
-        alignItems={{ xs: "stretch", sm: "center" }}
-        sx={{ mb: 2 }}
-      >
-        <Button variant="contained" onClick={recargar} disabled={loading} sx={{ borderRadius: 2, fontWeight: 800 }}>
-          Refrescar
-        </Button>
-        {canManage ? (
-          <Button
-            variant="contained"
-            color="secondary"
-            onClick={() => setDialog({ tipo: "invitar" })}
-            sx={{ borderRadius: 2, fontWeight: 800 }}
-          >
-            Invitar usuario
-          </Button>
-        ) : null}
-        <TextField
-          size="small"
-          label="Buscar por nombre o email"
-          value={texto}
-          onChange={(e) => setTexto(e.target.value)}
-          sx={{ width: { xs: "100%", sm: 280 } }}
-        />
-        <FormControlLabel
-          control={
-            <Switch checked={mostrarDesactivados} onChange={(e) => setMostrarDesactivados(e.target.checked)} />
-          }
-          label="Mostrar desactivados"
-        />
+      <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} alignItems={{ xs: "stretch", sm: "flex-end" }} sx={{ mb: 1.5 }}>
+        <Stack direction="row" spacing={1.5} alignItems="center">
+          <BotonRefrescar onClick={recargar} disabled={loading} />
+          {canManage ? (
+            <Button variant="arena" onClick={() => setDialog({ tipo: "invitar" })}>
+              Invitar usuario
+            </Button>
+          ) : null}
+        </Stack>
+        <Campo label="Buscar por nombre o email" value={texto} onChange={(e) => setTexto(e.target.value)} />
       </Stack>
 
-      <Divider sx={{ mb: 2 }} />
+      <FormControlLabel
+        sx={{ mb: 2 }}
+        control={<Switch checked={mostrarDesactivados} onChange={(e) => setMostrarDesactivados(e.target.checked)} />}
+        label="Mostrar desactivados"
+      />
 
       {contenido}
 

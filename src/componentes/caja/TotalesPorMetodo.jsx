@@ -1,6 +1,6 @@
 // Tabla de cobros, anulaciones y devoluciones por método de pago (spec 09, D-FI7, D-FI10). Muestra lo que manda
 // el backend (en vivo o el snapshot de un cierre): solo trae los métodos con movimientos y no se suma nada acá.
-import { Table, TableBody, TableCell, TableHead, TableRow, Typography } from "@mui/material";
+import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography } from "@mui/material";
 import { MetodoPago, labelOf } from "../../constants/enums";
 import { formatMoney } from "../../utils/formato";
 
@@ -16,25 +16,27 @@ export default function TotalesPorMetodo({ totales }) {
     );
   }
   return (
-    <Table size="small">
+    <TableContainer>
+      <Table size="small">
       <TableHead>
         <TableRow>
           <TableCell>Método</TableCell>
-          <TableCell align="right">Cobros</TableCell>
-          <TableCell align="right">Anulaciones</TableCell>
-          <TableCell align="right">Devoluciones</TableCell>
+          <TableCell>Cobros</TableCell>
+          <TableCell>Anulaciones</TableCell>
+          <TableCell>Devoluciones</TableCell>
         </TableRow>
       </TableHead>
       <TableBody>
         {totales.map((t) => (
           <TableRow key={t.metodo}>
             <TableCell>{labelOf(MetodoPago, t.metodo)}</TableCell>
-            <TableCell align="right">{formatMoney(t.cobros)}</TableCell>
-            <TableCell align="right">{formatMoney(t.anulaciones)}</TableCell>
-            <TableCell align="right">{formatMoney(t.devoluciones)}</TableCell>
+            <TableCell>{formatMoney(t.cobros)}</TableCell>
+            <TableCell>{formatMoney(t.anulaciones)}</TableCell>
+            <TableCell>{formatMoney(t.devoluciones)}</TableCell>
           </TableRow>
         ))}
       </TableBody>
-    </Table>
+      </Table>
+    </TableContainer>
   );
 }

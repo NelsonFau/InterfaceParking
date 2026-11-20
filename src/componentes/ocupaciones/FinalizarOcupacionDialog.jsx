@@ -24,6 +24,7 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
+import { useDialogFullScreen } from "../useDialogFullScreen";
 import { normalizeError, showApiError } from "../../api/errors";
 import { finalizeOcupacion, getOcupacion } from "../../api/ocupacionApi";
 import { ResolucionExcedente, labelOf } from "../../constants/enums";
@@ -44,6 +45,7 @@ const AVISO_DEVOLVER = "Quedó una devolución pendiente; registrala desde Pagos
  *   onError: (apiError: import("../../api/errors").ApiError) => void }} props
  */
 export default function FinalizarOcupacionDialog({ ocupacionId, now, onClose, onDone, onError }) {
+  const fullScreen = useDialogFullScreen();
   // Detalle fresco: `{ status: "loading" | "ready" | "error", data }`.
   const [detalle, setDetalle] = useState({ status: "loading", data: null });
   const [loadKey, setLoadKey] = useState(0);
@@ -194,19 +196,18 @@ export default function FinalizarOcupacionDialog({ ocupacionId, now, onClose, on
   }
 
   return (
-    <Dialog open onClose={saving ? undefined : onClose} fullWidth maxWidth="sm">
+    <Dialog open onClose={saving ? undefined : onClose} fullWidth maxWidth="sm" fullScreen={fullScreen}>
       <DialogTitle>Finalizar ocupación</DialogTitle>
       <DialogContent dividers>{contenido}</DialogContent>
       <DialogActions>
-        <Button onClick={onClose} disabled={saving}>
+        <Button variant="contorno" onClick={onClose} disabled={saving}>
           Volver
         </Button>
         <Button
-          color="success"
+          color="info"
           variant="contained"
           onClick={confirmar}
           disabled={saving || detalle.status !== "ready"}
-          sx={{ fontWeight: 900 }}
         >
           {textoBoton}
         </Button>

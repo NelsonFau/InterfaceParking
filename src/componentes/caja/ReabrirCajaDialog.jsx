@@ -8,6 +8,7 @@ import { reopenCaja } from "../../api/cajaApi";
 import { showApiError } from "../../api/errors";
 import { ModoCaja } from "../../constants/enums";
 import { buildReabrirBody, cajaFieldErrors, shouldCloseActionAfterCaja, shouldReloadAfterCaja } from "../../utils/caja";
+import { useDialogFullScreen } from "../useDialogFullScreen";
 
 const AVISO_REABRIR_DIARIA =
   "En modo diario, mientras esta caja de un día anterior esté abierta no se puede cobrar; cerrala cuando termines";
@@ -20,6 +21,7 @@ const AVISO_REABRIR_TURNO = "La caja vuelve a quedar abierta y hay que cerrarla 
  *   que quien lo abrió cierre su detalle (404).
  */
 export default function ReabrirCajaDialog({ sesion, modo, onClose, onChanged, onError }) {
+  const fullScreen = useDialogFullScreen();
   const [motivo, setMotivo] = useState("");
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -50,7 +52,7 @@ export default function ReabrirCajaDialog({ sesion, modo, onClose, onChanged, on
   }
 
   return (
-    <Dialog open onClose={saving ? undefined : onClose} fullWidth maxWidth="xs">
+    <Dialog open onClose={saving ? undefined : onClose} fullWidth maxWidth="xs" fullScreen={fullScreen}>
       <DialogTitle>Reabrir caja</DialogTitle>
       <DialogContent dividers>
         <Stack spacing={2} sx={{ pt: 1 }}>
@@ -73,10 +75,10 @@ export default function ReabrirCajaDialog({ sesion, modo, onClose, onChanged, on
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose} disabled={saving}>
+        <Button variant="contorno" onClick={onClose} disabled={saving}>
           Cancelar
         </Button>
-        <Button color="warning" variant="contained" onClick={enviar} disabled={saving} sx={{ fontWeight: 900 }}>
+        <Button color="warning" variant="contained" onClick={enviar} disabled={saving}>
           Reabrir caja
         </Button>
       </DialogActions>

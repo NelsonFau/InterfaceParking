@@ -3,16 +3,21 @@ import {
   Alert,
   Box,
   Button,
-  Card,
-  CardContent,
   Chip,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
   Divider,
+  Link,
   MenuItem,
   Stack,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
   TextField,
   Typography,
 } from "@mui/material";
@@ -25,7 +30,7 @@ import {
   updateTarifa,
 } from "../api/tarifaApi";
 import { usePermissions } from "../auth/usePermissions";
-import { TipoOcupacion, labelOf, optionsOf } from "../constants/enums";
+import { EstadoTarifa, TipoOcupacion, colorOf, labelOf, optionsOf } from "../constants/enums";
 import { formatDateOnly } from "../utils/fechas";
 import { formatMoney } from "../utils/formato";
 import {
@@ -36,23 +41,22 @@ import {
   validateTarifaForm,
 } from "../utils/tarifas";
 import { useTenantDates } from "../utils/useTenantDates";
+import { useDialogFullScreen } from "../componentes/useDialogFullScreen";
+import BotonRefrescar from "../componentes/ui/BotonRefrescar";
+import Campo from "../componentes/ui/Campo";
+import EncabezadoPagina from "../componentes/ui/EncabezadoPagina";
+import Tarjeta from "../componentes/ui/Tarjeta";
 
 const TIPO_OPTIONS = optionsOf(TipoOcupacion);
 
-// Chip de cada estado (D-FC4).
-const ESTADO_CHIP = {
-  vigente: { label: "Vigente", color: "success" },
-  programada: { label: "Programada", color: "info" },
-  finalizada: { label: "Finalizada", color: "default" },
-};
-
+// Chip de cada estado (D-FC4): etiqueta y color salen de `EstadoTarifa` (enums.js).
 function EstadoChip({ estado }) {
-  const { label, color } = ESTADO_CHIP[estado];
-  return <Chip size="small" label={label} color={color} />;
+  return <Chip size="small" label={labelOf(EstadoTarifa, estado)} color={colorOf(EstadoTarifa, estado)} />;
 }
 
 export default function Tarifas() {
   const { today } = useTenantDates();
+  const fullScreen = useDialogFullScreen();
   const hoy = today();
   const { can } = usePermissions();
   // Todo lo que escribe se oculta sin tarifas.editar (D-FC10); nunca se decide por rol.
@@ -208,12 +212,8 @@ export default function Tarifas() {
 
   return (
     <Box>
-      <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
-        <Typography variant="h5">Tarifas</Typography>
-        <Button variant="outlined" onClick={recargar} disabled={loading}>
-          Refrescar
-        </Button>
-      </Stack>
+      {/* No hay "Nueva tarifa": una tarifa nueva se crea con "Cambiar precio" de cada tipo (spec 03). */}
+      <EncabezadoPagina titulo="Tarifas" acciones={<BotonRefrescar onClick={recargar} disabled={loading} />} />
 
       {loading ? (
         <div>Cargando...</div>
@@ -231,130 +231,127 @@ export default function Tarifas() {
       ) : (
         <Stack spacing={2}>
           {/* TARIFAS POR TIPO: vigente y, debajo, la próxima programada */}
-          <Card variant="outlined">
-            <CardContent>
-              <Typography fontWeight={800} sx={{ mb: 1 }}>
-                Tarifas vigentes
-              </Typography>
-
-              <Stack spacing={2}>
-                {vigentes.map(({ tipo, vigente, proxima }) => (
-                  <Stack key={tipo} spacing={0.5}>
-                    <Stack direction="row" justifyContent="space-between" alignItems="center">
-                      <Stack>
-                        <Typography fontWeight={700}>{labelOf(TipoOcupacion, tipo)}</Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          {vigente
-                            ? `Vigente desde ${formatDateOnly(vigente.vigenteDesde)}`
-                            : "Sin tarifa vigente"}
-                        </Typography>
-                      </Stack>
-                      <Stack direction="row" spacing={2} alignItems="center">
-                        <Typography fontWeight={800}>{formatMoney(vigente?.precio)}</Typography>
-                        {canEdit ? (
-                          <Button variant="contained" onClick={() => abrirCambiarPrecio(tipo)}>
-                            Cambiar precio
-                          </Button>
-                        ) : null}
-                      </Stack>
+          <Tarjeta titulo="Tarifas vigentes">
+            <Stack divider={<Divider />} spacing={2}>
+              {vigentes.map(({ tipo, vigente, proxima }) => (
+                <Stack key={tipo} spacing={1.25} sx={{ pb: 0.5 }}>
+                  <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={2}>
+                    <Typography>{labelOf(TipoOcupacion, tipo)}</Typography>
+                    <Stack direction="row" spacing={2} alignItems="center">
+                      <Typography sx={{ fontWeight: 500 }}>{formatMoney(vigente?.precio)}</Typography>
+                      {canEdit ? (
+                        <Button variant="pill" color="inherit" onClick={() => abrirCambiarPrecio(tipo)}>
+                          Cambiar precio
+                        </Button>
+                      ) : null}
                     </Stack>
+                  </Stack>
 
-                    {proxima ? (
-                      <Stack direction="row" spacing={1} alignItems="center">
+                  <Typography color="text.secondary">
+                    {vigente ? `Vigente desde ${formatDateOnly(vigente.vigenteDesde)}` : "Sin tarifa vigente"}
+                  </Typography>
+
+                  {proxima ? (
+                    <Stack direction="row" spacing={1.5} alignItems="center" justifyContent="space-between">
+                      <Stack direction="row" spacing={1.5} alignItems="center">
                         <EstadoChip estado="programada" />
                         <Typography variant="body2">
                           {`Desde ${formatDateOnly(proxima.vigenteDesde)}: ${formatMoney(proxima.precio)}`}
                         </Typography>
-                        {canEdit ? (
-                          <Button
-                            size="small"
-                            color="error"
-                            onClick={() => quitar(proxima.id)}
-                            disabled={removingId !== null}
-                          >
-                            Quitar
-                          </Button>
-                        ) : null}
                       </Stack>
-                    ) : null}
-                  </Stack>
-                ))}
-              </Stack>
-            </CardContent>
-          </Card>
+                      {canEdit ? (
+                        <Link
+                          component="button"
+                          type="button"
+                          color="error"
+                          underline="hover"
+                          onClick={() => quitar(proxima.id)}
+                          disabled={removingId !== null}
+                          sx={{ color: "error.main", mr: 1.5 }}
+                        >
+                          Quitar
+                        </Link>
+                      ) : null}
+                    </Stack>
+                  ) : null}
+                </Stack>
+              ))}
+            </Stack>
+          </Tarjeta>
 
           {/* HISTORIAL */}
-          <Card variant="outlined">
-            <CardContent>
-              <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 1 }}>
-                <Typography fontWeight={800}>Historial</Typography>
-
-                <TextField
-                  select
-                  size="small"
-                  label="Tipo"
-                  value={tipoHist}
-                  onChange={(e) => setTipoHist(Number(e.target.value))}
-                  sx={{ width: 180 }}
-                >
+          <Tarjeta
+            titulo="Historial"
+            acciones={
+              <Box sx={{ width: 240 }}>
+                <Campo select label="Tipo" value={tipoHist} onChange={(e) => setTipoHist(Number(e.target.value))}>
                   {TIPO_OPTIONS.map((o) => (
                     <MenuItem key={o.value} value={o.value}>
                       {o.label}
                     </MenuItem>
                   ))}
-                </TextField>
-              </Stack>
-
-              <Divider sx={{ mb: 1 }} />
-
-              {!historial.length ? (
-                <Typography color="text.secondary">No hay historial para este tipo.</Typography>
-              ) : (
-                <Stack spacing={1}>
-                  {historial.map((t) => (
-                    <Stack
-                      key={t.id}
-                      direction="row"
-                      justifyContent="space-between"
-                      alignItems="center"
-                      spacing={2}
-                    >
-                      <Typography>{formatMoney(t.precio)}</Typography>
-                      <Stack direction="row" spacing={1} alignItems="center">
-                        <Typography variant="body2" color="text.secondary">
-                          {`Desde ${formatDateOnly(t.vigenteDesde)}`}
-                          {t.vigenteHasta
-                            ? ` hasta ${formatDateOnly(t.vigenteHasta)}`
-                            : " sin fecha de fin"}
-                        </Typography>
-                        <EstadoChip estado={tarifaEstado(t, hoy)} />
-                        {canEdit && tarifaEstado(t, hoy) === "programada" ? (
-                          <>
-                            <Button size="small" onClick={() => abrirEditar(t)}>
-                              Editar
-                            </Button>
-                            <Button
-                              size="small"
-                              color="error"
-                              onClick={() => quitar(t.id)}
-                              disabled={removingId !== null}
-                            >
-                              Quitar
-                            </Button>
-                          </>
-                        ) : null}
-                      </Stack>
-                    </Stack>
-                  ))}
-                </Stack>
-              )}
-            </CardContent>
-          </Card>
+                </Campo>
+              </Box>
+            }
+          >
+            {!historial.length ? (
+              <Typography color="text.secondary">No hay historial para este tipo.</Typography>
+            ) : (
+              <TableContainer>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Precio</TableCell>
+                      <TableCell>Período</TableCell>
+                      <TableCell>Estado</TableCell>
+                      <TableCell />
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {historial.map((t) => {
+                      const estado = tarifaEstado(t, hoy);
+                      return (
+                        <TableRow key={t.id}>
+                          <TableCell>{formatMoney(t.precio)}</TableCell>
+                          <TableCell>
+                            {`Desde ${formatDateOnly(t.vigenteDesde)}`}
+                            {t.vigenteHasta ? ` hasta ${formatDateOnly(t.vigenteHasta)}` : " sin fecha de fin"}
+                          </TableCell>
+                          <TableCell>
+                            <EstadoChip estado={estado} />
+                          </TableCell>
+                          <TableCell>
+                            {canEdit && estado === "programada" ? (
+                              <>
+                                <Link component="button" type="button" underline="hover" onClick={() => abrirEditar(t)}>
+                                  Editar
+                                </Link>
+                                {" · "}
+                                <Link
+                                  component="button"
+                                  type="button"
+                                  underline="hover"
+                                  onClick={() => quitar(t.id)}
+                                  disabled={removingId !== null}
+                                >
+                                  Quitar
+                                </Link>
+                              </>
+                            ) : null}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )}
+          </Tarjeta>
         </Stack>
       )}
 
       {/* DIÁLOGO: cambiar precio (formulario y, después, confirmación) */}
-      <Dialog open={Boolean(dialog)} onClose={cerrarDialogo} fullWidth maxWidth="sm">
+      <Dialog open={Boolean(dialog)} onClose={cerrarDialogo} fullScreen={fullScreen} fullWidth maxWidth="sm">
         {dialog ? (
           <>
             <DialogTitle>{`Cambiar precio · ${labelOf(TipoOcupacion, dialog.tipo)}`}</DialogTitle>
@@ -413,17 +410,17 @@ export default function Tarifas() {
             <DialogActions>
               {resumen ? (
                 <>
-                  <Button onClick={() => setResumen(null)} disabled={saving}>
+                  <Button variant="contorno" onClick={() => setResumen(null)} disabled={saving}>
                     Volver
                   </Button>
-                  <Button variant="contained" onClick={confirmar} disabled={saving}>
+                  <Button variant="marron" onClick={confirmar} disabled={saving}>
                     Confirmar
                   </Button>
                 </>
               ) : (
                 <>
-                  <Button onClick={cerrarDialogo}>Cancelar</Button>
-                  <Button variant="contained" onClick={guardar}>
+                  <Button variant="contorno" onClick={cerrarDialogo}>Cancelar</Button>
+                  <Button variant="marron" onClick={guardar}>
                     Guardar
                   </Button>
                 </>

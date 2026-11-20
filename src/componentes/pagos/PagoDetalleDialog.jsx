@@ -5,6 +5,7 @@
 import { useEffect, useState } from "react";
 import { Link as RouterLink } from "react-router-dom";
 import { Alert, Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Divider, Skeleton, Stack, Typography } from "@mui/material";
+import { useDialogFullScreen } from "../useDialogFullScreen";
 import { showApiError } from "../../api/errors";
 import { getOcupacion } from "../../api/ocupacionApi";
 import { getPago } from "../../api/pagosApi";
@@ -20,7 +21,7 @@ import DevolucionDialog from "./DevolucionDialog";
 function Section({ titulo, children }) {
   return (
     <Box component="section">
-      <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 0.5 }}>
+      <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
         {titulo}
       </Typography>
       {children}
@@ -47,6 +48,7 @@ function Fila({ label, children }) {
  *   estado viejo. `ocupacion` es opcional: sin ella se pide con `getOcupacion(pago.ocupacionId)`.
  */
 export default function PagoDetalleDialog({ pagoId, onClose, onChanged, ocupacion }) {
+  const fullScreen = useDialogFullScreen();
   const { formatInstant } = useTenantDates();
   const { can } = usePermissions();
   const { me } = useMe();
@@ -131,10 +133,10 @@ export default function PagoDetalleDialog({ pagoId, onClose, onChanged, ocupacio
     cuerpo = (
       <Stack spacing={2}>
         <Stack direction="row" alignItems="center" gap={1} flexWrap="wrap" useFlexGap>
-          <Typography variant="h6" sx={{ fontWeight: 900 }}>
+          <Typography variant="h6">
             Pago #{pago.id}
           </Typography>
-          <Chip size="small" label={estado.label} color={estado.color} sx={{ fontWeight: 700 }} />
+          <Chip size="small" label={estado.label} color={estado.color} />
           <Chip size="small" variant="outlined" label={`Ocupación #${pago.ocupacionId}`} />
         </Stack>
 
@@ -237,21 +239,21 @@ export default function PagoDetalleDialog({ pagoId, onClose, onChanged, ocupacio
 
   return (
     <>
-      <Dialog open onClose={onClose} fullWidth maxWidth="sm">
+      <Dialog open onClose={onClose} fullWidth maxWidth="sm" fullScreen={fullScreen}>
         <DialogTitle>Detalle del pago</DialogTitle>
         <DialogContent dividers>{cuerpo}</DialogContent>
         <DialogActions>
           {acciones?.anular ? (
-            <Button color="error" variant="contained" onClick={() => setAccion("anular")} sx={{ fontWeight: 900 }}>
+            <Button color="error" variant="contained" onClick={() => setAccion("anular")}>
               Anular pago
             </Button>
           ) : null}
           {acciones?.devolver ? (
-            <Button color="warning" variant="contained" onClick={() => setAccion("devolver")} sx={{ fontWeight: 900 }}>
+            <Button color="warning" variant="contained" onClick={() => setAccion("devolver")}>
               Devolver
             </Button>
           ) : null}
-          <Button onClick={onClose}>Cerrar</Button>
+          <Button variant="contorno" onClick={onClose}>Cerrar</Button>
         </DialogActions>
       </Dialog>
 

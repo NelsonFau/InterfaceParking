@@ -10,7 +10,7 @@ function Row({ label, children, strong = false }) {
       <Typography variant="body2" color="text.secondary">
         {label}
       </Typography>
-      <Typography variant="body2" sx={{ fontWeight: strong ? 800 : 500, textAlign: "right" }}>
+      <Typography variant="body2" sx={{ fontWeight: strong ? 600 : 400, textAlign: "right" }}>
         {children}
       </Typography>
     </Stack>
@@ -49,7 +49,7 @@ export default function CuentaOcupacion({ ocupacion, fase }) {
       </Row>
       {saldoAFavor > 0 ? (
         <Box>
-          <Chip size="small" color="warning" label={`Saldo a favor ${formatMoney(saldoAFavor)}`} sx={{ fontWeight: 700 }} />
+          <Chip size="small" color="warning" label={`Saldo a favor ${formatMoney(saldoAFavor)}`} />
         </Box>
       ) : null}
       {saldoAFavor > 0 && (finalizada || cancelada) ? (

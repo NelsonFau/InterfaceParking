@@ -3,12 +3,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link as RouterLink, useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
+import { alpha } from "@mui/material/styles";
 import {
   Alert,
   Box,
   Button,
-  Card,
-  CardContent,
   Chip,
   Dialog,
   DialogActions,
@@ -16,10 +15,10 @@ import {
   DialogTitle,
   Divider,
   LinearProgress,
+  Link,
   MenuItem,
   Skeleton,
   Stack,
-  TablePagination,
   TextField,
   Tooltip,
   Typography,
@@ -28,7 +27,14 @@ import {
 import { showApiError } from "../api/errors";
 import { getAlerta, listAlertas, resolveAlerta } from "../api/operationalAlertsApi";
 import { usePermissions } from "../auth/usePermissions";
+import { useDialogFullScreen } from "../componentes/useDialogFullScreen";
+import BotonRefrescar from "../componentes/ui/BotonRefrescar";
+import Campo from "../componentes/ui/Campo";
+import EncabezadoPagina from "../componentes/ui/EncabezadoPagina";
+import PaginacionTexto from "../componentes/ui/PaginacionTexto";
+import Tarjeta from "../componentes/ui/Tarjeta";
 import { SeveridadAlerta, TipoAlertaOperativa, colorOf, labelOf, optionsOf } from "../constants/enums";
+import { COLOR_TONE, DOT_RADIUS, RADIUS } from "../theme/theme";
 import {
   ALERTS_REFRESH_MS,
   DEFAULT_ALERT_FILTERS,
@@ -42,7 +48,6 @@ import {
   resolutionSummary,
 } from "../utils/alertas";
 import { formatNumber } from "../utils/formato";
-import { toTablePaginationProps } from "../utils/paginacion";
 import { usePagination } from "../utils/usePagination";
 import { useAutoRefresh } from "../utils/useAutoRefresh";
 import { useTenantDates } from "../utils/useTenantDates";
@@ -65,11 +70,12 @@ function AlertRow({ alerta, formatInstant, can, onResolve }) {
     canOcupaciones: can("ocupaciones.ver"),
     canCaja: can("caja.ver"),
   });
-  // El texto "Ocupación N" pasa a ser el enlace de Ocupación cuando el usuario puede verla (D-FG14).
   const ocupacionLink = links.find((l) => l.key === "ocupacion");
   const otherLinks = links.filter((l) => l.key !== "ocupacion");
   const resolucion = resolutionSummary(alerta, formatInstant);
   const critica = !alerta.resuelta && alerta.severidad === SeveridadAlerta.CRITICA;
+  // Tono de la franja lateral: el de la severidad (Baja en gris, `gr`).
+  const tono = COLOR_TONE[colorOf(SeveridadAlerta, alerta.severidad)] ?? "de";
 
   const resolveButton = (
     <Button variant="contained" color="error" disabled={!resolve.enabled} onClick={() => onResolve(alerta)}>
@@ -78,108 +84,141 @@ function AlertRow({ alerta, formatInstant, can, onResolve }) {
   );
 
   return (
-    <Card sx={{ borderRadius: 3, border: "1px solid", borderColor: critica ? "error.main" : "divider" }}>
-      <CardContent>
-        <Stack spacing={1.5}>
-          <Stack direction={{ xs: "column", md: "row" }} justifyContent="space-between" spacing={1}>
-            <Stack direction="row" spacing={1} alignItems="center" useFlexGap flexWrap="wrap">
-              <Chip
-                size="small"
-                label={labelOf(SeveridadAlerta, alerta.severidad)}
-                color={colorOf(SeveridadAlerta, alerta.severidad)}
-                sx={{ fontWeight: 800 }}
-              />
-              <Chip
-                size="small"
-                label={alerta.resuelta ? "RESUELTA" : "ABIERTA"}
-                color={alerta.resuelta ? "success" : "warning"}
-                variant={alerta.resuelta ? "filled" : "outlined"}
-                sx={{ fontWeight: 800 }}
-              />
-              {alerta.esDeDinero && <Chip size="small" label="DINERO" color="secondary" sx={{ fontWeight: 800 }} />}
-            </Stack>
-
-            <Typography variant="body2" color="text.secondary">
-              Creada: {formatInstant(alerta.fechaCreacion)}
+    <Tarjeta
+      relleno={false}
+      sx={(theme) => ({
+        bgcolor: "background.paper",
+        borderRadius: `${RADIUS}px`,
+        overflow: "hidden",
+        boxShadow: theme.palette.pc.alertShadow,
+        borderColor: critica ? alpha(theme.palette.pc.tone.er.text, 0.55) : "divider",
+        opacity: alerta.resuelta ? 0.92 : 1,
+      })}
+    >
+      <Stack direction={{ xs: "column", md: "row" }}>
+        {/* Franja lateral de severidad: a la izquierda en desktop y arriba, en fila, en mobile */}
+        <Stack
+          direction={{ xs: "row", md: "column" }}
+          spacing={0.75}
+          useFlexGap
+          flexWrap="wrap"
+          alignItems={{ xs: "center", md: "flex-start" }}
+          sx={(t) => {
+            const tone = t.palette.pc.tone[tono];
+            return {
+              p: 2.25,
+              flexShrink: 0,
+              width: { md: 150 },
+              bgcolor: tone.bg,
+              borderBottom: { xs: `1px solid ${tone.border}`, md: "none" },
+              borderRight: { md: `1px solid ${tone.border}` },
+            };
+          }}
+        >
+          <Typography sx={(t) => ({ color: t.palette.pc.tone[tono].text, fontSize: "1.25rem", fontWeight: 800 })}>
+            {labelOf(SeveridadAlerta, alerta.severidad)}
+          </Typography>
+          <Stack direction="row" alignItems="center" spacing={1} useFlexGap>
+            <Box
+              component="span"
+              aria-hidden
+              sx={(t) => {
+                const color = alerta.resuelta ? t.palette.pc.tone.ok.text : t.palette.pc.tone[tono].text;
+                return {
+                  width: 9,
+                  height: 9,
+                  flexShrink: 0,
+                  borderRadius: DOT_RADIUS,
+                  bgcolor: color,
+                  ...(!alerta.resuelta && {
+                    boxShadow: `0 0 0 4px ${alpha(color, 0.18)}`,
+                    animation: critica ? "pcBlink 1s ease-in-out infinite" : "pcBlink 1.8s ease-in-out infinite",
+                  }),
+                };
+              }}
+            />
+            <Typography variant="body2" component="span">
+              {alerta.resuelta ? "Resuelta" : "Abierta"}
             </Typography>
           </Stack>
+        </Stack>
 
-          <Box>
-            <Typography variant="h6" sx={{ fontWeight: 900 }}>
-              {labelOf(TipoAlertaOperativa, alerta.tipo)}
-            </Typography>
-            <Typography sx={{ color: "text.secondary", mt: 0.5 }}>{alerta.mensaje}</Typography>
-          </Box>
+        <Box sx={{ flex: 1, minWidth: 0, py: 2, px: 2.75 }}>
+          <Stack spacing={1.25}>
+            <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={1}>
+              <Box sx={{ minWidth: 0 }}>
+                <Typography variant="h6">{labelOf(TipoAlertaOperativa, alerta.tipo)}</Typography>
+                <Typography variant="body1" sx={{ mt: 0.5 }}>
+                  {alerta.mensaje}
+                </Typography>
+                <Typography variant="meta" color="text.secondary" sx={{ mt: 0.5 }}>
+                  {alerta.ocupacionId != null ? `Ocupación #${alerta.ocupacionId} · ` : ""}
+                  {alerta.cajaSesionId != null ? `Caja #${alerta.cajaSesionId} · ` : ""}
+                  Creada {formatInstant(alerta.fechaCreacion)}
+                </Typography>
+                {alerta.esDeDinero && <Chip size="small" variant="outlined" label="Dinero" sx={{ mt: 1 }} />}
+              </Box>
+            </Stack>
 
-          <Divider />
+            {resolucion && (
+              <Alert severity="success" icon={false} sx={{ py: 0 }}>
+                {resolucion.text}
+                {resolucion.comentario ? ` · ${resolucion.comentario}` : ""}
+              </Alert>
+            )}
 
-          <Stack direction={{ xs: "column", md: "row" }} justifyContent="space-between" spacing={1}>
-            <Stack spacing={0.5}>
+            <Divider />
+
+            <Stack direction="row" spacing={2} useFlexGap flexWrap="wrap" alignItems="center" justifyContent="space-between">
               <Stack direction="row" spacing={2} useFlexGap flexWrap="wrap" alignItems="center">
-                {alerta.ocupacionId != null &&
-                  (ocupacionLink ? (
-                    <Button size="small" component={RouterLink} to={ocupacionLink.to} title={ocupacionLink.label}>
-                      Ocupación {alerta.ocupacionId}
-                    </Button>
-                  ) : (
-                    <Typography variant="body2" color="text.secondary">
-                      Ocupación {alerta.ocupacionId}
-                    </Typography>
-                  ))}
-                {alerta.cajaSesionId != null && (
-                  <Typography variant="body2" color="text.secondary">
-                    Caja {alerta.cajaSesionId}
-                  </Typography>
+                {ocupacionLink && (
+                  <Button variant="neutro" component={RouterLink} to={ocupacionLink.to}>
+                    {ocupacionLink.label}
+                  </Button>
                 )}
                 {otherLinks.map((l) => (
-                  <Button key={l.key} size="small" component={RouterLink} to={l.to}>
+                  <Link key={l.key} component={RouterLink} to={l.to}>
                     {l.label}
-                  </Button>
+                  </Link>
                 ))}
               </Stack>
 
-              {resolucion && (
-                <>
-                  <Typography variant="body2" color="text.secondary">
-                    {resolucion.text}
-                  </Typography>
-                  {resolucion.comentario && (
-                    <Typography variant="body2" sx={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
-                      {resolucion.comentario}
-                    </Typography>
+              {resolve.visible && (
+                <Stack direction="row" spacing={1.5} useFlexGap alignItems="center" flexWrap="wrap">
+                  {resolve.enabled ? (
+                    resolveButton
+                  ) : (
+                    <>
+                      <Tooltip title={resolve.reason}>
+                        {/* El botón deshabilitado no dispara eventos: el Tooltip se ancla al contenedor. */}
+                        <Box component="span">{resolveButton}</Box>
+                      </Tooltip>
+                      <Typography variant="meta" color="text.secondary">
+                        {resolve.reason}
+                      </Typography>
+                    </>
                   )}
-                </>
+                </Stack>
               )}
             </Stack>
-
-            {resolve.visible &&
-              (resolve.enabled ? (
-                resolveButton
-              ) : (
-                <Tooltip title={resolve.reason}>
-                  {/* El botón deshabilitado no dispara eventos: el Tooltip se ancla al contenedor. */}
-                  <Box component="span" sx={{ alignSelf: { xs: "stretch", md: "flex-start" } }}>
-                    {resolveButton}
-                  </Box>
-                </Tooltip>
-              ))}
           </Stack>
-        </Stack>
-      </CardContent>
-    </Card>
+        </Box>
+      </Stack>
+    </Tarjeta>
   );
 }
 
 function ResolveDialog({ alerta, comentario, onChange, resolving, onCancel, onConfirm }) {
   const esDeDinero = Boolean(alerta?.esDeDinero);
   const vacio = comentario.trim() === "";
+  const fullScreen = useDialogFullScreen();
   return (
-    <Dialog open={Boolean(alerta)} onClose={resolving ? undefined : onCancel} fullWidth maxWidth="sm">
+    <Dialog open={Boolean(alerta)} onClose={resolving ? undefined : onCancel} fullScreen={fullScreen} fullWidth maxWidth="sm">
       <DialogTitle>Resolver alerta</DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ mt: 1 }}>
           <Box>
-            <Typography sx={{ fontWeight: 700 }}>{alerta ? labelOf(TipoAlertaOperativa, alerta.tipo) : ""}</Typography>
+            <Typography sx={{ fontWeight: 600 }}>{alerta ? labelOf(TipoAlertaOperativa, alerta.tipo) : ""}</Typography>
             <Typography variant="body2" color="text.secondary">
               {alerta?.mensaje}
             </Typography>
@@ -200,7 +239,7 @@ function ResolveDialog({ alerta, comentario, onChange, resolving, onCancel, onCo
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onCancel} disabled={resolving}>
+        <Button variant="contorno" onClick={onCancel} disabled={resolving}>
           Cancelar
         </Button>
         <Button
@@ -388,22 +427,20 @@ export default function OperationalAlerts() {
       <Stack spacing={1.5}>
         {loading && <LinearProgress />}
         {current.items.length === 0 ? (
-          <Card sx={{ borderRadius: 3 }}>
-            <CardContent>
-              <Typography sx={{ color: "text.secondary" }}>No hay alertas para los filtros seleccionados.</Typography>
-            </CardContent>
-          </Card>
+          <Tarjeta>
+            <Typography sx={{ color: "text.secondary" }}>No hay alertas para los filtros seleccionados.</Typography>
+          </Tarjeta>
         ) : (
           current.items.map((a) => (
             <AlertRow key={a.id} alerta={a} formatInstant={formatInstant} can={can} onResolve={openResolve} />
           ))
         )}
-        <TablePagination
-          component="div"
-          {...toTablePaginationProps(
-            { page, pageSize, total },
-            { onPageChange: pagination.setPage, onPageSizeChange: pagination.setPageSize },
-          )}
+        <PaginacionTexto
+          page={page}
+          pageSize={pageSize}
+          total={total}
+          count={current.items.length}
+          onPageChange={pagination.setPage}
         />
       </Stack>
     );
@@ -413,112 +450,87 @@ export default function OperationalAlerts() {
 
   return (
     <Box>
-      <Stack spacing={2.5}>
-        <Stack direction={{ xs: "column", md: "row" }} justifyContent="space-between" spacing={2}>
-          <Box>
-            <Typography variant="h4" sx={{ fontWeight: 900 }}>
-              Alertas operativas
-            </Typography>
-            <Typography sx={{ color: "text.secondary", mt: 0.5 }}>
-              Monitoreo de inconsistencias, pagos sospechosos y ocupaciones con riesgo operativo.
-            </Typography>
+      <EncabezadoPagina
+        titulo="Alertas operativas"
+        subtitulo="Monitoreo de inconsistencias, pagos sospechosos y ocupaciones con riesgo operativo."
+        acciones={<BotonRefrescar onClick={reload} disabled={loading} />}
+        pie={lastLoadedAt !== null ? `Actualizado: ${formatInstant(new Date(lastLoadedAt).toISOString())}` : null}
+      >
+        {failed && current && (
+          <Typography variant="body2" color="error" sx={{ mt: 1 }}>
+            No se pudo actualizar. Reintentá con 'Actualizar'
+          </Typography>
+        )}
+      </EncabezadoPagina>
+
+      <Stack spacing={2}>
+        <Tarjeta>
+          <Box
+            sx={{
+              display: "grid",
+              gap: 2,
+              gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)", lg: "1fr 1fr 1.5fr 1.5fr 1.5fr" },
+              alignItems: "start",
+            }}
+          >
+            <Campo select label="Estado" value={filters.estado} onChange={(e) => setFilter("estado", e.target.value)}>
+              {ESTADO_OPTIONS.map((o) => (
+                <MenuItem key={o.value} value={o.value}>
+                  {o.label}
+                </MenuItem>
+              ))}
+            </Campo>
+
+            <Campo select label="Severidad" value={filters.severidad} onChange={(e) => setFilter("severidad", e.target.value)}>
+              {SEVERIDAD_OPTIONS.map((o) => (
+                <MenuItem key={o.value} value={o.value}>
+                  {o.label}
+                </MenuItem>
+              ))}
+            </Campo>
+
+            <Campo select label="Tipo" value={filters.tipo} onChange={(e) => setFilter("tipo", e.target.value)}>
+              {TIPO_OPTIONS.map((o) => (
+                <MenuItem key={o.value} value={o.value}>
+                  {o.label}
+                </MenuItem>
+              ))}
+            </Campo>
+
+            <Campo
+              label="Desde"
+              type="date"
+              value={filters.desde}
+              onChange={(e) => setFilter("desde", e.target.value)}
+              error={Boolean(rangeError("desde"))}
+              helperText={rangeError("desde")}
+            />
+
+            <Campo
+              label="Hasta"
+              type="date"
+              value={filters.hasta}
+              onChange={(e) => setFilter("hasta", e.target.value)}
+              error={Boolean(rangeError("hasta"))}
+              helperText={rangeError("hasta")}
+            />
           </Box>
 
-          <Stack alignItems={{ xs: "flex-start", md: "flex-end" }} spacing={0.5}>
-            <Button variant="outlined" onClick={reload} disabled={loading}>
-              Actualizar
-            </Button>
-            {lastLoadedAt !== null && (
-              <Typography variant="caption" color="text.secondary">
-                Actualizado: {formatInstant(new Date(lastLoadedAt).toISOString())}
-              </Typography>
-            )}
-            {failed && current && (
-              <Typography variant="caption" color="error">
-                No se pudo actualizar. Reintentá con 'Actualizar'
-              </Typography>
-            )}
-          </Stack>
-        </Stack>
-
-        <Card sx={{ borderRadius: 3 }}>
-          <CardContent>
-            <Stack direction={{ xs: "column", md: "row" }} spacing={2} useFlexGap flexWrap="wrap" alignItems="flex-start">
-              <TextField
-                select
-                label="Estado"
-                value={filters.estado}
-                onChange={(e) => setFilter("estado", e.target.value)}
-                sx={{ minWidth: 180 }}
-              >
-                {ESTADO_OPTIONS.map((o) => (
-                  <MenuItem key={o.value} value={o.value}>{o.label}</MenuItem>
-                ))}
-              </TextField>
-
-              <TextField
-                select
-                label="Severidad"
-                value={filters.severidad}
-                onChange={(e) => setFilter("severidad", e.target.value)}
-                sx={{ minWidth: 180 }}
-              >
-                {SEVERIDAD_OPTIONS.map((o) => (
-                  <MenuItem key={o.value} value={o.value}>{o.label}</MenuItem>
-                ))}
-              </TextField>
-
-              <TextField
-                select
-                label="Tipo"
-                value={filters.tipo}
-                onChange={(e) => setFilter("tipo", e.target.value)}
-                sx={{ minWidth: 260 }}
-              >
-                {TIPO_OPTIONS.map((o) => (
-                  <MenuItem key={o.value} value={o.value}>{o.label}</MenuItem>
-                ))}
-              </TextField>
-
-              <TextField
-                label="Desde"
-                type="date"
-                value={filters.desde}
-                onChange={(e) => setFilter("desde", e.target.value)}
-                error={Boolean(rangeError("desde"))}
-                helperText={rangeError("desde")}
-                slotProps={{ inputLabel: { shrink: true } }}
-              />
-
-              <TextField
-                label="Hasta"
-                type="date"
-                value={filters.hasta}
-                onChange={(e) => setFilter("hasta", e.target.value)}
-                error={Boolean(rangeError("hasta"))}
-                helperText={rangeError("hasta")}
-                slotProps={{ inputLabel: { shrink: true } }}
-              />
+          {(filters.ocupacionId !== null || filters.cajaSesionId !== null) && (
+            <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
+              {filters.ocupacionId !== null && (
+                <Chip
+                  variant="outlined"
+                  label={`Ocupación ${filters.ocupacionId}`}
+                  onDelete={() => setFilter("ocupacionId", null)}
+                />
+              )}
+              {filters.cajaSesionId !== null && (
+                <Chip variant="outlined" label={`Caja ${filters.cajaSesionId}`} onDelete={() => setFilter("cajaSesionId", null)} />
+              )}
             </Stack>
-
-            {(filters.ocupacionId !== null || filters.cajaSesionId !== null) && (
-              <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
-                {filters.ocupacionId !== null && (
-                  <Chip
-                    label={`Ocupación ${filters.ocupacionId}`}
-                    onDelete={() => setFilter("ocupacionId", null)}
-                  />
-                )}
-                {filters.cajaSesionId !== null && (
-                  <Chip
-                    label={`Caja ${filters.cajaSesionId}`}
-                    onDelete={() => setFilter("cajaSesionId", null)}
-                  />
-                )}
-              </Stack>
-            )}
-          </CardContent>
-        </Card>
+          )}
+        </Tarjeta>
 
         {query.ok && current && (
           <Typography variant="body2" color="text.secondary">

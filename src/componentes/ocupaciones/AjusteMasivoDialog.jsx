@@ -24,6 +24,7 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
+import { useDialogFullScreen } from "../useDialogFullScreen";
 import { showApiError } from "../../api/errors";
 import { adjustPreciosMensuales, listOcupaciones } from "../../api/ocupacionApi";
 import { EstadoOcupacion } from "../../constants/enums";
@@ -48,6 +49,7 @@ const PASOS = ["Datos", "Revisar y excluir", "Resultado"];
  * @param {{ onClose: () => void, onApplied: () => void }} props `onApplied` recarga el listado de la página.
  */
 export default function AjusteMasivoDialog({ onClose, onApplied }) {
+  const fullScreen = useDialogFullScreen();
   const { today, formatInstant } = useTenantDates();
   const [step, setStep] = useState(0);
   const [form, setForm] = useState(() => ({ vigenteDesde: defaultVigenteDesde(today()), porcentaje: "", motivo: "" }));
@@ -184,7 +186,7 @@ export default function AjusteMasivoDialog({ onClose, onApplied }) {
     acciones = (
       <>
         <Button onClick={onClose}>Cancelar</Button>
-        <Button variant="contained" onClick={siguiente} sx={{ fontWeight: 900 }}>
+        <Button variant="contained" onClick={siguiente}>
           Siguiente
         </Button>
       </>
@@ -265,7 +267,6 @@ export default function AjusteMasivoDialog({ onClose, onApplied }) {
           color="warning"
           onClick={aplicar}
           disabled={saving || lista?.status !== "ok" || !entiendo}
-          sx={{ fontWeight: 900 }}
         >
           Aplicar ajuste
         </Button>
@@ -307,7 +308,7 @@ export default function AjusteMasivoDialog({ onClose, onApplied }) {
   }
 
   return (
-    <Dialog open onClose={saving ? undefined : step === 2 ? cerrar : onClose} fullWidth maxWidth="md">
+    <Dialog open onClose={saving ? undefined : step === 2 ? cerrar : onClose} fullWidth maxWidth="md" fullScreen={fullScreen}>
       <DialogTitle>Ajustar precios mensuales</DialogTitle>
       <DialogContent dividers>
         <Stepper activeStep={step} sx={{ mb: 2 }}>
