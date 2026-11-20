@@ -4,12 +4,10 @@
 import { useState } from "react";
 import { Alert, Button, Dialog, DialogActions, DialogContent, DialogTitle, Stack, TextField, Typography } from "@mui/material";
 import { useDialogFullScreen } from "../useDialogFullScreen";
-import toast from "react-hot-toast";
 import { normalizeError, showApiError } from "../../api/errors";
 import { adjustOcupacionPrecio } from "../../api/ocupacionApi";
 import {
   MAX_MOTIVO_CONTRATO,
-  contratoErrorOverride,
   contratoFieldErrors,
   defaultVigenteDesde,
   shouldCloseActionAfterContrato,
@@ -55,9 +53,7 @@ export default function AjustePrecioDialog({ ocupacion, onClose, onChanged }) {
       setResultado(await adjustOcupacionPrecio(ocupacion.id, r.body));
     } catch (e) {
       const err = normalizeError(e);
-      const override = contratoErrorOverride(err.code);
-      if (override) toast.error(override);
-      else showApiError(err);
+      showApiError(err);
       setErrors(contratoFieldErrors(err).fields);
       if (shouldCloseActionAfterContrato(err.code)) {
         onChanged();

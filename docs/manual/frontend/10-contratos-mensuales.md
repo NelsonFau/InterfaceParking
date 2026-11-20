@@ -55,7 +55,7 @@ Se ocultan, nunca se deshabilitan. El DUENO hace todo; ENCARGADO y OPERADOR solo
 
 ## Errores por `code`
 
-El aviso es el `title` del backend (`showApiError`), salvo `ocupacion_no_activa`, que usa un texto propio ("El contrato ya no está activo; recargá para ver su estado") porque el `title` dice "cancelar" (desvío DV-FJ3, `contratoErrorOverride`; se retira con PB-23).
+El aviso es siempre el `title` del backend (`showApiError`). El texto propio de `ocupacion_no_activa` (desvío DV-FJ3, `contratoErrorOverride`) se retiró en la spec 14 (PB-23): la Tanda A del backend devuelve un `title` genérico.
 
 | `code` | Qué pasa |
 |---|---|

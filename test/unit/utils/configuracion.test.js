@@ -6,6 +6,7 @@ import {
   afterSaveError,
   buildUpdateBody,
   diffConfiguracion,
+  motivoGuardarConfiguracion,
   summarizeChanges,
   toForm,
   validateConfiguracionForm,
@@ -185,5 +186,18 @@ describe("CONFIG_AYUDA", () => {
       expect(m, f).not.toBeNull();
       expect([Number(m[1]), Number(m[2])], f).toEqual([min, max]);
     }
+  });
+});
+
+describe("motivoGuardarConfiguracion", () => {
+  it("con cambios válidos da null", () => {
+    expect(motivoGuardarConfiguracion({ hayCambios: true, valido: true })).toBeNull();
+  });
+  it("con cambios inválidos pide corregir", () => {
+    expect(motivoGuardarConfiguracion({ hayCambios: true, valido: false })).toBe("Corregí los campos marcados");
+  });
+  it("sin cambios dice que no hay cambios, sea válido o no", () => {
+    expect(motivoGuardarConfiguracion({ hayCambios: false, valido: true })).toBe("No hay cambios para guardar");
+    expect(motivoGuardarConfiguracion({ hayCambios: false, valido: false })).toBe("No hay cambios para guardar");
   });
 });

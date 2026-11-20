@@ -52,7 +52,20 @@ export function buildFormRegistro({ registro, tipoRapido, cliente, cocheraId, in
   };
 }
 
+/**
+ * Motivo por el que "Confirmar ingreso" no se puede usar, o `null` si están los datos obligatorios.
+ * Lista lo que falta en orden: cliente, cochera, inicio. `cocheraId` 0 cuenta como elegido.
+ * @returns {string | null}
+ */
+export function motivoConfirmarIngreso({ cliente, cocheraId, inicio }) {
+  const faltan = [];
+  if (!cliente?.id) faltan.push("cliente");
+  if (String(cocheraId ?? "") === "") faltan.push("cochera");
+  if (String(inicio ?? "") === "") faltan.push("inicio");
+  return faltan.length === 0 ? null : `Falta elegir: ${faltan.join(", ")}`;
+}
+
 /** ¿Están todos los datos obligatorios para habilitar "Confirmar ingreso"? */
-export function datosCompletos({ cliente, cocheraId, inicio }) {
-  return Boolean(cliente?.id) && String(cocheraId ?? "") !== "" && String(inicio ?? "") !== "";
+export function datosCompletos(datos) {
+  return motivoConfirmarIngreso(datos) === null;
 }

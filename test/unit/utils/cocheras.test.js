@@ -7,6 +7,7 @@ import {
   buildEstadoBody,
   buildUpdateBody,
   parseRango,
+  motivoCrearCocheras,
   previewRango,
   shouldCloseDetailAfter,
   shouldReloadAfter,
@@ -287,5 +288,20 @@ describe("shouldReloadAfter y shouldCloseDetailAfter", () => {
     for (const c of ["cochera_numero_repetido", "datos_invalidos", undefined]) {
       expect(shouldCloseDetailAfter(c)).toBe(false);
     }
+  });
+});
+
+describe("motivoCrearCocheras", () => {
+  it("sin nada escrito pide el número", () => {
+    expect(motivoCrearCocheras({ pristine: true, preview: previewRango("", "", []) })).toBe(
+      "Ingresá el número de la cochera",
+    );
+  });
+  it("con una vista previa válida da null", () => {
+    expect(motivoCrearCocheras({ pristine: false, preview: previewRango("10", "12", []) })).toBeNull();
+  });
+  it("con una vista previa inválida repite su texto", () => {
+    const preview = previewRango("10", "12", [11]);
+    expect(motivoCrearCocheras({ pristine: false, preview })).toBe("Ya existe la cochera: 11");
   });
 });

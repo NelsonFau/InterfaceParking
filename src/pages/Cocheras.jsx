@@ -22,6 +22,7 @@ import { showApiError } from "../api/errors";
 import { usePermissions } from "../auth/usePermissions";
 import CocheraMosaico from "../componentes/cocheras/CocheraMosaico";
 import { useCocherasMosaico } from "../componentes/cocheras/useCocherasMosaico";
+import BotonConMotivo from "../componentes/ui/BotonConMotivo";
 import BotonRefrescar from "../componentes/ui/BotonRefrescar";
 import Campo from "../componentes/ui/Campo";
 import EncabezadoPagina from "../componentes/ui/EncabezadoPagina";
@@ -34,6 +35,7 @@ import {
   buildCreateBody,
   buildEstadoBody,
   buildUpdateBody,
+  motivoCrearCocheras,
   previewRango,
   shouldCloseDetailAfter,
   shouldReloadAfter,
@@ -116,9 +118,9 @@ function AltaDialog({ numeros, onClose, onDone, onError }) {
         <Button variant="contorno" onClick={onClose} disabled={saving}>
           Cancelar
         </Button>
-        <Button variant="marron" onClick={crear} disabled={saving || !preview.ok}>
+        <BotonConMotivo variant="marron" onClick={crear} ocupado={saving} motivo={motivoCrearCocheras({ pristine, preview })}>
           Crear
-        </Button>
+        </BotonConMotivo>
       </DialogActions>
     </Dialog>
   );
@@ -178,9 +180,14 @@ function EditDialog({ detalle, numeros, onClose, onDone, onError }) {
         <Button variant="contorno" onClick={onClose} disabled={saving}>
           Cancelar
         </Button>
-        <Button variant="marron" onClick={guardar} disabled={saving || !r.ok}>
+        <BotonConMotivo
+          variant="marron"
+          onClick={guardar}
+          ocupado={saving}
+          motivo={r.ok ? null : "Corregí los datos marcados"}
+        >
           Guardar
-        </Button>
+        </BotonConMotivo>
       </DialogActions>
     </Dialog>
   );
@@ -252,14 +259,15 @@ function EstadoDialog({ bloquear, detalle, onClose, onDone, onError }) {
         <Button variant="contorno" onClick={onClose} disabled={saving}>
           Cancelar
         </Button>
-        <Button
+        <BotonConMotivo
           variant="contained"
           color={bloquear ? "error" : "success"}
           onClick={enviar}
-          disabled={saving || Boolean(error)}
+          ocupado={saving}
+          motivo={error}
         >
           {bloquear ? "Bloquear" : "Desbloquear"}
-        </Button>
+        </BotonConMotivo>
       </DialogActions>
     </Dialog>
   );

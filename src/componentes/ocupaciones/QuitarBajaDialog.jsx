@@ -3,10 +3,9 @@
 import { useState } from "react";
 import { Alert, Button, Dialog, DialogActions, DialogContent, DialogTitle, Stack, Typography } from "@mui/material";
 import { useDialogFullScreen } from "../useDialogFullScreen";
-import toast from "react-hot-toast";
 import { normalizeError, showApiError } from "../../api/errors";
 import { setOcupacionFin } from "../../api/ocupacionApi";
-import { buildQuitarBajaBody, contratoErrorOverride, shouldCloseActionAfterContrato } from "../../utils/contratos";
+import { buildQuitarBajaBody, shouldCloseActionAfterContrato } from "../../utils/contratos";
 
 /**
  * @param {{ ocupacion: { id: number }, onClose: () => void, onChanged: () => void }} props
@@ -29,9 +28,7 @@ export default function QuitarBajaDialog({ ocupacion, onClose, onChanged }) {
       setHecho(true);
     } catch (e) {
       const err = normalizeError(e);
-      const override = contratoErrorOverride(err.code);
-      if (override) toast.error(override);
-      else showApiError(err);
+      showApiError(err);
       if (shouldCloseActionAfterContrato(err.code)) {
         onChanged();
         onClose();

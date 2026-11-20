@@ -13,6 +13,7 @@ import { listTarifasVigentes } from "../api/tarifaApi";
 import { usePermissions } from "../auth/usePermissions";
 import { OCUPACIONES_PATH } from "../auth/routes";
 import ClienteAutocomplete from "../componentes/ClienteAutocomplete";
+import BotonConMotivo from "../componentes/ui/BotonConMotivo";
 import Campo from "../componentes/ui/Campo";
 import EncabezadoPagina from "../componentes/ui/EncabezadoPagina";
 import Segmentado from "../componentes/ui/Segmentado";
@@ -23,8 +24,8 @@ import { defaultAltaForm, disponiblesRange, fieldErrorsFromApi, validateAltaForm
 import {
   REGISTRO,
   buildFormRegistro,
-  datosCompletos,
   joinFechaHora,
+  motivoConfirmarIngreso,
   reglaDeCobro,
   splitInicio,
 } from "../utils/registrarIngreso";
@@ -162,7 +163,7 @@ export default function RegistrarIngreso() {
   const { fecha, hora } = splitInicio(inicio);
   const inicioInstant = localInputToInstant(inicio);
   const inicioTxt = inicioInstant.ok && inicioInstant.instant ? formatInstant(inicioInstant.instant) : "";
-  const completo = datosCompletos({ cliente, cocheraId, inicio });
+  const motivoConfirmar = motivoConfirmarIngreso({ cliente, cocheraId, inicio });
 
   async function confirmar() {
     const v = validateAltaForm(form, { timeZone, can });
@@ -326,9 +327,9 @@ export default function RegistrarIngreso() {
           <Button variant="contorno" onClick={() => navigate(-1)} disabled={saving}>
             Cancelar
           </Button>
-          <Button variant="marron" onClick={confirmar} disabled={saving || !completo}>
+          <BotonConMotivo variant="marron" onClick={confirmar} ocupado={saving} motivo={motivoConfirmar}>
             Confirmar ingreso
-          </Button>
+          </BotonConMotivo>
         </Stack>
       </Tarjeta>
     </Box>

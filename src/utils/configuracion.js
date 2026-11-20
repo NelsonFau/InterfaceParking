@@ -103,6 +103,16 @@ export function validateConfiguracionForm(form) {
   return Object.keys(errors).length > 0 ? { ok: false, errors } : { ok: true, values };
 }
 
+/**
+ * Motivo por el que "Guardar" no se puede usar, o `null` (spec 14, D-FN4). Sin cambios gana sobre inválido.
+ * @param {{ hayCambios: boolean, valido: boolean }} datos
+ * @returns {string | null}
+ */
+export function motivoGuardarConfiguracion({ hayCambios, valido }) {
+  if (!hayCambios) return "No hay cambios para guardar";
+  return valido ? null : "Corregí los campos marcados";
+}
+
 /** Campos opcionales que cambiaron respecto del original (`{ campo: valorNuevo }`). `{}` si nada cambió. */
 export function diffConfiguracion(original, form) {
   const diff = {};
