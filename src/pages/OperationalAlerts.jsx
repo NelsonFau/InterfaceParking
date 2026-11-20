@@ -20,7 +20,6 @@ import {
   Skeleton,
   Stack,
   TextField,
-  Tooltip,
   Typography,
 } from "@mui/material";
 
@@ -28,6 +27,7 @@ import { showApiError } from "../api/errors";
 import { getAlerta, listAlertas, resolveAlerta } from "../api/operationalAlertsApi";
 import { usePermissions } from "../auth/usePermissions";
 import { useDialogFullScreen } from "../componentes/useDialogFullScreen";
+import BotonConMotivo from "../componentes/ui/BotonConMotivo";
 import BotonRefrescar from "../componentes/ui/BotonRefrescar";
 import Campo from "../componentes/ui/Campo";
 import EncabezadoPagina from "../componentes/ui/EncabezadoPagina";
@@ -76,12 +76,6 @@ function AlertRow({ alerta, formatInstant, can, onResolve }) {
   const critica = !alerta.resuelta && alerta.severidad === SeveridadAlerta.CRITICA;
   // Tono de la franja lateral: el de la severidad (Baja en gris, `gr`).
   const tono = COLOR_TONE[colorOf(SeveridadAlerta, alerta.severidad)] ?? "de";
-
-  const resolveButton = (
-    <Button variant="contained" color="error" disabled={!resolve.enabled} onClick={() => onResolve(alerta)}>
-      Resolver alerta
-    </Button>
-  );
 
   return (
     <Tarjeta
@@ -185,18 +179,18 @@ function AlertRow({ alerta, formatInstant, can, onResolve }) {
 
               {resolve.visible && (
                 <Stack direction="row" spacing={1.5} useFlexGap alignItems="center" flexWrap="wrap">
-                  {resolve.enabled ? (
-                    resolveButton
-                  ) : (
-                    <>
-                      <Tooltip title={resolve.reason}>
-                        {/* El botón deshabilitado no dispara eventos: el Tooltip se ancla al contenedor. */}
-                        <Box component="span">{resolveButton}</Box>
-                      </Tooltip>
-                      <Typography variant="meta" color="text.secondary">
-                        {resolve.reason}
-                      </Typography>
-                    </>
+                  <BotonConMotivo
+                    variant="contained"
+                    color="error"
+                    motivo={resolve.enabled ? null : resolve.reason}
+                    onClick={() => onResolve(alerta)}
+                  >
+                    Resolver alerta
+                  </BotonConMotivo>
+                  {!resolve.enabled && (
+                    <Typography variant="meta" color="text.secondary">
+                      {resolve.reason}
+                    </Typography>
                   )}
                 </Stack>
               )}
@@ -242,14 +236,15 @@ function ResolveDialog({ alerta, comentario, onChange, resolving, onCancel, onCo
         <Button variant="contorno" onClick={onCancel} disabled={resolving}>
           Cancelar
         </Button>
-        <Button
+        <BotonConMotivo
           variant="contained"
           color="error"
           onClick={onConfirm}
-          disabled={resolving || (esDeDinero && vacio)}
+          ocupado={resolving}
+          motivo={esDeDinero && vacio ? "Las alertas de dinero requieren un comentario" : null}
         >
           Resolver
-        </Button>
+        </BotonConMotivo>
       </DialogActions>
     </Dialog>
   );

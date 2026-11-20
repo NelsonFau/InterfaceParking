@@ -18,6 +18,7 @@ import {
   buildFormRegistro,
   datosCompletos,
   joinFechaHora,
+  motivoConfirmarIngreso,
   reglaDeCobro,
   splitInicio,
   tipoDeRegistro,
@@ -155,5 +156,23 @@ describe("registrarIngreso", () => {
     expect(datosCompletos({ cliente: { id: 3 }, cocheraId: "5", inicio: "2026-11-19T10:05" })).toBe(true);
     expect(datosCompletos({ cliente: null, cocheraId: "5", inicio: "x" })).toBe(false);
     expect(datosCompletos({ cliente: { id: 3 }, cocheraId: "", inicio: "x" })).toBe(false);
+  });
+});
+
+describe("motivoConfirmarIngreso", () => {
+  it("con todos los datos da null", () => {
+    expect(motivoConfirmarIngreso({ cliente: { id: 3 }, cocheraId: "5", inicio: "2026-11-19T10:05" })).toBeNull();
+  });
+  it("si falta uno, da su nombre", () => {
+    expect(motivoConfirmarIngreso({ cliente: null, cocheraId: "5", inicio: "x" })).toBe("Falta elegir: cliente");
+    expect(motivoConfirmarIngreso({ cliente: { id: 3 }, cocheraId: "", inicio: "x" })).toBe("Falta elegir: cochera");
+    expect(motivoConfirmarIngreso({ cliente: { id: 3 }, cocheraId: "5", inicio: "" })).toBe("Falta elegir: inicio");
+  });
+  it("si faltan varios, los lista en orden", () => {
+    expect(motivoConfirmarIngreso({ cliente: null, cocheraId: "", inicio: "" })).toBe("Falta elegir: cliente, cochera, inicio");
+    expect(motivoConfirmarIngreso({ cliente: { id: 3 }, cocheraId: null, inicio: "" })).toBe("Falta elegir: cochera, inicio");
+  });
+  it("cocheraId 0 cuenta como elegido", () => {
+    expect(motivoConfirmarIngreso({ cliente: { id: 3 }, cocheraId: 0, inicio: "x" })).toBeNull();
   });
 });

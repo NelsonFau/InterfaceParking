@@ -41,7 +41,7 @@ Botón "Anular pago" con `pagos.anular`, pago PAGADO y **sin devoluciones** (`mo
 - Si la ocupación está FINALIZADA (`anulacionAviso`): "La ocupación está finalizada: al anular va a quedar saldo pendiente de cobro" (C4: sube el saldo sin reabrirla). No se calcula ningún monto.
 - **Nota fija**: "Si el pago es de otra sesión de caja (o no hay caja abierta), solo puede anularlo un dueño".
 
-**Otra sesión de caja (C3).** El backend compara la sesión del pago con la única sesión abierta; sin sesión abierta todo pago cuenta como "de otra sesión". `PagoResponse` no trae `cajaSesionId`, así que el cliente no puede saberlo de antemano (PB-11) y por eso la nota. Un ENCARGADO tiene `pagos.anular` pero no `pagos.devolver`: puede anular los pagos de su sesión; en otra sesión recibe 403 `sin_permiso` (en modo DIARIA nunca puede anular un pago de un día anterior). Con el 403 (o con `anulacion_requiere_dueno`, solo por una carrera) se muestra el `title` y **el diálogo queda abierto con el motivo escrito**, sin recarga. La anulación se registra en la sesión **actual**, no en la del pago.
+**Otra sesión de caja (C3).** El backend compara la sesión del pago con la única sesión abierta; sin sesión abierta todo pago cuenta como "de otra sesión". `PagoResponse` no trae `cajaSesionId`, así que el cliente no puede saberlo de antemano (PB-11) y por eso la nota. Un ENCARGADO tiene `pagos.anular` pero no `pagos.devolver`: puede anular los pagos de su sesión; en otra sesión recibe 403 `sin_permiso` (en modo DIARIA nunca puede anular un pago de un día anterior). Con el 403 (el 409 `anulacion_requiere_dueno` se retiró del backend en la Tanda A y de este front en la spec 14) se muestra el `title` y **el diálogo queda abierto con el motivo escrito**, sin recarga. La anulación se registra en la sesión **actual**, no en la del pago.
 
 **Ojo: el 403 puede tapar otros códigos (C1).** El controller evalúa "otra sesión" antes del 404 y de los 409, así que para un no dueño con un pago de otra sesión `sin_permiso` tapa `pago_anulado`, `pago_con_devoluciones` y, en TURNO con la caja cerrada, `caja_cerrada`. El cliente no hace nada especial (muestra el `title`, no recarga); el pedido PB-12 propone ordenarlo mejor.
 
@@ -86,12 +86,12 @@ El aviso lo muestra siempre `showApiError` (el `title` del backend). Después:
 | `pago_anulado` | Cierra la acción y recarga lista y detalle |
 | `pago_con_devoluciones` | Cierra la acción y recarga el detalle del pago |
 | `devolucion_supera_pago` | Recarga el pago y la ocupación; el diálogo **queda abierto** con lo devolvible nuevo y el monto marcado con el `title` |
-| `sin_permiso`, `anulacion_requiere_dueno` | Solo el aviso; el diálogo queda abierto con lo escrito, sin recarga |
+| `sin_permiso` | Solo el aviso; el diálogo queda abierto con lo escrito, sin recarga |
 | `caja_cerrada`, `caja_dia_anterior_abierta` | Solo el aviso (spec 09); el diálogo queda abierto |
 | `servidor_ocupado`, `tiempo_agotado`, `sin_conexion` | Solo el aviso. El diálogo conserva lo escrito; el reintento es **manual** (una escritura no es idempotente) |
 | Desconocido o `undefined` | Solo el aviso |
 
-`shouldReloadAfterPago`, `shouldCloseActionAfterPago`, `shouldCloseDetailAfterPago` y `pagoErrorField` son puras. No se agregaron entradas a `errorCodes.js`. Orden del backend en anular (C1): policy → 400 `Motivo` → 403 "otra sesión" → 404 → `pago_anulado` → `pago_con_devoluciones` → caja → `anulacion_requiere_dueno`. En devolver (C2): policy → 400 → 404 → `pago_anulado` → `devolucion_supera_pago` → caja.
+`shouldReloadAfterPago`, `shouldCloseActionAfterPago`, `shouldCloseDetailAfterPago` y `pagoErrorField` son puras. No se agregaron entradas a `errorCodes.js`. Orden del backend en anular (C1): policy → 400 `Motivo` → 403 "otra sesión" → 404 → `pago_anulado` → `pago_con_devoluciones` → caja (el 409 `anulacion_requiere_dueno` fue retirado). En devolver (C2): policy → 400 → 404 → `pago_anulado` → `devolucion_supera_pago` → caja.
 
 ## `pagosApi.js` y la compatibilidad temporal
 

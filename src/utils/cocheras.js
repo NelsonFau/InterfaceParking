@@ -84,6 +84,17 @@ export function previewRango(desde, hasta, existentes) {
 }
 
 /**
+ * Motivo por el que "Crear" no se puede usar, o `null` si la vista previa es válida (spec 14, D-FN4).
+ * Sin nada escrito pide el número; si no, repite el texto que muestra el aviso.
+ * @param {{ pristine: boolean, preview: { ok: boolean, texto: string } }} datos
+ * @returns {string | null}
+ */
+export function motivoCrearCocheras({ pristine, preview }) {
+  if (pristine) return "Ingresá el número de la cochera";
+  return preview.ok ? null : preview.texto;
+}
+
+/**
  * Cuerpo de `POST /Cochera`. Sin `hasta` (o igual a `desde`) manda solo `{ desde }`:
  * así no se depende de cómo trate el backend un rango de un número.
  * @param {number} desde

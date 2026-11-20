@@ -284,7 +284,6 @@ describe("errores por code", () => {
       "datos_invalidos",
       "operacion_invalida",
       "sin_permiso",
-      "anulacion_requiere_dueno",
       "caja_cerrada",
       "caja_dia_anterior_abierta",
       "sin_conexion",
@@ -301,7 +300,6 @@ describe("errores por code", () => {
     for (const c of [
       "devolucion_supera_pago",
       "datos_invalidos",
-      "anulacion_requiere_dueno",
       "sin_permiso",
       "caja_cerrada",
       "caja_dia_anterior_abierta",

@@ -41,6 +41,7 @@ import { useMe, usePermissions } from "../auth/usePermissions";
 import { RolUsuario, labelOf, optionsOf } from "../constants/enums";
 import { buildTrazabilidadPath } from "../utils/trazabilidadLink";
 import { useDialogFullScreen } from "../componentes/useDialogFullScreen";
+import BotonConMotivo from "../componentes/ui/BotonConMotivo";
 import BotonRefrescar from "../componentes/ui/BotonRefrescar";
 import Campo from "../componentes/ui/Campo";
 import EncabezadoPagina from "../componentes/ui/EncabezadoPagina";
@@ -198,9 +199,13 @@ function RolDialog({ usuario, onClose, onDone, onError }) {
         ) : (
           <>
             <Button variant="contorno" onClick={onClose}>Cancelar</Button>
-            <Button variant="marron" onClick={() => setConfirmando(true)} disabled={!resumen.cambia}>
+            <BotonConMotivo
+              variant="marron"
+              onClick={() => setConfirmando(true)}
+              motivo={resumen.cambia ? null : "Elegí un rol distinto del actual"}
+            >
               Guardar
-            </Button>
+            </BotonConMotivo>
           </>
         )}
       </DialogActions>

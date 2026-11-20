@@ -25,6 +25,7 @@ import {
   Typography,
 } from "@mui/material";
 import { useDialogFullScreen } from "../useDialogFullScreen";
+import BotonConMotivo from "../ui/BotonConMotivo";
 import { normalizeError, showApiError } from "../../api/errors";
 import { finalizeOcupacion, getOcupacion } from "../../api/ocupacionApi";
 import { ResolucionExcedente, labelOf } from "../../constants/enums";
@@ -203,14 +204,15 @@ export default function FinalizarOcupacionDialog({ ocupacionId, now, onClose, on
         <Button variant="contorno" onClick={onClose} disabled={saving}>
           Volver
         </Button>
-        <Button
+        <BotonConMotivo
           color="info"
           variant="contained"
           onClick={confirmar}
-          disabled={saving || detalle.status !== "ready"}
+          ocupado={saving || detalle.status === "loading"}
+          motivo={detalle.status === "error" ? "No se pudo cargar la ocupación; reintentá" : null}
         >
           {textoBoton}
-        </Button>
+        </BotonConMotivo>
       </DialogActions>
     </Dialog>
   );

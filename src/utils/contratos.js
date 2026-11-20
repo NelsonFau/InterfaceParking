@@ -25,7 +25,6 @@ export const MSG_PORCENTAJE_RANGO = "El porcentaje va de −50 a 100";
 export const MSG_MOTIVO_VACIO = "Contanos el motivo";
 export const MSG_MOTIVO_LARGO = `El motivo no puede superar ${MAX_MOTIVO_CONTRATO} caracteres`;
 export const MSG_FIN_VACIO = "Elegí la fecha y la hora de fin";
-export const MSG_NO_ACTIVO = "El contrato ya no está activo; recargá para ver su estado";
 
 const text = (v) => (typeof v === "string" ? v.trim() : "");
 
@@ -213,9 +212,16 @@ export function contratoFieldErrors(apiError) {
   return { fields, general };
 }
 
-/** Texto propio para `ocupacion_no_activa` (DV-FJ3, hasta PB-23); `null` para el resto (se muestra el `title`). */
-export function contratoErrorOverride(code) {
-  return code === "ocupacion_no_activa" ? MSG_NO_ACTIVO : null;
+/**
+ * Motivo por el que "Aplicar ajuste" no se puede usar, o `null` (spec 14, D-FN4). `listaStatus` es el de la lista
+ * de candidatos (`"loading" | "ok" | "error"`): mientras carga no hay motivo (el botón va en `ocupado`).
+ * @param {{ listaStatus?: string | null, entiendo: boolean }} datos
+ * @returns {string | null}
+ */
+export function motivoAplicarAjuste({ listaStatus, entiendo }) {
+  if (listaStatus === "error") return "No se pudo cargar la lista; volvé al paso anterior";
+  if (listaStatus === "ok" && !entiendo) return "Marcá «Entiendo que el ajuste no se puede deshacer»";
+  return null;
 }
 
 const STALE_CODES = new Set(["ocupacion_no_encontrada", "ocupacion_no_mensual", "ocupacion_no_activa"]);

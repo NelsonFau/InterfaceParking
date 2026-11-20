@@ -10,7 +10,6 @@ import { normalizeError, showApiError } from "../../api/errors";
 import { getOcupacion, setOcupacionFin } from "../../api/ocupacionApi";
 import {
   bajaAviso,
-  contratoErrorOverride,
   contratoFieldErrors,
   shouldCloseActionAfterContrato,
   validateFin,
@@ -60,9 +59,7 @@ export default function ProgramarBajaDialog({ ocupacion, vencido, can, onClose, 
       setResultado({ fin: resp?.fin ?? r.body.fin, aviso });
     } catch (e) {
       const err = normalizeError(e);
-      const override = contratoErrorOverride(err.code);
-      if (override) toast.error(override);
-      else showApiError(err);
+      showApiError(err);
       setError(contratoFieldErrors(err).fields.fin ?? null);
       if (shouldCloseActionAfterContrato(err.code)) {
         onChanged();

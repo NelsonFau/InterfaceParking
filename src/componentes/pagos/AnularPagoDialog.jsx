@@ -2,7 +2,7 @@
 // sin inventar reglas: el pago deja de contar en la cuenta, una ocupación finalizada va a quedar con saldo
 // y, como el cliente no sabe si el pago es de otra sesión de caja (el backend no lo manda), una nota fija.
 // Después de un error el diálogo conserva el motivo escrito y el reintento es manual (una escritura no es
-// idempotente). `sin_permiso` (403) y `anulacion_requiere_dueno` solo muestran el `title` y quedan abiertos.
+// idempotente). `sin_permiso` (403) solo muestra el `title` y el diálogo queda abierto.
 import { useState } from "react";
 import toast from "react-hot-toast";
 import { Alert, Button, Dialog, DialogActions, DialogContent, DialogTitle, Stack, TextField, Typography } from "@mui/material";

@@ -104,6 +104,11 @@ diálogo lo llama una vez al principio del componente y pasa `fullScreen={fullSc
 "Cancelar reserva", "Bloquear" y "Anular" en `error`. Las acciones de la tarjeta de ocupación usan `size="large"`. Ningún botón
 lleva `borderRadius` ni `fontWeight` en `sx`: salen de `MuiButton` en el tema.
 
+**Botones deshabilitados con motivo (spec 14).** `src/componentes/ui/BotonConMotivo.jsx` es el `Button` que se deshabilita con un
+`motivo` (`string | null`) y lo muestra en un tooltip anclado a un `span` con `tabIndex={0}`; el estado transitorio (guardando,
+cargando) va en `ocupado`, sin tooltip. El llamador no pasa `disabled`. Los textos de los motivos salen de funciones puras
+`motivo…` (`registrarIngreso.js`, `configuracion.js`, `contratos.js`, `cocheras.js`) o de un ternario en el JSX.
+
 **Tarjetas.** `Card` es `outlined` por defecto y toma borde y sombra del tema: la tarjeta de ocupación y el panel de filtros ya
 no tienen `sx` de estilo. La tarjeta de cochera conserva solo lo que es de layout o semántico: altura de 150 px, `borderWidth: 2`
 y el `borderColor` del estado (`borderOf`, que lee `colorOf` y apunta a un color del tema, sin hex).

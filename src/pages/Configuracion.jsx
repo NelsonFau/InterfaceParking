@@ -19,6 +19,7 @@ import { useMe, usePermissions } from "../auth/usePermissions";
 import { FraccionMes, ModoCaja, ModoMes, labelOf, optionsOf } from "../constants/enums";
 import { ZONAS_HORARIAS, labelOfZona } from "../constants/zonasHorarias";
 import { useDialogFullScreen } from "../componentes/useDialogFullScreen";
+import BotonConMotivo from "../componentes/ui/BotonConMotivo";
 import Campo from "../componentes/ui/Campo";
 import EncabezadoPagina from "../componentes/ui/EncabezadoPagina";
 import Tarjeta from "../componentes/ui/Tarjeta";
@@ -27,6 +28,7 @@ import {
   afterSaveError,
   buildUpdateBody,
   diffConfiguracion,
+  motivoGuardarConfiguracion,
   summarizeChanges,
   toForm,
   validateConfiguracionForm,
@@ -287,12 +289,22 @@ export default function Configuracion() {
 
         {canEdit ? (
           <Stack direction="row" spacing={1.25} justifyContent="flex-end">
-            <Button variant="contorno" onClick={() => setDraft(toForm(original))} disabled={saving || !hayCambios}>
+            <BotonConMotivo
+              variant="contorno"
+              onClick={() => setDraft(toForm(original))}
+              ocupado={saving}
+              motivo={hayCambios ? null : "No hay cambios para descartar"}
+            >
               Descartar cambios
-            </Button>
-            <Button variant="marron" onClick={onGuardar} disabled={saving || !hayCambios || !validation?.ok}>
+            </BotonConMotivo>
+            <BotonConMotivo
+              variant="marron"
+              onClick={onGuardar}
+              ocupado={saving}
+              motivo={motivoGuardarConfiguracion({ hayCambios, valido: Boolean(validation?.ok) })}
+            >
               Guardar
-            </Button>
+            </BotonConMotivo>
           </Stack>
         ) : null}
       </Stack>

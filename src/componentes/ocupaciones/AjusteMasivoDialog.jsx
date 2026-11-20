@@ -25,6 +25,7 @@ import {
   Typography,
 } from "@mui/material";
 import { useDialogFullScreen } from "../useDialogFullScreen";
+import BotonConMotivo from "../ui/BotonConMotivo";
 import { showApiError } from "../../api/errors";
 import { adjustPreciosMensuales, listOcupaciones } from "../../api/ocupacionApi";
 import { EstadoOcupacion } from "../../constants/enums";
@@ -33,6 +34,7 @@ import {
   candidatosMensuales,
   contratoFieldErrors,
   defaultVigenteDesde,
+  motivoAplicarAjuste,
   resultadoLote,
   validateAjusteMasivo,
 } from "../../utils/contratos";
@@ -262,14 +264,15 @@ export default function AjusteMasivoDialog({ onClose, onApplied }) {
         <Button onClick={() => setStep(0)} disabled={saving}>
           Volver
         </Button>
-        <Button
+        <BotonConMotivo
           variant="contained"
           color="warning"
           onClick={aplicar}
-          disabled={saving || lista?.status !== "ok" || !entiendo}
+          ocupado={saving || !lista || lista.status === "loading"}
+          motivo={motivoAplicarAjuste({ listaStatus: lista?.status, entiendo })}
         >
           Aplicar ajuste
-        </Button>
+        </BotonConMotivo>
       </>
     );
   } else {

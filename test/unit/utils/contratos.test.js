@@ -5,9 +5,9 @@ import {
   bajaAviso,
   buildQuitarBajaBody,
   candidatosMensuales,
-  contratoErrorOverride,
   contratoFieldErrors,
   defaultVigenteDesde,
+  motivoAplicarAjuste,
   resultadoLote,
   shouldCloseActionAfterContrato,
   shouldReloadAfterContrato,
@@ -232,11 +232,22 @@ describe("códigos de error", () => {
       expect(shouldCloseActionAfterContrato(c)).toBe(false);
     }
   });
-  it("contratoErrorOverride", () => {
-    expect(contratoErrorOverride("ocupacion_no_activa")).toBe("El contrato ya no está activo; recargá para ver su estado");
-    for (const c of ["ocupacion_no_mensual", "ocupacion_no_encontrada", "cochera_no_disponible", "datos_invalidos", "raro", undefined]) {
-      expect(contratoErrorOverride(c)).toBeNull();
-    }
+});
+
+describe("motivoAplicarAjuste", () => {
+  it("lista ok y confirmado da null", () => {
+    expect(motivoAplicarAjuste({ listaStatus: "ok", entiendo: true })).toBeNull();
+  });
+  it("lista con error da el texto de la lista", () => {
+    expect(motivoAplicarAjuste({ listaStatus: "error", entiendo: true })).toBe("No se pudo cargar la lista; volvé al paso anterior");
+    expect(motivoAplicarAjuste({ listaStatus: "error", entiendo: false })).toBe("No se pudo cargar la lista; volvé al paso anterior");
+  });
+  it("lista cargando (o sin pedir) no tiene motivo", () => {
+    expect(motivoAplicarAjuste({ listaStatus: "loading", entiendo: false })).toBeNull();
+    expect(motivoAplicarAjuste({ listaStatus: undefined, entiendo: false })).toBeNull();
+  });
+  it("lista ok sin confirmar da el texto de la confirmación", () => {
+    expect(motivoAplicarAjuste({ listaStatus: "ok", entiendo: false })).toBe("Marcá «Entiendo que el ajuste no se puede deshacer»");
   });
 });
 
